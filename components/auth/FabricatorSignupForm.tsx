@@ -1,35 +1,47 @@
-import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Alert, AlertDescription } from '../ui/alert';
-import { ArrowLeft, UserPlus, Eye, EyeOff } from 'lucide-react';
-import { User } from '../../types';
-import { CompanyLogo } from '../ui/company-logo';
-import { RegistrationSuccessDialog } from './RegistrationSuccessDialog';
-import { apiService } from '../../utils/apiService';
-import { mapUserDataFromBackend } from '../../utils/userDataMapper';
+import { useState } from "react";
+import { Button } from "../ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Alert, AlertDescription } from "../ui/alert";
+import { ArrowLeft, UserPlus, Eye, EyeOff } from "lucide-react";
+import { User } from "../../types";
+import { CompanyLogo } from "../ui/company-logo";
+import { RegistrationSuccessDialog } from "./RegistrationSuccessDialog";
+import { apiService } from "../../utils/apiService";
+import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 
 // Schools list for the dropdown
 const SCHOOLS = [
-  'Ehub University',
-  'Philippine State College of Aeronautics',
-  'Technical Education and Skills Development Authority',
-  'University of the Philippines',
-  'Ateneo de Manila University',
-  'De La Salle University',
-  'University of Santo Tomas',
-  'Far Eastern University',
-  'Polytechnic University of the Philippines',
-  'Technological University of the Philippines',
-  'Mapúa University',
-  'Adamson University',
-  'University of the East',
-  'National University',
-  'San Beda University',
-  'Other'
+  "Ehub University",
+  "Philippine State College of Aeronautics",
+  "Technical Education and Skills Development Authority",
+  "University of the Philippines",
+  "Ateneo de Manila University",
+  "De La Salle University",
+  "University of Santo Tomas",
+  "Far Eastern University",
+  "Polytechnic University of the Philippines",
+  "Technological University of the Philippines",
+  "Mapúa University",
+  "Adamson University",
+  "University of the East",
+  "National University",
+  "San Beda University",
+  "Other",
 ];
 
 interface FabricatorSignupFormProps {
@@ -37,38 +49,89 @@ interface FabricatorSignupFormProps {
   onBackToMain: () => void;
 }
 
-export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignupFormProps) {
+export function FabricatorSignupForm({
+  onSignup,
+  onBackToMain,
+}: FabricatorSignupFormProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    school: '',
-    phone: '',
-    gcashNumber: ''
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    school: "",
+    phone: "+63 ",
+    gcashNumber: "",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [registeredUser, setRegisteredUser] = useState<User | null>(null);
 
+  // Validation regex patterns
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/; // Only gmail.com allowed
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const phoneRegex = /^\+63 \d{3} \d{3} \d{4}$/; // Format: +63 934 836 1937
+  const gcashRegex = /^09\d{9}$/; // Format: 09374638264 (11 digits starting with 09)
+
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setError('');
+    // Format phone number as user types
+    if (field === "phone") {
+      // Extract only digits from input
+      let digits = value.replace(/\D/g, "");
+
+      // Remove leading 63 if present (will be added back with +)
+      if (digits.startsWith("63")) {
+        digits = digits.slice(2);
+      }
+      // Remove leading 0 if present
+      if (digits.startsWith("0")) {
+        digits = digits.slice(1);
+      }
+
+      // Limit to 10 digits (the part after +63)
+      digits = digits.slice(0, 10);
+
+      // Always format with +63 prefix and spaces: +63 XXX XXX XXXX
+      let formatted = "+63 ";
+      if (digits.length > 0) formatted += digits.slice(0, 3);
+      if (digits.length > 3) formatted += " " + digits.slice(3, 6);
+      if (digits.length > 6) formatted += " " + digits.slice(6, 10);
+
+      value = formatted;
+    }
+
+    // Format GCash number - only allow digits, max 11, must start with 09
+    if (field === "gcashNumber") {
+      let cleaned = value.replace(/\D/g, "");
+      // Limit to 11 digits
+      cleaned = cleaned.slice(0, 11);
+      value = cleaned;
+    }
+
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setError("");
   };
 
   const validateForm = () => {
-    if (!formData.name.trim()) return 'Name is required';
-    if (!formData.email.trim()) return 'Email is required';
-    if (!formData.email.includes('@')) return 'Please enter a valid email';
-    if (!formData.password) return 'Password is required';
-    if (formData.password.length < 6) return 'Password must be at least 6 characters';
-    if (formData.password !== formData.confirmPassword) return 'Passwords do not match';
-    if (!formData.school) return 'School is required';
-    if (!formData.phone.trim()) return 'Phone number is required';
-    if (!formData.gcashNumber.trim()) return 'GCash number is required';
+    if (!formData.name.trim()) return "Name is required";
+    if (!formData.email.trim()) return "Email is required";
+    if (!emailRegex.test(formData.email))
+      return "Please enter a valid Gmail address (e.g., example@gmail.com)";
+    if (!formData.password) return "Password is required";
+    if (!passwordRegex.test(formData.password))
+      return "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)";
+    if (formData.password !== formData.confirmPassword)
+      return "Passwords do not match";
+    if (!formData.school) return "School is required";
+    if (!formData.phone.trim()) return "Phone number is required";
+    if (!phoneRegex.test(formData.phone))
+      return "Phone number must be in format: +63 XXX XXX XXXX (e.g., +63 934 836 1937)";
+    if (!formData.gcashNumber.trim()) return "GCash number is required";
+    if (!gcashRegex.test(formData.gcashNumber))
+      return "GCash number must be 11 digits starting with 09 (e.g., 09374638264)";
     return null;
   };
 
@@ -82,7 +145,7 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
     }
 
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       const response = await apiService.signup({
@@ -91,7 +154,7 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
         password: formData.password,
         school: formData.school,
         phone: formData.phone,
-        gcashNumber: formData.gcashNumber
+        gcashNumber: formData.gcashNumber,
       });
 
       if (response.data) {
@@ -100,10 +163,10 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
         setRegisteredUser(userData);
         setShowSuccessDialog(true);
       } else {
-        throw new Error(response.error || 'Signup failed');
+        throw new Error(response.error || "Signup failed");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Signup failed');
+      setError(err instanceof Error ? err.message : "Signup failed");
     } finally {
       setIsLoading(false);
     }
@@ -137,7 +200,9 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
             <div className="space-y-2">
               <div className="flex items-center justify-center gap-2">
                 <UserPlus className="h-6 w-6 text-accent" />
-                <CardTitle className="text-2xl">Fabricator Registration</CardTitle>
+                <CardTitle className="text-2xl">
+                  Fabricator Registration
+                </CardTitle>
               </div>
               <CardDescription className="text-base">
                 Create your fabricator account
@@ -153,7 +218,7 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                   type="text"
                   placeholder="Enter your full name"
                   value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
                   required
                 />
               </div>
@@ -165,7 +230,7 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                   type="email"
                   placeholder="Enter your email address"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
                   required
                 />
               </div>
@@ -176,10 +241,12 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                   <div className="relative">
                     <Input
                       id="password"
-                      type={showPassword ? 'text' : 'password'}
+                      type={showPassword ? "text" : "password"}
                       placeholder="Enter password"
                       value={formData.password}
-                      onChange={(e) => handleInputChange('password', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("password", e.target.value)
+                      }
                       required
                     />
                     <Button
@@ -189,7 +256,11 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                       className="absolute right-0 top-0 h-full px-3"
                       onClick={() => setShowPassword(!showPassword)}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -199,10 +270,12 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                   <div className="relative">
                     <Input
                       id="confirmPassword"
-                      type={showConfirmPassword ? 'text' : 'password'}
+                      type={showConfirmPassword ? "text" : "password"}
                       placeholder="Confirm password"
                       value={formData.confirmPassword}
-                      onChange={(e) => handleInputChange('confirmPassword', e.target.value)}
+                      onChange={(e) =>
+                        handleInputChange("confirmPassword", e.target.value)
+                      }
                       required
                     />
                     <Button
@@ -210,9 +283,15 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                       variant="ghost"
                       size="sm"
                       className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
                     >
-                      {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4" />
+                      ) : (
+                        <Eye className="h-4 w-4" />
+                      )}
                     </Button>
                   </div>
                 </div>
@@ -220,7 +299,10 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
 
               <div className="space-y-2">
                 <Label htmlFor="school">School/Institution</Label>
-                <Select value={formData.school} onValueChange={(value) => handleInputChange('school', value)}>
+                <Select
+                  value={formData.school}
+                  onValueChange={(value) => handleInputChange("school", value)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Select your school" />
                   </SelectTrigger>
@@ -240,11 +322,15 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                   <Input
                     id="phone"
                     type="tel"
-                    placeholder="+63 9XX XXX XXXX"
+                    placeholder="+63 934 836 1937"
                     value={formData.phone}
-                    onChange={(e) => handleInputChange('phone', e.target.value)}
+                    onChange={(e) => handleInputChange("phone", e.target.value)}
+                    maxLength={16}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Format: +63 XXX XXX XXXX
+                  </p>
                 </div>
 
                 <div className="space-y-2">
@@ -252,11 +338,17 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
                   <Input
                     id="gcashNumber"
                     type="tel"
-                    placeholder="09XX XXX XXXX"
+                    placeholder="09374638264"
                     value={formData.gcashNumber}
-                    onChange={(e) => handleInputChange('gcashNumber', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("gcashNumber", e.target.value)
+                    }
+                    maxLength={11}
                     required
                   />
+                  <p className="text-xs text-muted-foreground">
+                    11 digits starting with 09
+                  </p>
                 </div>
               </div>
 
@@ -267,11 +359,7 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
               )}
 
               <div className="space-y-3">
-                <Button
-                  type="submit"
-                  className="w-full"
-                  disabled={isLoading}
-                >
+                <Button type="submit" className="w-full" disabled={isLoading}>
                   {isLoading ? (
                     <>
                       <div className="h-4 w-4 animate-spin border-2 border-white border-t-transparent rounded-full mr-2" />
@@ -300,7 +388,8 @@ export function FabricatorSignupForm({ onSignup, onBackToMain }: FabricatorSignu
 
             <div className="text-xs text-muted-foreground text-center">
               <p>
-                By creating an account, you agree to our terms of service and privacy policy.
+                By creating an account, you agree to our terms of service and
+                privacy policy.
               </p>
             </div>
           </CardContent>

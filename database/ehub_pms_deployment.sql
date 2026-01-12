@@ -106,7 +106,7 @@ INSERT IGNORE INTO `users` (
   'admin-1',
   'System Administrator',
   'admin@ehub.com',
-  '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
+  '$2y$10$eZ8YF4H2jz6xywtquWObQemHuvi1VGEBa7a8st7PzJd27UgB/tr1u', -- password: admin123
   'admin',
   'ADM001',
   'EMP001',
@@ -120,7 +120,7 @@ INSERT IGNORE INTO `users` (
   'supervisor-1',
   'John Supervisor',
   'supervisor@ehub.com',
-  '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
+  '$2y$10$eZ8YF4H2jz6xywtquWObQemHuvi1VGEBa7a8st7PzJd27UgB/tr1u', -- password: admin123
   'supervisor',
   'SUP001',
   'EMP002',
@@ -133,7 +133,7 @@ INSERT IGNORE INTO `users` (
   'fabricator-1',
   'Mike Fabricator',
   'fabricator@ehub.com',
-  '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
+  '$2y$10$eZ8YF4H2jz6xywtquWObQemHuvi1VGEBa7a8st7PzJd27UgB/tr1u', -- password: admin123
   'fabricator',
   'FAB001',
   'EMP003',
@@ -146,7 +146,7 @@ INSERT IGNORE INTO `users` (
   'client-1',
   'Sarah Client',
   'client@ehub.com',
-  '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', -- password: admin123
+  '$2y$10$eZ8YF4H2jz6xywtquWObQemHuvi1VGEBa7a8st7PzJd27UgB/tr1u', -- password: admin123
   'client',
   'CLI001',
   NULL,

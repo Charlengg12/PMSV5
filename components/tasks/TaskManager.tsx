@@ -1,22 +1,54 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { Plus, Edit, Trash2, Calendar, User, Building, AlertCircle, CheckCircle } from 'lucide-react';
-import { Task, Project, User as UserType } from '../../types';
+import { useState } from "react";
+import Swal from "sweetalert2";
+import { apiService } from "../../utils/apiService";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../ui/alert-dialog";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Calendar,
+  User,
+  Building,
+  AlertCircle,
+  CheckCircle,
+} from "lucide-react";
+import { Task, Project, User as UserType } from "../../types";
 
 interface TaskManagerProps {
   tasks: Task[];
   projects: Project[];
   users: UserType[];
   currentUser: UserType;
-  onCreateTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
+  onCreateTask: (task: Omit<Task, "id" | "createdAt" | "updatedAt">) => void;
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onDeleteTask: (taskId: string) => void;
 }
@@ -28,47 +60,74 @@ export function TaskManager({
   currentUser,
   onCreateTask,
   onUpdateTask,
-  onDeleteTask
+  onDeleteTask,
 }: TaskManagerProps) {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    status: 'pending' as Task['status'],
-    priority: 'medium' as Task['priority'],
-    projectId: '',
-    assignedTo: 'unassigned',
-    dueDate: ''
+    title: "",
+    description: "",
+    status: "pending" as Task["status"],
+    priority: "medium" as Task["priority"],
+    projectId: "",
+    assignedTo: "unassigned",
+    dueDate: "",
   });
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
-      status: 'pending',
-      priority: 'medium',
-      projectId: '',
-      assignedTo: 'unassigned',
-      dueDate: ''
+      title: "",
+      description: "",
+      status: "pending",
+      priority: "medium",
+      projectId: "",
+      assignedTo: "unassigned",
+      dueDate: "",
     });
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
     if (!formData.title || !formData.projectId) return;
 
-    onCreateTask({
+    const newTaskData = {
       title: formData.title,
       description: formData.description,
       status: formData.status,
       priority: formData.priority,
       projectId: formData.projectId,
-      assignedTo: formData.assignedTo === 'unassigned' ? undefined : formData.assignedTo,
+      assignedTo:
+        formData.assignedTo === "unassigned" ? undefined : formData.assignedTo,
       dueDate: formData.dueDate || undefined,
-      createdBy: currentUser.id
-    });
+      createdBy: currentUser.id,
+    };
+
+    try {
+      const { data, error } = await apiService.createTask(newTaskData);
+      if (data && !error) {
+        onCreateTask({ ...data });
+        Swal.fire({
+          icon: "success",
+          title: "Task Created!",
+          text: "The task was successfully created.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error || "Failed to create task in database.",
+        });
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Failed to create task. Please try again.",
+      });
+    }
 
     resetForm();
     setShowCreateDialog(false);
@@ -78,12 +137,12 @@ export function TaskManager({
     setSelectedTask(task);
     setFormData({
       title: task.title,
-      description: task.description || '',
+      description: task.description || "",
       status: task.status,
       priority: task.priority,
       projectId: task.projectId,
-      assignedTo: task.assignedTo || 'unassigned',
-      dueDate: task.dueDate || ''
+      assignedTo: task.assignedTo || "unassigned",
+      dueDate: task.dueDate || "",
     });
     setShowEditDialog(true);
   };
@@ -97,8 +156,9 @@ export function TaskManager({
       status: formData.status,
       priority: formData.priority,
       projectId: formData.projectId,
-      assignedTo: formData.assignedTo === 'unassigned' ? undefined : formData.assignedTo,
-      dueDate: formData.dueDate || undefined
+      assignedTo:
+        formData.assignedTo === "unassigned" ? undefined : formData.assignedTo,
+      dueDate: formData.dueDate || undefined,
     });
 
     resetForm();
@@ -120,60 +180,72 @@ export function TaskManager({
   };
 
   const handleMarkAsDone = (task: Task) => {
-    onUpdateTask(task.id, { 
-      status: 'completed',
-      updatedAt: new Date().toISOString()
+    onUpdateTask(task.id, {
+      status: "completed",
+      updatedAt: new Date().toISOString(),
     });
   };
 
-  const getStatusColor = (status: Task['status']) => {
+  const getStatusColor = (status: Task["status"]) => {
     switch (status) {
-      case 'completed':
-        return 'default';
-      case 'in-progress':
-        return 'secondary';
-      case 'pending':
-        return 'outline';
-      case 'blocked':
-        return 'destructive';
+      case "completed":
+        return "default";
+      case "in-progress":
+        return "secondary";
+      case "pending":
+        return "outline";
+      case "blocked":
+        return "destructive";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
-  const getPriorityColor = (priority: Task['priority']) => {
+  const getPriorityColor = (priority: Task["priority"]) => {
     switch (priority) {
-      case 'urgent':
-        return 'destructive';
-      case 'high':
-        return 'destructive';
-      case 'medium':
-        return 'secondary';
-      case 'low':
-        return 'outline';
+      case "urgent":
+        return "destructive";
+      case "high":
+        return "destructive";
+      case "medium":
+        return "secondary";
+      case "low":
+        return "outline";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
   const getFilteredTasks = () => {
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === "admin") {
       return tasks;
     }
-    if (currentUser.role === 'supervisor') {
-      const supervisorProjects = projects.filter(p => p.supervisorId === currentUser.id);
-      return tasks.filter(t => supervisorProjects.some(p => p.id === t.projectId));
+    if (currentUser.role === "supervisor") {
+      const supervisorProjects = projects.filter(
+        (p) => p.supervisorId === currentUser.id
+      );
+      return tasks.filter((t) =>
+        supervisorProjects.some((p) => p.id === t.projectId)
+      );
     }
-    return tasks.filter(t => t.assignedTo === currentUser.id || t.createdBy === currentUser.id);
+    return tasks.filter(
+      (t) => t.assignedTo === currentUser.id || t.createdBy === currentUser.id
+    );
   };
 
   const filteredTasks = getFilteredTasks();
 
-  const canCreateTask = currentUser.role === 'admin' || currentUser.role === 'supervisor';
+  const canCreateTask =
+    currentUser.role === "admin" || currentUser.role === "supervisor";
   const canEditTask = (task: Task) => {
-    return currentUser.role === 'admin' || 
-           task.createdBy === currentUser.id ||
-           (currentUser.role === 'supervisor' && projects.some(p => p.id === task.projectId && p.supervisorId === currentUser.id));
+    return (
+      currentUser.role === "admin" ||
+      task.createdBy === currentUser.id ||
+      (currentUser.role === "supervisor" &&
+        projects.some(
+          (p) => p.id === task.projectId && p.supervisorId === currentUser.id
+        ))
+    );
   };
 
   return (
@@ -221,15 +293,19 @@ export function TaskManager({
                 <div className="flex items-center gap-2">
                   <Building className="h-4 w-4 text-muted-foreground" />
                   <span>
-                    Project: {projects.find(p => p.id === task.projectId)?.name || 'Unknown'}
+                    Project:{" "}
+                    {projects.find((p) => p.id === task.projectId)?.name ||
+                      "Unknown"}
                   </span>
                 </div>
-                
+
                 {task.assignedTo && (
                   <div className="flex items-center gap-2">
                     <User className="h-4 w-4 text-muted-foreground" />
                     <span>
-                      Assigned to: {users.find(u => u.id === task.assignedTo)?.name || 'Unknown'}
+                      Assigned to:{" "}
+                      {users.find((u) => u.id === task.assignedTo)?.name ||
+                        "Unknown"}
                     </span>
                   </div>
                 )}
@@ -245,12 +321,12 @@ export function TaskManager({
 
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
                   <span>
-                    Created by: {users.find(u => u.id === task.createdBy)?.name || 'Unknown'}
+                    Created by:{" "}
+                    {users.find((u) => u.id === task.createdBy)?.name ||
+                      "Unknown"}
                   </span>
                   <span>•</span>
-                  <span>
-                    {new Date(task.createdAt).toLocaleDateString()}
-                  </span>
+                  <span>{new Date(task.createdAt).toLocaleDateString()}</span>
                 </div>
               </div>
 
@@ -273,7 +349,7 @@ export function TaskManager({
                     <Trash2 className="h-4 w-4 mr-2" />
                     Delete
                   </Button>
-                  {task.status !== 'completed' && (
+                  {task.status !== "completed" && (
                     <Button
                       variant="default"
                       size="sm"
@@ -297,10 +373,9 @@ export function TaskManager({
             <div className="text-center">
               <h3 className="text-lg mb-2">No tasks found</h3>
               <p className="text-muted-foreground mb-4">
-                {canCreateTask 
-                  ? 'Create your first task to get started.'
-                  : 'No tasks have been assigned to you yet.'
-                }
+                {canCreateTask
+                  ? "Create your first task to get started."
+                  : "No tasks have been assigned to you yet."}
               </p>
               {canCreateTask && (
                 <Button onClick={() => setShowCreateDialog(true)}>
@@ -328,7 +403,9 @@ export function TaskManager({
               <Input
                 id="title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 placeholder="Enter task title"
               />
             </div>
@@ -338,7 +415,9 @@ export function TaskManager({
               <Textarea
                 id="description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Enter task description"
                 rows={3}
               />
@@ -347,7 +426,12 @@ export function TaskManager({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="status">Status</Label>
-                <Select value={formData.status} onValueChange={(value: Task['status']) => setFormData({ ...formData, status: value })}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: Task["status"]) =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -362,7 +446,12 @@ export function TaskManager({
 
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
-                <Select value={formData.priority} onValueChange={(value: Task['priority']) => setFormData({ ...formData, priority: value })}>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(value: Task["priority"]) =>
+                    setFormData({ ...formData, priority: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -378,37 +467,56 @@ export function TaskManager({
 
             <div className="space-y-2">
               <Label htmlFor="project">Project</Label>
-              <Select value={formData.projectId} onValueChange={(value) => setFormData({ ...formData, projectId: value })}>
+              <Select
+                value={formData.projectId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, projectId: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
                   {projects
-                    .filter(p => currentUser.role === 'admin' || p.supervisorId === currentUser.id)
-                    .map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
+                    .filter(
+                      (p) =>
+                        currentUser.role === "admin" ||
+                        p.supervisorId === currentUser.id
+                    )
+                    .map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="assignedTo">Assign To</Label>
-              <Select value={formData.assignedTo || 'unassigned'} onValueChange={(value) => setFormData({ ...formData, assignedTo: value === 'unassigned' ? '' : value })}>
+              <Select
+                value={formData.assignedTo || "unassigned"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    assignedTo: value === "unassigned" ? "" : value,
+                  })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a team member" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {users
-                    .filter(u => u.role === 'fabricator' || u.role === 'supervisor')
-                    .map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.secureId})
-                    </SelectItem>
-                  ))}
+                    .filter(
+                      (u) => u.role === "fabricator" || u.role === "supervisor"
+                    )
+                    .map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name} ({user.secureId})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -419,15 +527,23 @@ export function TaskManager({
                 id="dueDate"
                 type="date"
                 value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, dueDate: e.target.value })
+                }
               />
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowCreateDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={!formData.title || !formData.projectId}>
+              <Button
+                onClick={handleCreate}
+                disabled={!formData.title || !formData.projectId}
+              >
                 Create Task
               </Button>
             </div>
@@ -450,7 +566,9 @@ export function TaskManager({
               <Input
                 id="edit-title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, title: e.target.value })
+                }
                 placeholder="Enter task title"
               />
             </div>
@@ -460,7 +578,9 @@ export function TaskManager({
               <Textarea
                 id="edit-description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
                 placeholder="Enter task description"
                 rows={3}
               />
@@ -469,7 +589,12 @@ export function TaskManager({
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="edit-status">Status</Label>
-                <Select value={formData.status} onValueChange={(value: Task['status']) => setFormData({ ...formData, status: value })}>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value: Task["status"]) =>
+                    setFormData({ ...formData, status: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -484,7 +609,12 @@ export function TaskManager({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-priority">Priority</Label>
-                <Select value={formData.priority} onValueChange={(value: Task['priority']) => setFormData({ ...formData, priority: value })}>
+                <Select
+                  value={formData.priority}
+                  onValueChange={(value: Task["priority"]) =>
+                    setFormData({ ...formData, priority: value })
+                  }
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -500,37 +630,56 @@ export function TaskManager({
 
             <div className="space-y-2">
               <Label htmlFor="edit-project">Project</Label>
-              <Select value={formData.projectId} onValueChange={(value) => setFormData({ ...formData, projectId: value })}>
+              <Select
+                value={formData.projectId}
+                onValueChange={(value) =>
+                  setFormData({ ...formData, projectId: value })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a project" />
                 </SelectTrigger>
                 <SelectContent>
                   {projects
-                    .filter(p => currentUser.role === 'admin' || p.supervisorId === currentUser.id)
-                    .map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
-                  ))}
+                    .filter(
+                      (p) =>
+                        currentUser.role === "admin" ||
+                        p.supervisorId === currentUser.id
+                    )
+                    .map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="edit-assignedTo">Assign To</Label>
-              <Select value={formData.assignedTo || 'unassigned'} onValueChange={(value) => setFormData({ ...formData, assignedTo: value === 'unassigned' ? '' : value })}>
+              <Select
+                value={formData.assignedTo || "unassigned"}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    assignedTo: value === "unassigned" ? "" : value,
+                  })
+                }
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select a team member" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="unassigned">Unassigned</SelectItem>
                   {users
-                    .filter(u => u.role === 'fabricator' || u.role === 'supervisor')
-                    .map(user => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name} ({user.secureId})
-                    </SelectItem>
-                  ))}
+                    .filter(
+                      (u) => u.role === "fabricator" || u.role === "supervisor"
+                    )
+                    .map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.name} ({user.secureId})
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -541,15 +690,23 @@ export function TaskManager({
                 id="edit-dueDate"
                 type="date"
                 value={formData.dueDate}
-                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, dueDate: e.target.value })
+                }
               />
             </div>
 
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setShowEditDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleUpdate} disabled={!formData.title || !formData.projectId}>
+              <Button
+                onClick={handleUpdate}
+                disabled={!formData.title || !formData.projectId}
+              >
                 Update Task
               </Button>
             </div>
@@ -566,12 +723,16 @@ export function TaskManager({
               Delete Task
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{selectedTask?.title}"? This action cannot be undone.
+              Are you sure you want to delete "{selectedTask?.title}"? This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction
+              onClick={confirmDelete}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Delete Task
             </AlertDialogAction>
           </AlertDialogFooter>

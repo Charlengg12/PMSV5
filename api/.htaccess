@@ -2,7 +2,7 @@
   RewriteEngine On
 
   # Ensure the base is the current directory
-  RewriteBase /api/
+  RewriteBase /PMSv4/api/
 
   # If the requested file or directory exists, serve it directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
@@ -10,7 +10,7 @@
   RewriteRule ^ - [L]
 
   # Otherwise, send everything to index.php
-  RewriteRule ^ index.php [L]
+  RewriteRule ^(.*)$ index.php/$1 [L,QSA]
 </IfModule>
 
 

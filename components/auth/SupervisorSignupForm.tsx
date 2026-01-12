@@ -1,4 +1,7 @@
 import { useState } from "react";
+import Swal from "sweetalert2";
+import { apiService } from "../../utils/apiService";
+import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -20,10 +23,7 @@ import { Badge } from "../ui/badge";
 import { Alert, AlertDescription } from "../ui/alert";
 import { X, UserPlus, Shield } from "lucide-react";
 import { User } from "../../types";
-import {
-  generateSecureId,
-  generateEmployeeNumber,
-} from "../../utils/secureId";
+// import { generateSecureId, generateEmployeeNumber } from "../../utils/secureId";
 // import { apiService } from "../../utils/apiService";
 
 interface SupervisorSignupFormProps {
@@ -55,6 +55,12 @@ export function SupervisorSignupForm({
     "Maintenance",
   ];
 
+  // Validation regex patterns
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/; // Only gmail.com allowed
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+  const phoneRegex = /^(\+639|09)\d{9}$/; // Format: +639123456789 or 09123456789
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -64,24 +70,23 @@ export function SupervisorSignupForm({
 
     if (!formData.email.trim()) {
       newErrors.email = "Email is required";
-    } else if (
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
-    ) {
-      newErrors.email = "Please enter a valid email address";
+    } else if (!emailRegex.test(formData.email)) {
+      newErrors.email =
+        "Please enter a valid Gmail address (e.g., example@gmail.com)";
     }
 
     if (!formData.password.trim()) {
       newErrors.password = "Password is required";
-    } else if (formData.password.length < 6) {
+    } else if (!passwordRegex.test(formData.password)) {
       newErrors.password =
-        "Password must be at least 6 characters";
+        "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)";
     }
 
     if (!formData.phone.trim()) {
       newErrors.phone = "Phone number is required";
-    } else if (!/^(\+639|09)\d{9}$/.test(formData.phone)) {
+    } else if (!phoneRegex.test(formData.phone)) {
       newErrors.phone =
-        "Please enter a valid Philippine phone number";
+        "Phone must be +639XXXXXXXXX or 09XXXXXXXXX (12 or 11 digits)";
     }
 
     if (!formData.department) {
@@ -93,6 +98,23 @@ export function SupervisorSignupForm({
   };
 
   const handleInputChange = (field: string, value: string) => {
+    // Format phone number - only allow digits and + at the start
+    if (field === "phone") {
+      // Only allow digits and + at the beginning
+      let cleaned = value.replace(/[^\d+]/g, "");
+      // Ensure + only appears at the start
+      if (cleaned.includes("+")) {
+        cleaned = "+" + cleaned.replace(/\+/g, "");
+      }
+      // Limit length: +639XXXXXXXXX (13 chars) or 09XXXXXXXXX (11 chars)
+      if (cleaned.startsWith("+")) {
+        cleaned = cleaned.slice(0, 13); // +639123456789
+      } else {
+        cleaned = cleaned.slice(0, 11); // 09123456789
+      }
+      value = cleaned;
+    }
+
     setFormData((prev) => ({ ...prev, [field]: value }));
     // Clear error when user starts typing
     if (errors[field]) {
@@ -108,26 +130,37 @@ export function SupervisorSignupForm({
     }
 
     setIsLoading(true);
+    setErrors({});
 
     try {
-      // For now, create a local supervisor user since we don't have the supervisor endpoint yet
-      const newUser: User = {
-        id: `user-${Date.now()}`,
+      const response = await apiService.signup({
         name: formData.name,
-        email: formData.email.toLowerCase(),
-        role: "supervisor",
-        department: formData.department,
-        school: formData.department,
-        secureId: generateSecureId('supervisor'),
-        employeeNumber: generateEmployeeNumber(),
+        email: formData.email,
+        password: formData.password,
+        school: formData.department, // For supervisor, use department as school
         phone: formData.phone,
-        password: formData.password, // Keep password in memory for this session
-      };
+        role: "supervisor",
+      });
 
-      onSignup(newUser);
+      if (response.data && response.data.user) {
+        const userData = mapUserDataFromBackend(response.data.user);
+        onSignup(userData);
+        Swal.fire({
+          icon: "success",
+          title: "Supervisor Created!",
+          text: "The supervisor has been successfully added.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      } else {
+        throw new Error(response.error || "Signup failed");
+      }
     } catch (err) {
       setErrors({
-        submit: err instanceof Error ? err.message : 'Failed to create supervisor account'
+        submit:
+          err instanceof Error
+            ? err.message
+            : "Failed to create supervisor account",
       });
     } finally {
       setIsLoading(false);
@@ -147,9 +180,7 @@ export function SupervisorSignupForm({
               <X className="h-4 w-4" />
             </Button>
           </div>
-          <CardDescription>
-            Add a new supervisor to the system
-          </CardDescription>
+          <CardDescription>Add a new supervisor to the system</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -160,17 +191,11 @@ export function SupervisorSignupForm({
                 type="text"
                 placeholder="Enter supervisor's full name"
                 value={formData.name}
-                onChange={(e) =>
-                  handleInputChange("name", e.target.value)
-                }
-                className={
-                  errors.name ? "border-destructive" : ""
-                }
+                onChange={(e) => handleInputChange("name", e.target.value)}
+                className={errors.name ? "border-destructive" : ""}
               />
               {errors.name && (
-                <p className="text-sm text-destructive">
-                  {errors.name}
-                </p>
+                <p className="text-sm text-destructive">{errors.name}</p>
               )}
             </div>
 
@@ -181,17 +206,11 @@ export function SupervisorSignupForm({
                 type="email"
                 placeholder="Enter supervisor's email"
                 value={formData.email}
-                onChange={(e) =>
-                  handleInputChange("email", e.target.value)
-                }
-                className={
-                  errors.email ? "border-destructive" : ""
-                }
+                onChange={(e) => handleInputChange("email", e.target.value)}
+                className={errors.email ? "border-destructive" : ""}
               />
               {errors.email && (
-                <p className="text-sm text-destructive">
-                  {errors.email}
-                </p>
+                <p className="text-sm text-destructive">{errors.email}</p>
               )}
             </div>
 
@@ -202,17 +221,11 @@ export function SupervisorSignupForm({
                 type="password"
                 placeholder="Enter password"
                 value={formData.password}
-                onChange={(e) =>
-                  handleInputChange("password", e.target.value)
-                }
-                className={
-                  errors.password ? "border-destructive" : ""
-                }
+                onChange={(e) => handleInputChange("password", e.target.value)}
+                className={errors.password ? "border-destructive" : ""}
               />
               {errors.password && (
-                <p className="text-sm text-destructive">
-                  {errors.password}
-                </p>
+                <p className="text-sm text-destructive">{errors.password}</p>
               )}
             </div>
 
@@ -223,17 +236,15 @@ export function SupervisorSignupForm({
                 type="tel"
                 placeholder="+639123456789 or 09123456789"
                 value={formData.phone}
-                onChange={(e) =>
-                  handleInputChange("phone", e.target.value)
-                }
-                className={
-                  errors.phone ? "border-destructive" : ""
-                }
+                onChange={(e) => handleInputChange("phone", e.target.value)}
+                maxLength={13}
+                className={errors.phone ? "border-destructive" : ""}
               />
+              <p className="text-xs text-muted-foreground">
+                Format: +639XXXXXXXXX or 09XXXXXXXXX
+              </p>
               {errors.phone && (
-                <p className="text-sm text-destructive">
-                  {errors.phone}
-                </p>
+                <p className="text-sm text-destructive">{errors.phone}</p>
               )}
             </div>
 
@@ -246,11 +257,7 @@ export function SupervisorSignupForm({
                 }
               >
                 <SelectTrigger
-                  className={
-                    errors.department
-                      ? "border-destructive"
-                      : ""
-                  }
+                  className={errors.department ? "border-destructive" : ""}
                 >
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
@@ -263,38 +270,26 @@ export function SupervisorSignupForm({
                 </SelectContent>
               </Select>
               {errors.department && (
-                <p className="text-sm text-destructive">
-                  {errors.department}
-                </p>
+                <p className="text-sm text-destructive">{errors.department}</p>
               )}
             </div>
 
             <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm">
-                  Account Information
-                </span>
+                <span className="text-sm">Account Information</span>
               </div>
               <div className="space-y-2 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Role:
-                  </span>
+                  <span className="text-muted-foreground">Role:</span>
                   <Badge variant="default">Supervisor</Badge>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Secure ID:
-                  </span>
-                  <span className="font-mono text-xs">
-                    Auto-generated
-                  </span>
+                  <span className="text-muted-foreground">Secure ID:</span>
+                  <span className="font-mono text-xs">Auto-generated</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">
-                    Created by:
-                  </span>
+                  <span className="text-muted-foreground">Created by:</span>
                   <span className="text-xs">Administrator</span>
                 </div>
               </div>

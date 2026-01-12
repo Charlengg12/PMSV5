@@ -1,15 +1,46 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { UserPlus, Mail, Phone, Shield, Eye, EyeOff, /* Edit, Trash2, */ Save, X } from 'lucide-react';
-import { SupervisorSignupForm } from '../auth/SupervisorSignupForm';
-import { User } from '../../types';
+import { useState } from "react";
+import { apiService } from "../../utils/apiService";
+import { mapUserDataFromBackend } from "../../utils/userDataMapper";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
+  UserPlus,
+  Mail,
+  Phone,
+  Shield,
+  Eye,
+  EyeOff,
+  /* Edit, Trash2, */ Save,
+  X,
+} from "lucide-react";
+import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
+import { User } from "../../types";
+import Swal from "sweetalert2";
 
 interface UserManagementProps {
   users: User[];
@@ -17,33 +48,176 @@ interface UserManagementProps {
   currentUser: User;
 }
 
-export function UserManagement({ users, setUsers, currentUser }: UserManagementProps) {
+export function UserManagement({
+  users,
+  setUsers,
+  currentUser,
+}: UserManagementProps) {
   const [showSupervisorForm, setShowSupervisorForm] = useState(false);
   const [showSecureIds, setShowSecureIds] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editEmailError, setEditEmailError] = useState<string>("");
+  const [editPhoneError, setEditPhoneError] = useState<string>("");
+  const [editGcashError, setEditGcashError] = useState<string>("");
 
-  const handleCreateSupervisor = (newSupervisor: User) => {
-    setUsers([...users, newSupervisor]);
+  const handleCreateSupervisor = async (newSupervisor: User) => {
+    // After adding, fetch the latest users from backend for true refresh
+    try {
+      const response = await apiService.getUsers();
+      if (response.data) {
+        const mapped = response.data.map(mapUserDataFromBackend);
+        setUsers(mapped);
+      } else {
+        // fallback: add locally if fetch fails
+        setUsers([...users, newSupervisor]);
+      }
+    } catch (err) {
+      setUsers([...users, newSupervisor]);
+    }
     setShowSupervisorForm(false);
   };
 
   const handleEditUser = (user: User) => {
     setEditingUser({ ...user });
+    setEditEmailError("");
+    setEditPhoneError("");
+    setEditGcashError("");
     setShowEditDialog(true);
   };
 
-  const handleSaveUser = () => {
+  const handleSaveUser = async () => {
     if (editingUser) {
-      setUsers(users.map(u => u.id === editingUser.id ? editingUser : u));
-      setShowEditDialog(false);
-      setEditingUser(null);
+      const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+      const phoneRegex = /^(\+639|09)\d{9}$/;
+      const gcashRegex = /^09\d{9}$/;
+      let hasError = false;
+
+      if (!emailRegex.test(editingUser.email)) {
+        setEditEmailError(
+          "Please enter a valid Gmail address (e.g., example@gmail.com)"
+        );
+        hasError = true;
+      } else {
+        setEditEmailError("");
+      }
+
+      if (editingUser.phone && !phoneRegex.test(editingUser.phone)) {
+        setEditPhoneError("Phone must be +639123456789 or 09123456789");
+        hasError = true;
+      } else if (
+        editingUser.phone &&
+        editingUser.phone.length !== 13 &&
+        editingUser.phone.length !== 11
+      ) {
+        setEditPhoneError("Phone must be 13 or 11 digits");
+        hasError = true;
+      } else {
+        setEditPhoneError("");
+      }
+
+      if (
+        editingUser.gcashNumber &&
+        !gcashRegex.test(editingUser.gcashNumber)
+      ) {
+        setEditGcashError(
+          "GCash number must be 11 digits starting with 09 (e.g., 09123456789)"
+        );
+        hasError = true;
+      } else if (
+        editingUser.gcashNumber &&
+        editingUser.gcashNumber.length !== 11
+      ) {
+        setEditGcashError("GCash number must be exactly 11 digits");
+        hasError = true;
+      } else {
+        setEditGcashError("");
+      }
+
+      if (hasError) return;
+
+      // Check if any field actually changed
+      const originalUser = users.find((u) => u.id === editingUser.id);
+      if (
+        originalUser &&
+        JSON.stringify(originalUser) === JSON.stringify(editingUser)
+      ) {
+        Swal.fire({
+          icon: "info",
+          title: "No Changes Detected",
+          text: "No information was changed.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+        setShowEditDialog(false);
+        setEditingUser(null);
+        return;
+      }
+
+      // Update user in database
+      try {
+        await apiService.updateUser(editingUser.id, editingUser);
+        // Refresh user list from backend
+        const response = await apiService.getUsers();
+        if (response.data) {
+          const mapped = response.data.map(mapUserDataFromBackend);
+          setUsers(mapped);
+        }
+        setShowEditDialog(false);
+        setEditingUser(null);
+        Swal.fire({
+          icon: "success",
+          title: "User Updated!",
+          text: "The user information has been successfully updated.",
+          showConfirmButton: false,
+          timer: 1500,
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: "error",
+          title: "Update Failed",
+          text: "Could not update user information.",
+        });
+      }
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    if (window.confirm('Are you sure you want to deactivate this user?')) {
-      setUsers(users.filter(u => u.id !== userId));
+  const handleDeleteUser = async (userId: string) => {
+    const result = await Swal.fire({
+      title: "Deactivate User?",
+      text: "This action can be undone by reactivating.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+    if (result.isConfirmed) {
+      // Optionally, call backend to set is_active = 0
+      try {
+        await apiService.updateUser(userId, { is_active: 0 });
+        const response = await apiService.getUsers();
+        if (response.data) {
+          const mapped = response.data.map(mapUserDataFromBackend);
+          setUsers(mapped);
+        } else {
+          setUsers(users.filter((u) => u.id !== userId));
+        }
+        Swal.fire({
+          icon: "success",
+          title: "User Deactivated",
+          text: "The user has been deactivated.",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (err) {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to Deactivate",
+          text: "Could not deactivate the user.",
+        });
+      }
     }
   };
 
@@ -54,18 +228,18 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
 
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
-      case 'admin':
-        return 'destructive';
-      case 'supervisor':
-        return 'default';
-      case 'fabricator':
-        return 'secondary';
+      case "admin":
+        return "destructive";
+      case "supervisor":
+        return "default";
+      case "fabricator":
+        return "secondary";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
-  const canManageUsers = currentUser.role === 'admin';
+  const canManageUsers = currentUser.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -88,8 +262,12 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
               size="sm"
               onClick={() => setShowSecureIds(!showSecureIds)}
             >
-              {showSecureIds ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showSecureIds ? 'Hide' : 'Show'} Secure IDs
+              {showSecureIds ? (
+                <EyeOff className="h-4 w-4" />
+              ) : (
+                <Eye className="h-4 w-4" />
+              )}
+              {showSecureIds ? "Hide" : "Show"} Secure IDs
             </Button>
           </div>
         </CardHeader>
@@ -103,7 +281,7 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
                 <TableHead>Contact</TableHead>
                 {showSecureIds && <TableHead>Secure ID</TableHead>}
                 <TableHead>Employee #</TableHead>
-                {currentUser.role === 'admin' && <TableHead>Actions</TableHead>}
+                {currentUser.role === "admin" && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -147,18 +325,24 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
                     </TableCell>
                   )}
                   <TableCell>
-                    <code className="text-xs">
-                      {user.employeeNumber}
-                    </code>
+                    <code className="text-xs">{user.employeeNumber}</code>
                   </TableCell>
-                  {currentUser.role === 'admin' && (
+                  {currentUser.role === "admin" && (
                     <TableCell>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEditUser(user)}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                        >
                           Edit
                         </Button>
                         {user.id !== currentUser.id && (
-                          <Button variant="outline" size="sm" onClick={() => handleDeleteUser(user.id)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteUser(user.id)}
+                          >
                             Deactivate
                           </Button>
                         )}
@@ -179,7 +363,8 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
               <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg mb-2">Limited Access</h3>
               <p className="text-muted-foreground">
-                Only administrators can manage users and create supervisor accounts.
+                Only administrators can manage users and create supervisor
+                accounts.
               </p>
             </div>
           </CardContent>
@@ -208,45 +393,94 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
                   <Label htmlFor="name">Name</Label>
                   <Input
                     id="name"
-                    value={editingUser.name || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                    value={editingUser.name || ""}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, name: e.target.value })
+                    }
                   />
                 </div>
                 <div>
                   <Label htmlFor="email">Email</Label>
                   <Input
                     id="email"
-                    value={editingUser.email || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    value={editingUser.email || ""}
+                    onChange={(e) => {
+                      setEditingUser({ ...editingUser, email: e.target.value });
+                      setEditEmailError("");
+                    }}
+                    className={editEmailError ? "border-destructive" : ""}
                   />
+                  {editEmailError && (
+                    <p className="text-sm text-destructive">{editEmailError}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="phone">Phone</Label>
                   <Input
                     id="phone"
-                    value={editingUser.phone || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                    value={editingUser.phone || ""}
+                    maxLength={13}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^\d+]/g, "");
+                      if (val.includes("+")) {
+                        val = "+" + val.replace(/\+/g, "");
+                      }
+                      if (val.startsWith("+")) {
+                        val = val.slice(0, 13);
+                      } else {
+                        val = val.slice(0, 11);
+                      }
+                      setEditingUser({ ...editingUser, phone: val });
+                      setEditPhoneError("");
+                    }}
+                    className={editPhoneError ? "border-destructive" : ""}
                   />
+                  {editPhoneError && (
+                    <p className="text-sm text-destructive">{editPhoneError}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="gcashNumber">GCash Number</Label>
                   <Input
                     id="gcashNumber"
-                    value={editingUser.gcashNumber || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, gcashNumber: e.target.value })}
+                    value={editingUser.gcashNumber || ""}
+                    maxLength={11}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^\d]/g, "");
+                      val = val.slice(0, 11);
+                      setEditingUser({
+                        ...editingUser,
+                        gcashNumber: val,
+                      });
+                      setEditGcashError("");
+                    }}
+                    className={editGcashError ? "border-destructive" : ""}
                   />
+                  {editGcashError && (
+                    <p className="text-sm text-destructive">{editGcashError}</p>
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="school">School/Institution</Label>
                   <Input
                     id="school"
-                    value={editingUser.school || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, school: e.target.value })}
+                    value={editingUser.school || ""}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, school: e.target.value })
+                    }
                   />
                 </div>
                 <div>
                   <Label htmlFor="role">Role</Label>
-                  <Select value={editingUser.role} onValueChange={(value) => setEditingUser({ ...editingUser, role: value as User['role'] })}>
+                  <Select
+                    value={editingUser.role}
+                    onValueChange={(value) =>
+                      setEditingUser({
+                        ...editingUser,
+                        role: value as User["role"],
+                      })
+                    }
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -262,16 +496,26 @@ export function UserManagement({ users, setUsers, currentUser }: UserManagementP
                   <Label htmlFor="secureId">Secure ID</Label>
                   <Input
                     id="secureId"
-                    value={editingUser.secureId || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, secureId: e.target.value })}
+                    value={editingUser.secureId || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        secureId: e.target.value,
+                      })
+                    }
                   />
                 </div>
                 <div>
                   <Label htmlFor="employeeNumber">Employee #</Label>
                   <Input
                     id="employeeNumber"
-                    value={editingUser.employeeNumber || ''}
-                    onChange={(e) => setEditingUser({ ...editingUser, employeeNumber: e.target.value })}
+                    value={editingUser.employeeNumber || ""}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        employeeNumber: e.target.value,
+                      })
+                    }
                   />
                 </div>
               </div>

@@ -1,15 +1,21 @@
-import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Separator } from '../ui/separator';
-import { Shield, UserPlus, Eye, EyeOff } from 'lucide-react';
-import { User } from '../../types';
-import { CompanyLogo } from '../ui/company-logo';
-import { apiService } from '../../utils/apiService';
-import { mapUserDataFromBackend } from '../../utils/userDataMapper';
+import { useState } from "react";
+import { Button } from "../ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Separator } from "../ui/separator";
+import { Shield, UserPlus, Eye, EyeOff } from "lucide-react";
+import { User } from "../../types";
+import { CompanyLogo } from "../ui/company-logo";
+import { apiService } from "../../utils/apiService";
+import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 
 interface LoginFormProps {
   onLogin: (user: User) => void;
@@ -17,29 +23,36 @@ interface LoginFormProps {
   onShowForgotPassword: () => void;
 }
 
-export function LoginForm({ onLogin, onShowSignup, onShowForgotPassword }: LoginFormProps) {
+export function LoginForm({
+  onLogin,
+  onShowSignup,
+  onShowForgotPassword,
+}: LoginFormProps) {
   const [formData, setFormData] = useState({
-    identifier: '',
-    password: ''
+    identifier: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-    setError(''); // Clear error when user types
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setError(""); // Clear error when user types
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError('');
+    setError("");
 
     try {
       // Check if we're in demo mode (no proper Supabase setup)
       // Try API login first
-      const response = await apiService.login(formData.identifier, formData.password);
+      const response = await apiService.login(
+        formData.identifier,
+        formData.password
+      );
 
       if (response.data) {
         // Set the token in the API service
@@ -52,83 +65,95 @@ export function LoginForm({ onLogin, onShowSignup, onShowForgotPassword }: Login
         onLogin(userData);
       } else {
         // If API fails, try demo mode as fallback
-        if (formData.identifier.toLowerCase() === 'admin' && formData.password === 'password123') {
+        if (
+          formData.identifier.toLowerCase() === "admin" &&
+          formData.password === "password123"
+        ) {
           const demoAdminUser = {
-            id: 'admin-1',
-            name: 'Demo Administrator',
-            email: 'admin@ehub.com',
-            role: 'admin' as const,
-            school: 'Ehub University',
-            phone: '+63 123 456 7890',
-            gcashNumber: '09123456789',
-            secureId: 'ADM001',
-            employeeNumber: 'EMP001',
+            id: "admin-1",
+            name: "Demo Administrator",
+            email: "admin@ehub.com",
+            role: "admin" as const,
+            school: "Ehub University",
+            phone: "+63 123 456 7890",
+            gcashNumber: "09123456789",
+            secureId: "ADM001",
+            employeeNumber: "EMP001",
             isActive: true,
             createdAt: new Date().toISOString(),
-            department: 'Administration'
+            department: "Administration",
           };
           onLogin(demoAdminUser);
           return;
         }
-        if (formData.identifier.toLowerCase() === 'supervisor' && formData.password === 'password123') {
+        if (
+          formData.identifier.toLowerCase() === "supervisor" &&
+          formData.password === "password123"
+        ) {
           const demoSupervisorUser = {
-            id: 'supervisor-1',
-            name: 'Demo Supervisor',
-            email: 'supervisor@ehub.com',
-            role: 'supervisor' as const,
-            school: 'Ehub University',
-            phone: '+63 987 654 3210',
-            gcashNumber: '09987654321',
-            secureId: 'SUP001',
-            employeeNumber: 'EMP101',
+            id: "supervisor-1",
+            name: "Demo Supervisor",
+            email: "supervisor@ehub.com",
+            role: "supervisor" as const,
+            school: "Ehub University",
+            phone: "+63 987 654 3210",
+            gcashNumber: "09987654321",
+            secureId: "SUP001",
+            employeeNumber: "EMP101",
             isActive: true,
             createdAt: new Date().toISOString(),
-            department: 'Demo Department'
+            department: "Demo Department",
           };
           onLogin(demoSupervisorUser);
           return;
         }
-        throw new Error(response.error || 'Login failed');
+        throw new Error(response.error || "Login failed");
       }
     } catch (err) {
       // If API is completely unavailable, try demo mode
-      if (formData.identifier.toLowerCase() === 'admin' && formData.password === 'password123') {
+      if (
+        formData.identifier.toLowerCase() === "admin" &&
+        formData.password === "password123"
+      ) {
         const demoAdminUser = {
-          id: 'admin-1',
-          name: 'Demo Administrator',
-          email: 'admin@ehub.com',
-          role: 'admin' as const,
-          school: 'Ehub University',
-          phone: '+63 123 456 7890',
-          gcashNumber: '09123456789',
-          secureId: 'ADM001',
-          employeeNumber: 'EMP001',
+          id: "admin-1",
+          name: "Demo Administrator",
+          email: "admin@ehub.com",
+          role: "admin" as const,
+          school: "Ehub University",
+          phone: "+63 123 456 7890",
+          gcashNumber: "09123456789",
+          secureId: "ADM001",
+          employeeNumber: "EMP001",
           isActive: true,
           createdAt: new Date().toISOString(),
-          department: 'Administration'
+          department: "Administration",
         };
         onLogin(demoAdminUser);
         return;
       }
-      if (formData.identifier.toLowerCase() === 'supervisor' && formData.password === 'password123') {
+      if (
+        formData.identifier.toLowerCase() === "supervisor" &&
+        formData.password === "password123"
+      ) {
         const demoSupervisorUser = {
-          id: 'supervisor-1',
-          name: 'Demo Supervisor',
-          email: 'supervisor@ehub.com',
-          role: 'supervisor' as const,
-          school: 'Ehub University',
-          phone: '+63 987 654 3210',
-          gcashNumber: '09987654321',
-          secureId: 'SUP001',
-          employeeNumber: 'EMP101',
+          id: "supervisor-1",
+          name: "Demo Supervisor",
+          email: "supervisor@ehub.com",
+          role: "supervisor" as const,
+          school: "Ehub University",
+          phone: "+63 987 654 3210",
+          gcashNumber: "09987654321",
+          secureId: "SUP001",
+          employeeNumber: "EMP101",
           isActive: true,
           createdAt: new Date().toISOString(),
-          department: 'Demo Department'
+          department: "Demo Department",
         };
         onLogin(demoSupervisorUser);
         return;
       }
-      setError(err instanceof Error ? err.message : 'Login failed');
+      setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       setIsLoading(false);
     }
@@ -145,12 +170,18 @@ export function LoginForm({ onLogin, onShowSignup, onShowForgotPassword }: Login
       <Card className="w-full max-w-md relative z-10 shadow-2xl border-0">
         <CardHeader className="text-center space-y-4 pb-8">
           <div className="flex items-center justify-center mb-4">
-            <CompanyLogo size="xl" showText={true} className="font-[Archivo_Black]" />
+            <CompanyLogo
+              size="xl"
+              showText={true}
+              className="font-[Archivo_Black]"
+            />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl font-[Archivo_Black]">Ehub Project Management</CardTitle>
+              <CardTitle className="text-2xl font-[Archivo_Black]">
+                Ehub Project Management
+              </CardTitle>
             </div>
             <CardDescription className="text-base">
               Enter your credentials to access the system
@@ -160,13 +191,17 @@ export function LoginForm({ onLogin, onShowSignup, onShowForgotPassword }: Login
         <CardContent className="space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="identifier">Employee ID / Secure ID / Email</Label>
+              <Label htmlFor="identifier">
+                Employee ID / Secure ID / Email
+              </Label>
               <Input
                 id="identifier"
                 type="text"
                 placeholder="Enter your ID or email"
                 value={formData.identifier}
-                onChange={(e) => handleInputChange('identifier', e.target.value)}
+                onChange={(e) =>
+                  handleInputChange("identifier", e.target.value)
+                }
                 required
               />
               <p className="text-xs text-muted-foreground">
@@ -179,10 +214,12 @@ export function LoginForm({ onLogin, onShowSignup, onShowForgotPassword }: Login
               <div className="relative">
                 <Input
                   id="password"
-                  type={showPassword ? 'text' : 'password'}
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={formData.password}
-                  onChange={(e) => handleInputChange('password', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
                   required
                 />
                 <Button

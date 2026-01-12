@@ -1,50 +1,64 @@
-import { useState, useEffect } from 'react';
-import { Button } from '../ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Calendar } from '../ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Badge } from '../ui/badge';
-import { X, Plus, CalendarIcon, Building, DollarSign } from 'lucide-react';
-import { format } from 'date-fns';
-import { Project, User } from '../../types';
+import { useState, useEffect } from "react";
+import { Button } from "../ui/button";
+import Swal from "sweetalert2";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Alert, AlertDescription } from "../ui/alert";
+import { Calendar } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Badge } from "../ui/badge";
+import { X, Plus, CalendarIcon, Building, DollarSign } from "lucide-react";
+import { format } from "date-fns";
+import { Project, User } from "../../types";
 // Removed embedded client creation dialog; it will be launched separately from the Projects page
 
 interface CreateProjectFormProps {
   currentUser: User;
   users: User[];
-  onCreateProject: (project: Omit<Project, 'id'>) => void | Promise<void> | Promise<Project>;
+  onCreateProject: (
+    project: Omit<Project, "id">
+  ) => void | Promise<void> | Promise<Project>;
   onClose: () => void;
 }
 
-export function CreateProjectForm({ currentUser, users, onCreateProject, onClose }: CreateProjectFormProps) {
+export function CreateProjectForm({
+  currentUser,
+  users,
+  onCreateProject,
+  onClose,
+}: CreateProjectFormProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    priority: 'medium' as Project['priority'],
+    name: "",
+    description: "",
+    priority: "medium" as Project["priority"],
     startDate: new Date(),
     endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-    supervisorId: '',
+    supervisorId: "",
     fabricatorIds: [] as string[],
-    fabricatorAllocation: '',
-    materialsAllocation: '',
-    supervisorAllocation: '',
-    companyAllocation: '',
-    totalProjectPrice: '',
+    fabricatorAllocation: "",
+    materialsAllocation: "",
+    supervisorAllocation: "",
+    companyAllocation: "",
+    totalProjectPrice: "",
     supervisorAssignsFabricators: false,
     broadcastToSupervisors: false, // New toggle state
-    documentationUrl: ''
+    documentationUrl: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
 
-  const supervisors = users.filter(u => u.role === 'supervisor');
-  const fabricators = users.filter(u => u.role === 'fabricator');
+  const supervisors = users.filter((u) => u.role === "supervisor");
+  const fabricators = users.filter((u) => u.role === "fabricator");
 
   useEffect(() => {
     const fabricator = parseFloat(formData.fabricatorAllocation) || 0;
@@ -53,35 +67,41 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
     const company = parseFloat(formData.companyAllocation) || 0;
 
     const total = fabricator + materials + supervisor + company;
-    setFormData(prev => ({ ...prev, totalProjectPrice: total.toFixed(2) }));
+    setFormData((prev) => ({ ...prev, totalProjectPrice: total.toFixed(2) }));
   }, [
     formData.fabricatorAllocation,
     formData.materialsAllocation,
     formData.supervisorAllocation,
-    formData.companyAllocation
+    formData.companyAllocation,
   ]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = 'Project name is required';
+      newErrors.name = "Project name is required";
     }
 
     if (!formData.description.trim()) {
-      newErrors.description = 'Project description is required';
+      newErrors.description = "Project description is required";
     }
 
     if (!formData.supervisorId && !formData.broadcastToSupervisors) {
-      newErrors.supervisorId = 'Supervisor selection is required unless broadcasting to all';
+      newErrors.supervisorId =
+        "Supervisor selection is required unless broadcasting to all";
     }
 
-    if (!formData.supervisorAssignsFabricators && !formData.broadcastToSupervisors && formData.fabricatorIds.length === 0) {
-      newErrors.fabricatorIds = 'At least one fabricator must be assigned or supervisor must assign manually';
+    if (
+      !formData.supervisorAssignsFabricators &&
+      !formData.broadcastToSupervisors &&
+      formData.fabricatorIds.length === 0
+    ) {
+      newErrors.fabricatorIds =
+        "At least one fabricator must be assigned or supervisor must assign manually";
     }
 
     if (formData.endDate <= formData.startDate) {
-      newErrors.endDate = 'End date must be after start date';
+      newErrors.endDate = "End date must be after start date";
     }
 
     if (
@@ -90,7 +110,8 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
       (parseFloat(formData.supervisorAllocation) || 0) < 0 ||
       (parseFloat(formData.companyAllocation) || 0) < 0
     ) {
-      newErrors.totalProjectPrice = 'Allocations must be zero or positive numbers';
+      newErrors.totalProjectPrice =
+        "Allocations must be zero or positive numbers";
     }
 
     setErrors(newErrors);
@@ -98,20 +119,26 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
   };
 
   const handleInputChange = (field: string, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors(prev => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const handleAddFabricator = (fabricatorId: string) => {
     if (!formData.fabricatorIds.includes(fabricatorId)) {
-      handleInputChange('fabricatorIds', [...formData.fabricatorIds, fabricatorId]);
+      handleInputChange("fabricatorIds", [
+        ...formData.fabricatorIds,
+        fabricatorId,
+      ]);
     }
   };
 
   const handleRemoveFabricator = (fabricatorId: string) => {
-    handleInputChange('fabricatorIds', formData.fabricatorIds.filter(id => id !== fabricatorId));
+    handleInputChange(
+      "fabricatorIds",
+      formData.fabricatorIds.filter((id) => id !== fabricatorId)
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -124,19 +151,23 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
     const totalProjectPrice = parseFloat(formData.totalProjectPrice);
 
     const shouldSupervisorAssign = formData.supervisorAssignsFabricators;
-    const initialStatus: Project['status'] = shouldSupervisorAssign ? '0_Created' : '1_Assigned_to_FAB';
+    const initialStatus: Project["status"] = shouldSupervisorAssign
+      ? "0_Created"
+      : "1_Assigned_to_FAB";
 
-    const newProject: Omit<Project, 'id'> = {
+    const newProject: Omit<Project, "id"> = {
       name: formData.name,
       description: formData.description,
-      clientName: '',
+      clientName: "",
       status: initialStatus,
       priority: formData.priority,
-      startDate: formData.startDate.toISOString().split('T')[0],
-      endDate: formData.endDate.toISOString().split('T')[0],
+      startDate: formData.startDate.toISOString().split("T")[0],
+      endDate: formData.endDate.toISOString().split("T")[0],
       progress: 0,
       supervisorId: formData.supervisorId,
-      fabricatorIds: formData.supervisorAssignsFabricators ? [] : formData.fabricatorIds,
+      fabricatorIds: formData.supervisorAssignsFabricators
+        ? []
+        : formData.fabricatorIds,
       budget: totalProjectPrice,
       spent: 0,
       revenue: 0,
@@ -145,16 +176,25 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
       createdAt: new Date().toISOString(),
       fabricatorBudgets: [],
       // @ts-ignore - Adding extra property handled by backend
-      broadcastToSupervisors: formData.broadcastToSupervisors
+      broadcastToSupervisors: formData.broadcastToSupervisors,
     };
 
     await onCreateProject(newProject);
+    Swal.fire({
+      icon: "success",
+      title: "Project Created!",
+      text: "The project was successfully created.",
+      timer: 1500,
+      showConfirmButton: false,
+    });
     onClose();
-    try { window.location.hash = 'projects'; } catch { }
+    try {
+      window.location.hash = "projects";
+    } catch {}
   };
 
   const getFabricatorName = (id: string) => {
-    return users.find(u => u.id === id)?.name || 'Unknown';
+    return users.find((u) => u.id === id)?.name || "Unknown";
   };
 
   return (
@@ -184,11 +224,13 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                   <Input
                     id="name"
                     value={formData.name}
-                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
                     placeholder="Enter project name"
-                    className={errors.name ? 'border-destructive' : ''}
+                    className={errors.name ? "border-destructive" : ""}
                   />
-                  {errors.name && <p className="text-sm text-destructive">{errors.name}</p>}
+                  {errors.name && (
+                    <p className="text-sm text-destructive">{errors.name}</p>
+                  )}
                 </div>
               </div>
 
@@ -197,18 +239,26 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                 <Textarea
                   id="description"
                   value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("description", e.target.value)
+                  }
                   placeholder="Enter project description"
-                  className={errors.description ? 'border-destructive' : ''}
+                  className={errors.description ? "border-destructive" : ""}
                 />
-                {errors.description && <p className="text-sm text-destructive">{errors.description}</p>}
+                {errors.description && (
+                  <p className="text-sm text-destructive">
+                    {errors.description}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="priority">Priority</Label>
                 <Select
                   value={formData.priority}
-                  onValueChange={(value: Project['priority']) => handleInputChange('priority', value)}
+                  onValueChange={(value: Project["priority"]) =>
+                    handleInputChange("priority", value)
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select priority" />
@@ -230,11 +280,17 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label>Start Date</Label>
-                  <Popover open={showStartCalendar} onOpenChange={setShowStartCalendar}>
+                  <Popover
+                    open={showStartCalendar}
+                    onOpenChange={setShowStartCalendar}
+                  >
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                      >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(formData.startDate, 'PPP')}
+                        {format(formData.startDate, "PPP")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -243,7 +299,7 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                         selected={formData.startDate}
                         onSelect={(date) => {
                           if (date) {
-                            handleInputChange('startDate', date);
+                            handleInputChange("startDate", date);
                             setShowStartCalendar(false);
                           }
                         }}
@@ -255,11 +311,17 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
 
                 <div className="space-y-2">
                   <Label>End Date</Label>
-                  <Popover open={showEndCalendar} onOpenChange={setShowEndCalendar}>
+                  <Popover
+                    open={showEndCalendar}
+                    onOpenChange={setShowEndCalendar}
+                  >
                     <PopoverTrigger asChild>
-                      <Button variant="outline" className="w-full justify-start text-left">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-start text-left"
+                      >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {format(formData.endDate, 'PPP')}
+                        {format(formData.endDate, "PPP")}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
@@ -268,7 +330,7 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                         selected={formData.endDate}
                         onSelect={(date) => {
                           if (date) {
-                            handleInputChange('endDate', date);
+                            handleInputChange("endDate", date);
                             setShowEndCalendar(false);
                           }
                         }}
@@ -276,7 +338,9 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                       />
                     </PopoverContent>
                   </Popover>
-                  {errors.endDate && <p className="text-sm text-destructive">{errors.endDate}</p>}
+                  {errors.endDate && (
+                    <p className="text-sm text-destructive">{errors.endDate}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -289,20 +353,28 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                 <Label htmlFor="supervisor">Supervisor *</Label>
                 <Select
                   value={formData.supervisorId}
-                  onValueChange={(value) => handleInputChange('supervisorId', value)}
+                  onValueChange={(value) =>
+                    handleInputChange("supervisorId", value)
+                  }
                 >
-                  <SelectTrigger className={errors.supervisorId ? 'border-destructive' : ''}>
+                  <SelectTrigger
+                    className={errors.supervisorId ? "border-destructive" : ""}
+                  >
                     <SelectValue placeholder="Select supervisor" />
                   </SelectTrigger>
                   <SelectContent>
-                    {supervisors.map(supervisor => (
+                    {supervisors.map((supervisor) => (
                       <SelectItem key={supervisor.id} value={supervisor.id}>
                         {supervisor.name} - {supervisor.department}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {errors.supervisorId && <p className="text-sm text-destructive">{errors.supervisorId}</p>}
+                {errors.supervisorId && (
+                  <p className="text-sm text-destructive">
+                    {errors.supervisorId}
+                  </p>
+                )}
               </div>
 
               {/* Broadcast to all supervisors toggle */}
@@ -312,23 +384,30 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                   type="checkbox"
                   checked={formData.broadcastToSupervisors}
                   onChange={(e) => {
-                    handleInputChange('broadcastToSupervisors', e.target.checked);
+                    handleInputChange(
+                      "broadcastToSupervisors",
+                      e.target.checked
+                    );
                     // If broadcasting, we might clear specific supervisor or keep it as preferred?
                     // Let's keep it simply separate.
                     if (e.target.checked) {
-                      handleInputChange('supervisorId', '');
+                      handleInputChange("supervisorId", "");
                     }
                   }}
                   className="cursor-pointer h-4 w-4"
                 />
-                <Label htmlFor="broadcastToSupervisors" className="cursor-pointer font-medium">
+                <Label
+                  htmlFor="broadcastToSupervisors"
+                  className="cursor-pointer font-medium"
+                >
                   Send to all active supervisors
                 </Label>
               </div>
               {formData.broadcastToSupervisors && (
                 <Alert>
                   <AlertDescription>
-                    All supervisors will be notified. The first to accept will be assigned.
+                    All supervisors will be notified. The first to accept will
+                    be assigned.
                   </AlertDescription>
                 </Alert>
               )}
@@ -339,63 +418,88 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                   id="supervisorAssignsFabricators"
                   type="checkbox"
                   checked={formData.supervisorAssignsFabricators}
-                  onChange={(e) => handleInputChange('supervisorAssignsFabricators', e.target.checked)}
+                  onChange={(e) =>
+                    handleInputChange(
+                      "supervisorAssignsFabricators",
+                      e.target.checked
+                    )
+                  }
                   className="cursor-pointer"
                 />
-                <Label htmlFor="supervisorAssignsFabricators" className="cursor-pointer">
+                <Label
+                  htmlFor="supervisorAssignsFabricators"
+                  className="cursor-pointer"
+                >
                   Supervisor will assign fabricators manually
                 </Label>
               </div>
               {formData.supervisorAssignsFabricators && (
                 <Alert>
                   <AlertDescription>
-                    You can assign fabricators later from the project card using the Assign action.
+                    You can assign fabricators later from the project card using
+                    the Assign action.
                   </AlertDescription>
                 </Alert>
               )}
 
               {/* Fabricators selection disabled if supervisor assigns manually or broadcasting */}
-              {!formData.supervisorAssignsFabricators && !formData.broadcastToSupervisors && (
-                <div className="space-y-2">
-                  <Label>Fabricators *</Label>
-                  <Select onValueChange={handleAddFabricator}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Add fabricators" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fabricators
-                        .filter(fab => !formData.fabricatorIds.includes(fab.id))
-                        .map(fabricator => (
-                          <SelectItem key={fabricator.id} value={fabricator.id}>
-                            {fabricator.name} - {fabricator.department}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+              {!formData.supervisorAssignsFabricators &&
+                !formData.broadcastToSupervisors && (
+                  <div className="space-y-2">
+                    <Label>Fabricators *</Label>
+                    <Select onValueChange={handleAddFabricator}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Add fabricators" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fabricators
+                          .filter(
+                            (fab) => !formData.fabricatorIds.includes(fab.id)
+                          )
+                          .map((fabricator) => (
+                            <SelectItem
+                              key={fabricator.id}
+                              value={fabricator.id}
+                            >
+                              {fabricator.name} - {fabricator.department}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
 
-                  {formData.fabricatorIds.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      {formData.fabricatorIds.map(id => (
-                        <Badge key={id} variant="secondary" className="flex items-center gap-1">
-                          {getFabricatorName(id)}
-                          <X
-                            className="h-3 w-3 cursor-pointer"
-                            onClick={() => handleRemoveFabricator(id)}
-                          />
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                  {errors.fabricatorIds && <p className="text-sm text-destructive">{errors.fabricatorIds}</p>}
-                </div>
-              )}
+                    {formData.fabricatorIds.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {formData.fabricatorIds.map((id) => (
+                          <Badge
+                            key={id}
+                            variant="secondary"
+                            className="flex items-center gap-1"
+                          >
+                            {getFabricatorName(id)}
+                            <X
+                              className="h-3 w-3 cursor-pointer"
+                              onClick={() => handleRemoveFabricator(id)}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                    {errors.fabricatorIds && (
+                      <p className="text-sm text-destructive">
+                        {errors.fabricatorIds}
+                      </p>
+                    )}
+                  </div>
+                )}
             </div>
 
             {/* Financial Allocation */}
             <div className="space-y-4">
               <div className="flex items-end justify-between">
                 <h3 className="text-lg font-medium">Financial Allocation</h3>
-                <div className="text-sm text-muted-foreground">Total Project Price</div>
+                <div className="text-sm text-muted-foreground">
+                  Total Project Price
+                </div>
               </div>
 
               {/* Financial Overview Preview */}
@@ -406,7 +510,12 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
                       <DollarSign className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm">Budget</span>
                     </div>
-                    <p className="text-2xl">₱{(parseFloat(formData.totalProjectPrice) || 0).toLocaleString()}</p>
+                    <p className="text-2xl">
+                      ₱
+                      {(
+                        parseFloat(formData.totalProjectPrice) || 0
+                      ).toLocaleString()}
+                    </p>
                   </CardContent>
                 </Card>
 
@@ -433,61 +542,87 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
 
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="fabricatorAllocation">Fabricator Allocation (₱)</Label>
+                  <Label htmlFor="fabricatorAllocation">
+                    Fabricator Allocation (₱)
+                  </Label>
                   <Input
                     id="fabricatorAllocation"
                     type="number"
                     min="0"
                     step="0.01"
                     value={formData.fabricatorAllocation}
-                    onChange={(e) => handleInputChange('fabricatorAllocation', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("fabricatorAllocation", e.target.value)
+                    }
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-muted-foreground">Labor costs allocated to fabricators.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Labor costs allocated to fabricators.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="materialsAllocation">Materials Allocation (₱)</Label>
+                  <Label htmlFor="materialsAllocation">
+                    Materials Allocation (₱)
+                  </Label>
                   <Input
                     id="materialsAllocation"
                     type="number"
                     min="0"
                     step="0.01"
                     value={formData.materialsAllocation}
-                    onChange={(e) => handleInputChange('materialsAllocation', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("materialsAllocation", e.target.value)
+                    }
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-muted-foreground">Expected material expenses.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Expected material expenses.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="supervisorAllocation">Supervisor Allocation (₱)</Label>
+                  <Label htmlFor="supervisorAllocation">
+                    Supervisor Allocation (₱)
+                  </Label>
                   <Input
                     id="supervisorAllocation"
                     type="number"
                     min="0"
                     step="0.01"
                     value={formData.supervisorAllocation}
-                    onChange={(e) => handleInputChange('supervisorAllocation', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("supervisorAllocation", e.target.value)
+                    }
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-muted-foreground">Supervisor fees or overhead.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Supervisor fees or overhead.
+                  </p>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="companyAllocation">Company Allocation (₱)</Label>
+                  <Label htmlFor="companyAllocation">
+                    Company Allocation (₱)
+                  </Label>
                   <Input
                     id="companyAllocation"
                     type="number"
                     min="0"
                     step="0.01"
                     value={formData.companyAllocation}
-                    onChange={(e) => handleInputChange('companyAllocation', e.target.value)}
+                    onChange={(e) =>
+                      handleInputChange("companyAllocation", e.target.value)
+                    }
                     placeholder="0.00"
                   />
-                  <p className="text-xs text-muted-foreground">Company margin and other costs.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Company margin and other costs.
+                  </p>
                 </div>
                 <div className="space-y-2 md:col-span-2">
                   <Label className="flex items-center justify-between">
                     <span>Total Project Price (₱)</span>
-                    <span className="text-muted-foreground">Auto-calculated</span>
+                    <span className="text-muted-foreground">
+                      Auto-calculated
+                    </span>
                   </Label>
                   <Input
                     readOnly
@@ -503,12 +638,16 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
               <h3>Documentation (Optional)</h3>
 
               <div className="space-y-2">
-                <Label htmlFor="documentationUrl">Google Drive Documentation URL</Label>
+                <Label htmlFor="documentationUrl">
+                  Google Drive Documentation URL
+                </Label>
                 <Input
                   id="documentationUrl"
                   type="url"
                   value={formData.documentationUrl}
-                  onChange={(e) => handleInputChange('documentationUrl', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange("documentationUrl", e.target.value)
+                  }
                   placeholder="https://drive.google.com/drive/folders/..."
                 />
               </div>
@@ -523,7 +662,12 @@ export function CreateProjectForm({ currentUser, users, onCreateProject, onClose
             )}
 
             <div className="flex gap-4">
-              <Button type="button" variant="outline" onClick={onClose} className="flex-1">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onClose}
+                className="flex-1"
+              >
                 Cancel
               </Button>
               <Button type="submit" className="flex-1">
