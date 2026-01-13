@@ -1,19 +1,29 @@
 <?php
 
-// 1. Allow React (running on localhost:5173 or similar) to access this API
-header("Access-Control-Allow-Origin: *"); 
-// 2. Allow specific headers (JSON content type)
-header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-// 3. Explicitly allow PUT and DELETE methods
-header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+// // 1. Allow React (running on localhost:5173 or similar) to access this API
+// header("Access-Control-Allow-Origin: *"); 
+// // 2. Allow specific headers (JSON content type)
+// header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+// // 3. Explicitly allow PUT and DELETE methods
+// header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 
-// 4. Handle the "Preflight" OPTIONS request
-// The browser asks: "Can I send a PUT request?"
-// If we don't say "Yes" (200 OK) here, the browser blocks the update.
+// // 4. Handle the "Preflight" OPTIONS request
+// // The browser asks: "Can I send a PUT request?"
+// // If we don't say "Yes" (200 OK) here, the browser blocks the update.
+
+// --- PASTE THIS DEBUG BLOCK HERE ---
+$debugFile = 'global_debug.txt';
+$debugMsg = "Timestamp: " . date('Y-m-d H:i:s') . "\n";
+$debugMsg .= "Method: " . $_SERVER['REQUEST_METHOD'] . "\n";
+$debugMsg .= "URI: " . $_SERVER['REQUEST_URI'] . "\n";
+$debugMsg .= "Raw Input: " . file_get_contents('php://input') . "\n";
+$debugMsg .= "-----------------------------------\n";
+file_put_contents($debugFile, $debugMsg, FILE_APPEND);
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
 }
+
 
 // Simple PHP API router to replace Node/Express backend
 
@@ -29,13 +39,13 @@ if ($scriptDir !== '' && strpos($requestUri, $scriptDir) === 0) {
 } else {
     $path = $requestUri;
 }
-// $path = '/' . trim($path, '/');
-$path = '/' . trim($requestUri, '/');
+$path = '/' . trim($path, '/');
+// $path = '/' . trim($requestUri, '/');
 
-// 🔴 CRITICAL FIX: normalize `/api`
-if (str_starts_with($path, '/api/')) {
-    $path = substr($path, 4); // remove "/api"
-}
+// // 🔴 CRITICAL FIX: normalize `/api`
+// if (str_starts_with($path, '/api/')) {
+//     $path = substr($path, 4); // remove "/api"
+// }
 
 // Basic routing
 switch ($method . ' ' . $path) {
@@ -789,35 +799,93 @@ function handle_get_worklogs(PDO $pdo): void
 function handle_create_worklog(PDO $pdo): void
 {
     require_login();
-    $body = sanitize_recursive(json_input());
-    $workLogId = 'wl-' . time();
 
-    if (empty($body['projectId']) || empty($body['userId']) || empty($body['date']) || !isset($body['hoursWorked'])) {
-        json_response(['error' => 'projectId, userId, date, and hoursWorked are required'], 400);
+    // 1. Direct Input Reading (Bypasses potential helper function issues)
+    $rawInput = file_get_contents('php://input');
+    $body = json_decode($rawInput, true);
+
+    // 2. DEBUG LOGGING: Writes exactly what the server sees to a file
+    $debugMsg = "--- Worklog Attempt " . date('Y-m-d H:i:s') . " ---\n";
+    $debugMsg .= "Raw Input: " . $rawInput . "\n";
+    $debugMsg .= "Decoded Body: " . print_r($body, true) . "\n";
+    file_put_contents('debug_worklog_error.txt', $debugMsg, FILE_APPEND);
+
+    // 3. Flexible Extraction (Checks camelCase, snake_case, and lowercase)
+    $projectId = $body['projectId'] ?? $body['project_id'] ?? $body['projectid'] ?? null;
+    
+    // Check all variations for user ID
+    $userId = $body['fabricatorId'] ?? $body['fabricator_id'] ?? $body['userId'] ?? $body['user_id'] ?? $body['userid'] ?? null;
+    
+    $date = $body['date'] ?? null;
+    
+    // Check all variations for hours
+    $hoursInput = $body['hoursWorked'] ?? $body['hours_worked'] ?? $body['hoursworked'] ?? null;
+
+    // 4. Strict Validation with Specific Error Message
+    // We check !== '' to ensure we don't block 0 hours, but block empty strings
+    $hasHours = isset($hoursInput) && $hoursInput !== '';
+
+    if (!$projectId || !$userId || !$date || !$hasHours) {
+        // Construct a detailed error message for the frontend
+        $missing = [];
+        if (!$projectId) $missing[] = "projectId (Received: " . print_r($body['projectId'] ?? 'null', true) . ")";
+        if (!$userId) $missing[] = "userId/fabricatorId (Received keys: " . implode(', ', array_keys($body ?: [])) . ")";
+        if (!$date) $missing[] = "date";
+        if (!$hasHours) $missing[] = "hoursWorked";
+
+        // Return 400 with the specific details
+        json_response([
+            'error' => "Server Validation Failed. Missing fields: " . implode('; ', $missing),
+            'received_data' => $body
+        ], 400);
     }
 
-    $stmt = $pdo->prepare(
-        'INSERT INTO work_logs (id, project_id, user_id, date, hours_worked, description, progress_percentage)
-         VALUES (:id, :project_id, :user_id, :date, :hours_worked, :description, :progress_percentage)'
-    );
+    // 5. Insert Logic
+    $hours = floatval($hoursInput);
+    $description = $body['description'] ?? null;
+    $progressPercentage = $body['progressPercentage'] ?? $body['progress_percentage'] ?? 0;
 
-    $stmt->execute([
-        ':id' => $workLogId,
-        ':project_id' => $body['projectId'],
-        ':user_id' => $body['userId'],
-        ':date' => $body['date'],
-        ':hours_worked' => $body['hoursWorked'],
-        ':description' => $body['description'] ?? null,
-        ':progress_percentage' => $body['progressPercentage'] ?? 0,
-    ]);
+    $materialsUsed = null;
+    if (!empty($body['materials']) && is_array($body['materials'])) {
+        $materialsUsed = json_encode($body['materials']);
+    } elseif (!empty($body['materialsUsed']) && is_array($body['materialsUsed'])) {
+        $materialsUsed = json_encode($body['materialsUsed']);
+    }
 
-    $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $workLogId]);
-    $log = $stmt->fetch();
+    $workLogId = 'wl-' . time() . '-' . substr(md5(microtime()), 0, 6);
 
-    json_response($log);
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO work_logs 
+            (id, project_id, user_id, date, hours_worked, description, progress_percentage, materials_used)
+            VALUES (:id, :project_id, :user_id, :date, :hours_worked, :description, :progress_percentage, :materials_used)
+        ");
+
+        $stmt->execute([
+            ':id'                => $workLogId,
+            ':project_id'        => $projectId,
+            ':user_id'           => $userId,
+            ':date'              => $date,
+            ':hours_worked'      => $hours,
+            ':description'       => $description,
+            ':progress_percentage' => $progressPercentage,
+            ':materials_used'    => $materialsUsed,
+        ]);
+
+        // Fetch and return the result
+        $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id');
+        $stmt->execute([':id' => $workLogId]);
+        $log = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $log['fabricatorId'] = $log['user_id'];
+        $log['materials'] = json_decode($log['materials_used'] ?? '[]', true);
+
+        json_response($log);
+
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database SQL Error: ' . $e->getMessage()], 500);
+    }
 }
-
 function handle_get_materials(PDO $pdo): void
 {
     require_login();
