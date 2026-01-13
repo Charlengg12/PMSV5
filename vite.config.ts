@@ -80,7 +80,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api': {
           // CHANGE 'ehubph_pms2' to the actual name of your folder in htdocs
-          target: 'http://localhost/ELECTRONIK-HUB/EHUB_PMS_TEAM/api', 
+          target: 'http://localhost/EHUB_PMSv4/api', 
           changeOrigin: true,
           secure: false,
           // This strips '/api' from the request before sending it to PHP
