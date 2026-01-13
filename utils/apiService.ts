@@ -227,6 +227,34 @@ class ApiService {
     async healthCheck(): Promise<ApiResponse<any>> {
         return this.request('/health');
     }
+
+    // Reports methods
+    async getReports(): Promise<ApiResponse<any[]>> {
+        return this.request('/reports', {
+            method: 'GET',
+            credentials: 'include', 
+        });
+    }
+
+    async createReport(reportData: any): Promise<ApiResponse<any>> {
+        return this.request('/reports/create', {
+            method: 'POST',
+            body: JSON.stringify(reportData),
+        });
+    }
+
+    async editReport(reportId: string, updates: any): Promise<ApiResponse<any>> {
+        return this.request(`/reports/${reportId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+    async deleteReport(reportId: string): Promise<ApiResponse<any>> {
+        return this.request(`/reports/${reportId}`, {
+            method: 'DELETE',
+        });
+    }
+    
 }
 
 export const apiService = new ApiService();
