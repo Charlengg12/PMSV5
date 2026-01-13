@@ -1,15 +1,5 @@
 <?php
 
-// // 1. Allow React (running on localhost:5173 or similar) to access this API
-// header("Access-Control-Allow-Origin: *"); 
-// // 2. Allow specific headers (JSON content type)
-// header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
-// // 3. Explicitly allow PUT and DELETE methods
-// header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
-
-// // 4. Handle the "Preflight" OPTIONS request
-// // The browser asks: "Can I send a PUT request?"
-// // If we don't say "Yes" (200 OK) here, the browser blocks the update.
 
 // --- PASTE THIS DEBUG BLOCK HERE ---
 $debugFile = 'global_debug.txt';
@@ -312,15 +302,25 @@ function handle_create_project(PDO $pdo): void
 
     $pendingSupervisors = [];
     if (!empty($body['broadcastToSupervisors'])) {
-        // Fetch all active supervisors
         $stmt = $pdo->query("SELECT id FROM users WHERE role = 'supervisor' AND is_active = 1");
         $supervisors = $stmt->fetchAll(PDO::FETCH_COLUMN);
         $pendingSupervisors = $supervisors;
     }
 
+    // UPDATED: Added allocation columns to INSERT statement
     $stmt = $pdo->prepare(
-        'INSERT INTO projects (id, title, description, status, priority, progress, start_date, due_date, budget, client_id, supervisor_id, fabricator_ids, pending_supervisors)
-         VALUES (:id, :title, :description, :status, :priority, :progress, :start_date, :due_date, :budget, :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors)'
+        'INSERT INTO projects (
+            id, title, description, status, priority, progress, 
+            start_date, due_date, budget, revenue, spent,
+            fabricator_allocation, materials_allocation, supervisor_allocation, company_allocation,
+            client_id, supervisor_id, fabricator_ids, pending_supervisors
+        )
+         VALUES (
+            :id, :title, :description, :status, :priority, :progress, 
+            :start_date, :due_date, :budget, :revenue, :spent,
+            :fabricator_allocation, :materials_allocation, :supervisor_allocation, :company_allocation,
+            :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors
+        )'
     );
 
     $stmt->execute([
@@ -332,7 +332,16 @@ function handle_create_project(PDO $pdo): void
         ':progress' => $body['progress'] ?? 0,
         ':start_date' => $body['startDate'] ?? null,
         ':due_date' => $body['endDate'] ?? ($body['dueDate'] ?? null),
-        ':budget' => $body['budget'] ?? null,
+        
+        // Financial mappings
+        ':budget' => $body['budget'] ?? 0.00, // This is Total Allocated
+        ':revenue' => $body['revenue'] ?? 0.00, // This is Client Price
+        ':spent' => 0.00,
+        ':fabricator_allocation' => $body['fabricator_allocation'] ?? 0.00,
+        ':materials_allocation' => $body['materials_allocation'] ?? 0.00,
+        ':supervisor_allocation' => $body['supervisor_allocation'] ?? 0.00,
+        ':company_allocation' => $body['company_allocation'] ?? 0.00,
+
         ':client_id' => $body['clientId'] ?? null,
         ':supervisor_id' => $body['supervisorId'] ?? null,
         ':fabricator_ids' => isset($body['fabricatorIds']) ? json_encode($body['fabricatorIds']) : json_encode([]),
