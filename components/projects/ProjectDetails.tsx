@@ -617,7 +617,7 @@ export function ProjectDetails({
                         </div>
                         <div>
                           <p className="font-medium">
-                            {getSupervisorName(project.supervisorId)}
+                            {getSupervisorName(editedProject.supervisorId)}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Project Supervisor
@@ -630,10 +630,10 @@ export function ProjectDetails({
                   {/* Fabricators list */}
                   <div>
                     <Label className="flex items-center gap-2 text-base mb-3">
-                      Fabricators ({project.fabricatorIds.length})
+                      Fabricators ({editedProject.fabricatorIds.length})
                     </Label>
                     <div className="space-y-3">
-                      {project.fabricatorIds.map((fabId, index) => {
+                      {editedProject.fabricatorIds.map((fabId, index) => {
                         const fabricator = users.find((u) => u.id === fabId);
                         const fabricatorBudget =
                           project.fabricatorBudgets?.find(
