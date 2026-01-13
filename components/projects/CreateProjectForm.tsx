@@ -142,12 +142,56 @@ export function CreateProjectForm({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!validateForm()) {
-      return;
+  if (!validateForm()) {
+    return;
+  }
+
+  const result = await Swal.fire({
+    title: 'Are you sure?',
+    text: "Please confirm if you want to proceed.",
+    icon: 'info',
+    showCancelButton: true,
+    cancelButtonText: 'Cancel',
+    confirmButtonText: 'Confirm',
+    allowOutsideClick: false,
+    customClass: {
+        container: 'swal-container',
+        popup: 'swal-popup',
+        title: 'swal-title',
+        htmlContainer: 'swal-content',
+        confirmButton: 'swal-confirm-button',
+        cancelButton: 'swal-cancel-button',
+        icon: 'swal-icon'
     }
+  });
 
+  if (!result.isConfirmed) {
+    return;
+  }
+
+  // ────────────────────────────────────────────────
+  // Show loading state
+  // ────────────────────────────────────────────────
+  Swal.fire({
+    title: 'Processing...',
+    text: "Please wait, your request is being processed.",
+    allowOutsideClick: false,
+    customClass: {
+        container: 'swal-container',
+        popup: 'swal-popup',
+        title: 'swal-title',
+        htmlContainer: 'swal-content',
+        cancelButton: 'swal-cancel-button',
+        icon: 'swal-icon'
+    },
+    didOpen: () => {
+        Swal.showLoading();
+    }
+  });
+
+  try {
     const totalProjectPrice = parseFloat(formData.totalProjectPrice);
 
     const shouldSupervisorAssign = formData.supervisorAssignsFabricators;
@@ -175,23 +219,61 @@ export function CreateProjectForm({
       createdBy: currentUser.id,
       createdAt: new Date().toISOString(),
       fabricatorBudgets: [],
-      // @ts-ignore - Adding extra property handled by backend
+      // @ts-ignore
       broadcastToSupervisors: formData.broadcastToSupervisors,
     };
 
     await onCreateProject(newProject);
-    Swal.fire({
-      icon: "success",
+
+    // Fake minimum 3-second loading feel (remove if backend is fast)
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+
+    // Success with custom class
+    await Swal.fire({
       title: "Project Created!",
       text: "The project was successfully created.",
-      timer: 1500,
-      showConfirmButton: false,
+      icon: "success",
+      timer: 2200,
+      customClass: {
+        container: 'swal-container',
+        popup: 'swal-popup',
+        title: 'swal-title',
+        htmlContainer: 'swal-content',
+        cancelButton: 'swal-cancel-button',
+        icon: 'swal-icon'
+    },
     });
+
     onClose();
-    try {
-      window.location.hash = "projects";
-    } catch {}
-  };
+
+    // Option A: hash-based navigation (your original approach)
+    window.location.hash = "projects";
+
+    // Option B: full page reload (most reliable after create)
+    // window.location.reload();
+
+    // Option C: if using react-router → navigate("/projects")
+    // navigate("/projects");
+
+  } catch (err) {
+    console.error("Project creation failed:", err);
+
+    Swal.fire({
+      title: "Error",
+      text: "Failed to create the project. Please try again.",
+      icon: "error",
+      confirmButtonText: "OK",
+      customClass: {
+        container: 'swal-container',
+        popup: 'swal-popup',
+        title: 'swal-title',
+        htmlContainer: 'swal-content',
+        cancelButton: 'swal-cancel-button',
+        icon: 'swal-icon'
+    },
+    });
+  }
+};
 
   const getFabricatorName = (id: string) => {
     return users.find((u) => u.id === id)?.name || "Unknown";
