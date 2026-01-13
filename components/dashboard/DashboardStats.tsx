@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { FolderOpen, CheckSquare, Users, DollarSign } from 'lucide-react';
+import { FolderOpen, CheckSquare, Users, DollarSign, X } from 'lucide-react';
 import { Project, Task, User as UserType } from '../../types';
 
 interface DashboardStatsProps {
@@ -14,6 +15,9 @@ const navigateToView = (view: string) => {
 };
 
 export function DashboardStats({ projects, tasks, users, currentUser }: DashboardStatsProps) {
+  // 1. Add state for the modal
+  const [showRevenueDetails, setShowRevenueDetails] = useState(false);
+
   const getFilteredData = () => {
     if (currentUser.role === 'admin') {
       return { projects, tasks, users };
@@ -111,38 +115,98 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       value: revenueData.value,
       icon: DollarSign,
       description: revenueData.description,
-      onClick: () => navigateToView('revenue'),
+      // 2. Update Click handler to open modal for fabricators
+      onClick: () => {
+        if (currentUser.role === 'fabricator') {
+          setShowRevenueDetails(true);
+        } else {
+          navigateToView('revenue');
+        }
+      },
     },
   ];
 
   return (
-    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat, index) => (
-        <Card
-          key={stat.title}
-          className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all cursor-pointer md:hover:scale-105 active:scale-95"
-          onClick={stat.onClick}
-        >
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-br from-primary/5 to-transparent px-4 md:px-6">
-            <CardTitle className="text-xs md:text-sm font-medium">{stat.title}</CardTitle>
-            <div className={`p-1.5 md:p-2 rounded-lg ${index === 0 ? 'bg-primary/10 text-primary' :
-                index === 1 ? 'bg-accent/10 text-accent' :
-                  index === 2 ? 'bg-secondary/10 text-secondary' :
-                    'bg-accent/10 text-accent'
-              }`}>
-              <stat.icon className="h-4 w-4 md:h-5 md:w-5" />
+    <>
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+        {stats.map((stat, index) => (
+          <Card
+            key={stat.title}
+            className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all cursor-pointer md:hover:scale-105 active:scale-95"
+            onClick={stat.onClick}
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-br from-primary/5 to-transparent px-4 md:px-6">
+              <CardTitle className="text-xs md:text-sm font-medium">{stat.title}</CardTitle>
+              <div className={`p-1.5 md:p-2 rounded-lg ${index === 0 ? 'bg-primary/10 text-primary' :
+                  index === 1 ? 'bg-accent/10 text-accent' :
+                    index === 2 ? 'bg-secondary/10 text-secondary' :
+                      'bg-accent/10 text-accent'
+                }`}>
+                <stat.icon className="h-4 w-4 md:h-5 md:w-5" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-4 px-4 md:px-6">
+              <div className="text-2xl md:text-3xl font-bold">
+                {stat.value}
+              </div>
+              <p className="text-[10px] md:text-sm text-muted-foreground mt-1 truncate">
+                {stat.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* 3. The Modal Implementation */}
+      {showRevenueDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden border animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+              <h3 className="font-semibold text-lg flex items-center gap-2">
+                <DollarSign className="w-5 h-5 text-green-600" />
+                Assigned Projects Value
+              </h3>
+              <button 
+                onClick={() => setShowRevenueDetails(false)}
+                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
             </div>
-          </CardHeader>
-          <CardContent className="pt-4 px-4 md:px-6">
-            <div className="text-2xl md:text-3xl font-bold">
-              {stat.value}
+            
+            <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+              {filteredProjects.length === 0 ? (
+                <p className="text-center text-gray-500 py-4">No assigned projects found.</p>
+              ) : (
+                filteredProjects.map((project) => (
+                  <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                    <div className="space-y-1">
+                      <p className="font-medium text-sm text-slate-900">{project.name}</p>
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
+                        project.status === 'completed' ? 'bg-green-100 text-green-700' :
+                        project.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                        'bg-gray-100 text-gray-700'
+                      }`}>
+                        {project.status.replace('-', ' ')}
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-slate-700">₱{project.revenue.toLocaleString()}</p>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
-            <p className="text-[10px] md:text-sm text-muted-foreground mt-1 truncate">
-              {stat.description}
-            </p>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+
+            <div className="p-4 border-t bg-slate-50 flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-500">Total Value</span>
+              <span className="text-lg font-bold text-green-600">
+                {revenueData.value}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
