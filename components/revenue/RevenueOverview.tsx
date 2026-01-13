@@ -274,7 +274,10 @@ export function RevenueOverview({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl">
-                    ₱{latestCompanyData.totalExpenses.toLocaleString()}
+                    ₱{latestCompanyData.totalExpenses 
+                      ? latestCompanyData.totalExpenses.toLocaleString()
+                      : 0
+                    }
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Operating costs
@@ -289,7 +292,10 @@ export function RevenueOverview({
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl text-green-500">
-                    ₱{latestCompanyData.netProfit.toLocaleString()}
+                    ₱{latestCompanyData.netProfit
+                      ? latestCompanyData.netProfit.toLocaleString()
+                      : 0
+                    }
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {latestCompanyData.projectsCompleted} projects completed
