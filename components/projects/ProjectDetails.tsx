@@ -239,12 +239,12 @@ export function ProjectDetails({
                 </div>
               ) : (
                 <>
-                  <CardTitle className="text-2xl">{project.name}</CardTitle>
+                  <CardTitle className="text-2xl">{editedProject.name}</CardTitle>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant={getStatusColor(project.status)}>
-                      {project.status}
+                      {editedProject.status}
                     </Badge>
-                    <Badge variant="outline">{project.priority} priority</Badge>
+                    <Badge variant="outline">{editedProject.priority} priority</Badge>
                   </div>
                 </>
               )}
@@ -327,7 +327,7 @@ export function ProjectDetails({
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground mt-1">
-                        {project.description}
+                        {editedProject.description}
                       </p>
                     )}
                   </div>
@@ -336,7 +336,7 @@ export function ProjectDetails({
                     <Label>Progress</Label>
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>{project.progress}% Complete</span>
+                        <span>{editedProject.progress}% Complete</span>
                         {isEditing && (
                           <Input
                             type="number"
@@ -353,7 +353,7 @@ export function ProjectDetails({
                           />
                         )}
                       </div>
-                      <Progress value={project.progress} />
+                      <Progress value={editedProject.progress} />
                     </div>
                   </div>
                 </div>
@@ -379,7 +379,7 @@ export function ProjectDetails({
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          {new Date(project.startDate).toLocaleDateString()}
+                          {new Date(editedProject.startDate).toLocaleDateString()}
                         </p>
                       )}
                     </div>
@@ -402,7 +402,7 @@ export function ProjectDetails({
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          {new Date(project.endDate).toLocaleDateString()}
+                          {new Date(editedProject.endDate).toLocaleDateString()}
                         </p>
                       )}
                     </div>
@@ -454,7 +454,7 @@ export function ProjectDetails({
                             />
                           ) : (
                             <p className="text-2xl">
-                              ₱{project.budget.toLocaleString()}
+                              ₱{editedProject.budget.toLocaleString()}
                             </p>
                           )}
                         </CardContent>
