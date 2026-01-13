@@ -133,6 +133,13 @@ class ApiService {
     }
 
     async updateProject(projectId: string, updates: any): Promise<ApiResponse<any>> {
+        await this.request(`/projects/${projectId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        }).then((json) => {
+            console.log(json);
+        });
+
         return this.request(`/projects/${projectId}`, {
             method: 'PUT',
             body: JSON.stringify(updates),

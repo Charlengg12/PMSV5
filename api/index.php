@@ -274,6 +274,16 @@ function handle_update_project(PDO $pdo, string $id): void
         }
     }
 
+    // Supplemental stuff in case field mismatch with $body's fields & DB fields
+    if (isset($body['name'])) {
+        $fields[] = "title = :title";
+        $params[':title'] = $body['name'];
+    }
+    if (isset($body['endDate'])) {
+        $fields[] = "due_date = :due_date";
+        $params[':due_date'] = $body['endDate'];
+    }
+
     if (isset($body['fabricatorIds'])) {
         $fields[] = "fabricator_ids = :fabricator_ids";
         $params[':fabricator_ids'] = json_encode($body['fabricatorIds']);
@@ -292,6 +302,7 @@ function handle_update_project(PDO $pdo, string $id): void
     }
 
     $sql = "UPDATE projects SET " . implode(', ', $fields) . " WHERE id = :id";
+    // json_response($body);
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
 
