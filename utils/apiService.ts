@@ -1,253 +1,223 @@
 // API Service for PHP backend (cPanel/shared hosting friendly)
-// Use VITE_API_URL when provided, otherwise default to same-origin `/api`
-const API_BASE_URL = import.meta.env.VITE_API_URL || "/api";
+// Use VITE_API_URL when provided, otherwise default to same-origin /api
+const API_BASE_URL = '/api';
 
 interface ApiResponse<T> {
-  data?: T;
-  error?: string;
-  user?: any;
-  token?: string;
+    data?: T;
+    error?: string;
+    user?: any;
+    token?: string;
 }
 
 class ApiService {
-  private baseUrl: string;
-  private token: string | null = null;
+    private baseUrl: string;
+    private token: string | null = null;
 
-  constructor() {
-    this.baseUrl = API_BASE_URL;
-    this.token = localStorage.getItem("authToken");
-  }
-
-  private async request<T>(
-    endpoint: string,
-    options: RequestInit = {},
-    retryCount: number = 0
-  ): Promise<ApiResponse<T>> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const headers: HeadersInit = {
-      "Content-Type": "application/json",
-      ...options.headers,
-    };
-
-    if (this.token) {
-      (
-        headers as Record<string, string>
-      ).Authorization = `Bearer ${this.token}`;
+    constructor() {
+        this.baseUrl = API_BASE_URL;
+        this.token = localStorage.getItem('authToken');
     }
 
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers,
-      });
+    private async request<T>(
+        endpoint: string,
+        options: RequestInit = {},
+        retryCount: number = 0
+    ): Promise<ApiResponse<T>> {
+        const url = `${this.baseUrl}${endpoint}`;
 
-      if (response.status === 429) {
-        // Too Many Requests: honor Retry-After when available
-        const retryAfterHeader = response.headers.get("Retry-After");
-        const retryAfterSeconds = retryAfterHeader
-          ? parseInt(retryAfterHeader, 10)
-          : NaN;
-        const retryAfterMs = Number.isFinite(retryAfterSeconds)
-          ? Math.min(Math.max(retryAfterSeconds, 1), 30) * 1000
-          : Math.min(1000 * Math.pow(2, retryCount), 8000);
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            ...options.headers,
+        };
 
-        if (retryCount < 3) {
-          await new Promise((r) => setTimeout(r, retryAfterMs));
-          return this.request<T>(endpoint, options, retryCount + 1);
+        if (this.token) {
+            (headers as Record<string, string>).Authorization = `Bearer ${this.token}`;
         }
-        return { error: "Too many requests. Please try again shortly." };
-      }
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
+        try {
+            const response = await fetch(url, {
+                ...options,
+                headers,
+            });
 
-      const data = await response.json();
-      return { data };
-    } catch (error) {
-      // Network-level retry (e.g., brief disconnect) with capped backoff
-      if (retryCount < 2) {
-        const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 4000);
-        await new Promise((r) => setTimeout(r, backoffMs));
-        return this.request<T>(endpoint, options, retryCount + 1);
-      }
-      console.error(`API request failed for ${endpoint}:`, error);
-      return {
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
+            if (response.status === 429) {
+                // Too Many Requests: honor Retry-After when available
+                const retryAfterHeader = response.headers.get('Retry-After');
+                const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : NaN;
+                const retryAfterMs = Number.isFinite(retryAfterSeconds)
+                    ? Math.min(Math.max(retryAfterSeconds, 1), 30) * 1000
+                    : Math.min(1000 * Math.pow(2, retryCount), 8000);
 
-  // Authentication methods
-  async login(identifier: string, password: string): Promise<ApiResponse<any>> {
-    const response = await this.request("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({ identifier, password }),
-    });
+                if (retryCount < 3) {
+                    await new Promise((r) => setTimeout(r, retryAfterMs));
+                    return this.request<T>(endpoint, options, retryCount + 1);
+                }
+                return { error: 'Too many requests. Please try again shortly.' };
+            }
 
-    if (response.data && (response.data as any).token) {
-      this.token = (response.data as any).token;
-      localStorage.setItem("authToken", this.token!);
-    }
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `HTTP ${response.status}`);
+            }
 
-    return response;
-  }
-
-  async signup(userData: {
-    email: string;
-    password: string;
-    name: string;
-    school?: string;
-    phone?: string;
-    gcashNumber?: string;
-    role?: string; // allow role for supervisor/client/admin
-  }): Promise<ApiResponse<any>> {
-    const response = await this.request("/auth/signup", {
-      method: "POST",
-      body: JSON.stringify(userData),
-    });
-
-    if (response.data && (response.data as any).token) {
-      this.token = (response.data as any).token;
-      localStorage.setItem("authToken", this.token!);
+            const data = await response.json();
+            return { data };
+        } catch (error) {
+            // Network-level retry (e.g., brief disconnect) with capped backoff
+            if (retryCount < 2) {
+                const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 4000);
+                await new Promise((r) => setTimeout(r, backoffMs));
+                return this.request<T>(endpoint, options, retryCount + 1);
+            }
+            console.error(`API request failed for ${endpoint}:`, error);
+            return { error: error instanceof Error ? error.message : 'Unknown error' };
+        }
     }
 
-    return response;
-  }
+    // Authentication methods
+    async login(identifier: string, password: string): Promise<ApiResponse<any>> {
+        const response = await this.request('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ identifier, password }),
+        });
 
-  logout(): void {
-    this.token = null;
-    localStorage.removeItem("authToken");
-  }
+        if (response.data && (response.data as any).token) {
+            this.token = (response.data as any).token;
+            localStorage.setItem('authToken', this.token!);
+        }
 
-  setToken(token: string): void {
-    this.token = token;
-    localStorage.setItem("authToken", token);
-  }
+        return response;
+    }
 
-  // Project methods
-  async getProjects(): Promise<ApiResponse<any[]>> {
-    return this.request("/projects");
-  }
+    async signup(userData: {
+        email: string;
+        password: string;
+        name: string;
+        school?: string;
+        phone?: string;
+        gcashNumber?: string;
+    }): Promise<ApiResponse<any>> {
+        const response = await this.request('/auth/signup', {
+            method: 'POST',
+            body: JSON.stringify(userData),
+        });
 
-  async createProject(projectData: any): Promise<ApiResponse<any>> {
-    return this.request("/projects", {
-      method: "POST",
-      body: JSON.stringify(projectData),
-    });
-  }
+        if (response.data && (response.data as any).token) {
+            this.token = (response.data as any).token;
+            localStorage.setItem('authToken', this.token!);
+        }
 
-  async updateProject(
-    projectId: string,
-    updates: any
-  ): Promise<ApiResponse<any>> {
-    return this.request(`/projects/${projectId}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-  }
+        return response;
+    }
 
-  async deleteProject(projectId: string): Promise<ApiResponse<any>> {
-    return this.request(`/projects/${projectId}`, {
-      method: "DELETE",
-    });
-  }
+    logout(): void {
+        this.token = null;
+        localStorage.removeItem('authToken');
+    }
 
-  // Task methods
-  async getTasks(): Promise<ApiResponse<any[]>> {
-    return this.request("/tasks");
-  }
+    setToken(token: string): void {
+        this.token = token;
+        localStorage.setItem('authToken', token);
+    }
 
-  async createTask(taskData: any): Promise<ApiResponse<any>> {
-    return this.request("/tasks", {
-      method: "POST",
-      body: JSON.stringify(taskData),
-    });
-  }
+    // Project methods
+    async getProjects(): Promise<ApiResponse<any[]>> {
+        return this.request('/projects');
+    }
 
-  async updateTask(taskId: string, updates: any): Promise<ApiResponse<any>> {
-    return this.request(`/tasks/${taskId}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-  }
+    async createProject(projectData: any): Promise<ApiResponse<any>> {
+        return this.request('/projects', {
+            method: 'POST',
+            body: JSON.stringify(projectData),
+        });
+    }
 
-  async deleteTask(taskId: string): Promise<ApiResponse<any>> {
-    return this.request(`/tasks/${taskId}`, {
-      method: "DELETE",
-    });
-  }
+    async updateProject(projectId: string, updates: any): Promise<ApiResponse<any>> {
+        return this.request(`/projects/${projectId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
 
-  // Work log methods
-  async getWorkLogs(): Promise<ApiResponse<any[]>> {
-    return this.request("/worklogs");
-  }
+    async deleteProject(projectId: string): Promise<ApiResponse<any>> {
+        return this.request(`/projects/${projectId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async createWorkLog(workLogData: any): Promise<ApiResponse<any>> {
-    return this.request("/worklogs", {
-      method: "POST",
-      body: JSON.stringify(workLogData),
-    });
-  }
+    // Task methods
+    async getTasks(): Promise<ApiResponse<any[]>> {
+        return this.request('/tasks');
+    }
 
-  // Materials methods
-  async getMaterials(): Promise<ApiResponse<any[]>> {
-    return this.request("/materials");
-  }
+    async createTask(taskData: any): Promise<ApiResponse<any>> {
+        return this.request('/tasks', {
+            method: 'POST',
+            body: JSON.stringify(taskData),
+        });
+    }
 
-  async createMaterial(materialData: any): Promise<ApiResponse<any>> {
-    return this.request("/materials", {
-      method: "POST",
-      body: JSON.stringify(materialData),
-    });
-  }
+    async updateTask(taskId: string, updates: any): Promise<ApiResponse<any>> {
+        return this.request(`/tasks/${taskId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
 
-  // Users methods
-  async getUsers(): Promise<ApiResponse<any[]>> {
-    return this.request("/users");
-  }
+    async deleteTask(taskId: string): Promise<ApiResponse<any>> {
+        return this.request(`/tasks/${taskId}`, {
+            method: 'DELETE',
+        });
+    }
 
-  async createClient(clientData: any): Promise<ApiResponse<any>> {
-    return this.request("/users/client", {
-      method: "POST",
-      body: JSON.stringify(clientData),
-    });
-  }
+    // Work log methods
+    async getWorkLogs(): Promise<ApiResponse<any[]>> {
+        return this.request('/worklogs');
+    }
 
-  async updateUser(userId: string, updates: any): Promise<ApiResponse<any>> {
-    return this.request(`/users/${userId}`, {
-      method: "PUT",
-      body: JSON.stringify(updates),
-    });
-  }
+    async createWorkLog(workLogData: any): Promise<ApiResponse<any>> {
+        return this.request('/worklogs', {
+            method: 'POST',
+            body: JSON.stringify(workLogData),
+        });
+    }
 
-  // Health check
-  async healthCheck(): Promise<ApiResponse<any>> {
-    return this.request("/health");
-  }
+    // Materials methods
+    async getMaterials(): Promise<ApiResponse<any[]>> {
+        return this.request('/materials');
+    }
 
-  // Assignment Broadcast & Response
-  async broadcastToFabricators(
-    projectId: string,
-    message?: string
-  ): Promise<ApiResponse<any>> {
-    return this.request("/projects/broadcast-fabricators", {
-      method: "POST",
-      body: JSON.stringify({ projectId, message }),
-    });
-  }
+    async createMaterial(materialData: any): Promise<ApiResponse<any>> {
+        return this.request('/materials', {
+            method: 'POST',
+            body: JSON.stringify(materialData),
+        });
+    }
 
-  async respondToAssignment(
-    projectId: string,
-    response: "accepted" | "declined",
-    assignmentId?: string
-  ): Promise<ApiResponse<any>> {
-    return this.request("/projects/respond-assignment", {
-      method: "POST",
-      body: JSON.stringify({ projectId, response, assignmentId }),
-    });
-  }
+    // Users methods
+    async getUsers(): Promise<ApiResponse<any[]>> {
+        return this.request('/users');
+    }
+
+    // create supervisor
+    async createSupervisor(supervisorData: any): Promise<ApiResponse<any>> {
+        return this.request('/users/supervisor', {
+            method: 'POST',
+            body: JSON.stringify(supervisorData),
+        });
+    }
+
+    async createClient(clientData: any): Promise<ApiResponse<any>> {
+        return this.request('/users/client', {
+            method: 'POST',
+            body: JSON.stringify(clientData),
+        });
+    }
+
+    // Health check
+    async healthCheck(): Promise<ApiResponse<any>> {
+        return this.request('/health');
+    }
 }
 
 export const apiService = new ApiService();
