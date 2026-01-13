@@ -1,5 +1,20 @@
 <?php
 
+// 1. Allow React (running on localhost:5173 or similar) to access this API
+header("Access-Control-Allow-Origin: *"); 
+// 2. Allow specific headers (JSON content type)
+header("Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With");
+// 3. Explicitly allow PUT and DELETE methods
+header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
+
+// 4. Handle the "Preflight" OPTIONS request
+// The browser asks: "Can I send a PUT request?"
+// If we don't say "Yes" (200 OK) here, the browser blocks the update.
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 // Simple PHP API router to replace Node/Express backend
 
 require __DIR__ . '/config.php';
@@ -14,7 +29,13 @@ if ($scriptDir !== '' && strpos($requestUri, $scriptDir) === 0) {
 } else {
     $path = $requestUri;
 }
-$path = '/' . trim($path, '/');
+// $path = '/' . trim($path, '/');
+$path = '/' . trim($requestUri, '/');
+
+// 🔴 CRITICAL FIX: normalize `/api`
+if (str_starts_with($path, '/api/')) {
+    $path = substr($path, 4); // remove "/api"
+}
 
 // Basic routing
 switch ($method . ' ' . $path) {
@@ -125,18 +146,99 @@ switch ($method . ' ' . $path) {
         break;
 
     // We need to handle dynamic routes manually in the default or before switch
-    default:
-        // Simple manual router for dynamic paths
-        if (preg_match('#^PUT /projects/([^/]+)$#', $method . ' ' . $path, $matches)) {
-            handle_update_project($pdo, $matches[1]);
-        } elseif (preg_match('#^DELETE /projects/([^/]+)$#', $method . ' ' . $path, $matches)) {
-            handle_delete_project($pdo, $matches[1]);
-        } elseif (preg_match('#^PUT /users/([^/]+)$#', $method . ' ' . $path, $matches)) {
-            handle_update_user($pdo, $matches[1]);
-        } else {
-            json_response(['error' => 'Not found'], 404);
-        }
+   default:
+    if (preg_match('#^PUT /tasks/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_task($pdo, $matches[1]);
+    } elseif (preg_match('#^DELETE /tasks/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_delete_task($pdo, $matches[1]);
+    } elseif (preg_match('#^PUT /projects/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_project($pdo, $matches[1]);
+    } elseif (preg_match('#^PUT /users/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_user($pdo, $matches[1]);
+    } else {
+        json_response(['error' => 'Not found'], 404);
+    }
+    break;
 }
+
+
+function handle_update_task(PDO $pdo, string $id): void
+{
+    require_login();
+    $body = sanitize_recursive(json_input());
+
+    $fields = [];
+    $params = [':id' => $id];
+
+    // --- FIX 1: ADD MISSING COLUMNS TO ALLOWED LIST ---
+    $allowed = [
+        'project_id',      // Added this so you can move tasks between projects
+        'title',
+        'description',
+        'status',
+        'priority',
+        'assigned_to',
+        'due_date',
+        'estimated_hours',
+        'actual_hours',
+        'updated_at'       // Added this so "Mark as Done" updates the time
+    ];
+
+    foreach ($allowed as $field) {
+        $val = null;
+        
+        // Check for direct match
+        if (isset($body[$field])) {
+            $val = $body[$field];
+        }
+
+        // --- FIX 2: MAP FRONTEND NAMES TO DATABASE NAMES ---
+        if ($field === 'project_id' && isset($body['projectId'])) $val = $body['projectId'];
+        if ($field === 'assigned_to' && isset($body['assignedTo'])) $val = $body['assignedTo'];
+        if ($field === 'due_date' && isset($body['dueDate'])) $val = $body['dueDate'];
+        if ($field === 'estimated_hours' && isset($body['estimatedHours'])) $val = $body['estimatedHours'];
+        if ($field === 'actual_hours' && isset($body['actualHours'])) $val = $body['actualHours'];
+        
+        // Handle updatedAt from React -> updated_at in DB
+        if ($field === 'updated_at' && isset($body['updatedAt'])) $val = $body['updatedAt'];
+
+        if ($val !== null) {
+            // Handle "unassigned" logic
+            if (($field === 'assigned_to' || $field === 'due_date') && $val === "") {
+                $val = null; 
+            }
+            
+            $fields[] = "$field = :$field";
+            $params[":$field"] = $val;
+        }
+    }
+
+    if (empty($fields)) {
+        json_response(['message' => 'No changes provided'], 400);
+    }
+
+    $sql = "UPDATE tasks SET " . implode(', ', $fields) . " WHERE id = :id";
+    
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $stmt = $pdo->prepare('SELECT * FROM tasks WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $id]);
+        $task = $stmt->fetch();
+
+        if (!$task) {
+             json_response(['error' => 'Task not found or update failed'], 404);
+        }
+
+        json_response($task);
+
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+}
+
+
 // --- User Update Handler ---
 function handle_update_user(PDO $pdo, string $id): void
 {

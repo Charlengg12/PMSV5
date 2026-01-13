@@ -147,44 +147,111 @@ export function TaskManager({
     setShowEditDialog(true);
   };
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!selectedTask || !formData.title || !formData.projectId) return;
 
-    onUpdateTask(selectedTask.id, {
+    // Prepare the data
+    const updates = {
       title: formData.title,
       description: formData.description,
       status: formData.status,
       priority: formData.priority,
       projectId: formData.projectId,
-      assignedTo:
-        formData.assignedTo === "unassigned" ? undefined : formData.assignedTo,
+      assignedTo: formData.assignedTo === "unassigned" ? "" : formData.assignedTo,
       dueDate: formData.dueDate || undefined,
-    });
+    };
 
-    resetForm();
-    setSelectedTask(null);
-    setShowEditDialog(false);
+    try {
+      // 1. CALL THE API
+      const { data, error } = await apiService.updateTask(selectedTask.id, updates);
+
+      if (data && !error) {
+        // 2. IF SUCCESSFUL, Update the UI
+        onUpdateTask(selectedTask.id, data);
+        
+        Swal.fire({
+          icon: "success",
+          title: "Updated",
+          text: "Task updated successfully",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+        
+        // Close dialogs only on success
+        resetForm();
+        setSelectedTask(null);
+        setShowEditDialog(false);
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error || "Failed to update task",
+        });
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: "error",
+        title: "Connection Error",
+        text: "Could not reach the server.",
+      });
+    }
   };
-
   const handleDelete = (task: Task) => {
     setSelectedTask(task);
     setShowDeleteDialog(true);
   };
 
-  const confirmDelete = () => {
-    if (selectedTask) {
-      onDeleteTask(selectedTask.id);
-      setSelectedTask(null);
-      setShowDeleteDialog(false);
+  const confirmDelete = async () => {
+  if (!selectedTask) return;
+
+  try {
+    await apiService.deleteTask(selectedTask.id);
+    onDeleteTask(selectedTask.id);
+  } catch {
+    Swal.fire("Error", "Failed to delete task", "error");
+  }
+
+  setSelectedTask(null);
+  setShowDeleteDialog(false);
+};
+
+
+ const handleMarkAsDone = async (task: Task) => {
+    try {
+      // 1. CALL THE API (This was missing)
+      const { data, error } = await apiService.updateTask(task.id, {
+        status: "completed",
+        updatedAt: new Date().toISOString(), // Optional, DB usually handles this
+      });
+
+      if (data && !error) {
+        // 2. IF SUCCESSFUL, Update the UI
+        onUpdateTask(task.id, data);
+        
+        Swal.fire({
+          icon: "success",
+          title: "Completed",
+          text: "Task marked as done",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: error || "Failed to update task",
+        });
+      }
+    } catch (e) {
+      console.error(e);
+      Swal.fire({
+        icon: "error",
+        title: "Connection Error",
+        text: "Could not reach the server.",
+      });
     }
   };
 
-  const handleMarkAsDone = (task: Task) => {
-    onUpdateTask(task.id, {
-      status: "completed",
-      updatedAt: new Date().toISOString(),
-    });
-  };
 
   const getStatusColor = (status: Task["status"]) => {
     switch (status) {
