@@ -82,16 +82,47 @@ export function AppSidebar({
   const handleLogoutClick = async () => {
     const result = await Swal.fire({
       title: 'Logout?',
-      text: 'Are you sure you want to logout?',
-      icon: 'warning',
+      text: 'Are you sure you want to log out of your account?',
+      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Yes',
+      confirmButtonText: 'Logout',
       cancelButtonText: 'Cancel',
-      reverseButtons: true,
       focusCancel: true,
+      allowOutsideClick: true,
+      customClass: {
+        container: 'swal-container',
+        popup: 'swal-popup',
+        title: 'swal-title',
+        htmlContainer: 'swal-content',
+        confirmButton: 'swal-confirm-button',
+        cancelButton: 'swal-cancel-button',
+        icon: 'swal-icon',
+      },
     });
+
     if (result.isConfirmed) {
-      onLogout();
+      await Swal.fire({
+        title: 'Logging out...',
+        text: 'Please wait a moment',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        showConfirmButton: false,
+        customClass: {
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          icon: 'swal-icon',
+        },
+        didOpen: () => {
+          Swal.showLoading();
+
+          setTimeout(() => {
+            onLogout();
+            Swal.close();
+          }, 2000);
+        },
+      });
     }
   };
 
@@ -104,7 +135,6 @@ export function AppSidebar({
         ${isCollapsed ? 'w-16' : 'w-64'}
       `}
     >
-      {/* Logo + Collapse Toggle */}
       <div className="relative flex items-center justify-between px-4 pt-5 pb-4 border-b border-border">
         <div
           className={`transition-all duration-200 ${
@@ -127,9 +157,7 @@ export function AppSidebar({
         </button>
       </div>
 
-      {/* Main content with flex column */}
       <div className="flex flex-col h-[calc(100vh-80px)]">
-        {/* Scrollable Navigation */}
         <nav className="flex-1 px-3 py-4 overflow-y-auto">
           <ul className="space-y-1">
             {navigationItems.map((item) => (
@@ -162,7 +190,6 @@ export function AppSidebar({
           </ul>
         </nav>
 
-        {/* Logout - pushed to bottom */}
         <div className="border-t border-border p-3 bg-muted/30 mt-auto mb-3">
           <button
             onClick={handleLogoutClick}
