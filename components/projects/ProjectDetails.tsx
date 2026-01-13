@@ -617,7 +617,7 @@ export function ProjectDetails({
                         </div>
                         <div>
                           <p className="font-medium">
-                            {getSupervisorName(project.supervisorId)}
+                            {getSupervisorName(editedProject.supervisorId)}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             Project Supervisor
