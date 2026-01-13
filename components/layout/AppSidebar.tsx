@@ -3,10 +3,11 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from '../ui/sidebar';
+} from "../ui/sidebar";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -19,182 +20,255 @@ import {
   DollarSign,
   Archive,
   Eye,
-  Download
-} from 'lucide-react';
-import { User } from '../../types';
-import { useSidebar } from '../ui/sidebar';
+  Download,
+  LogOut,
+} from "lucide-react";
+import { User } from "../../types";
+import { useSidebar } from "../ui/sidebar";
+import Swal from "sweetalert2";
+import { useEffect, useMemo, useState } from "react";
+import { CustomLogoutSpinner } from "../ui/CustomLogoutSpinner";
+import { CompanyLogo } from "../ui/company-logo";
 
 interface AppSidebarProps {
   currentUser: User;
+  onLogout: () => void;
 }
 
-export function AppSidebar({ currentUser }: AppSidebarProps) {
+export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   const { isMobile, setOpenMobile, state } = useSidebar();
+  const [showLogoutSpinner, setShowLogoutSpinner] = useState(false);
+  const [activeHash, setActiveHash] = useState("");
+  const isCollapsed = state === "collapsed";
+  const isCollapsedDesktop = isCollapsed && !isMobile;
+  const menuLinkClassName = isCollapsedDesktop
+    ? "flex items-center justify-center px-2 py-2"
+    : "flex items-center gap-3 px-3 py-2.5";
+  // SweetAlert logout confirmation
+  const handleLogoutClick = async () => {
+    const result = await Swal.fire({
+      title: "Logout?",
+      text: "Are you sure you want to logout?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+    if (result.isConfirmed) {
+      setShowLogoutSpinner(true);
+      setTimeout(() => {
+        setShowLogoutSpinner(false);
+        onLogout();
+      }, 3000); // 3s delay for spinner effect
+    }
+  };
   // Base navigation items for all users
-  const getNavigationItems = () => {
+  const navigationItems = useMemo(() => {
     const baseItems = [
       {
-        title: 'Dashboard',
-        url: '#dashboard',
+        title: "Dashboard",
+        url: "#dashboard",
         icon: LayoutDashboard,
       },
       {
-        title: 'Projects',
-        url: '#projects',
+        title: "Projects",
+        url: "#projects",
         icon: FolderOpen,
       },
     ];
 
     // Role-specific navigation items
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === "admin") {
       return [
         ...baseItems,
         {
-          title: 'Archives',
-          url: '#archives',
+          title: "Archives",
+          url: "#archives",
           icon: Archive,
         },
         {
-          title: 'Tasks',
-          url: '#tasks',
+          title: "Tasks",
+          url: "#tasks",
           icon: CheckSquare,
         },
         {
-          title: 'Users',
-          url: '#users',
+          title: "Users",
+          url: "#users",
           icon: Users,
         },
         {
-          title: 'Revenue',
-          url: '#revenue',
+          title: "Revenue",
+          url: "#revenue",
           icon: DollarSign,
         },
         {
-          title: 'Reports',
-          url: '#reports',
+          title: "Reports",
+          url: "#reports",
           icon: BarChart3,
         },
         {
-          title: 'Settings',
-          url: '#settings',
+          title: "Settings",
+          url: "#settings",
           icon: Settings,
         },
       ];
     }
 
-    if (currentUser.role === 'supervisor') {
+    if (currentUser.role === "supervisor") {
       return [
         ...baseItems,
         {
-          title: 'Archives',
-          url: '#archives',
+          title: "Archives",
+          url: "#archives",
           icon: Archive,
         },
         {
-          title: 'Tasks',
-          url: '#tasks',
+          title: "Tasks",
+          url: "#tasks",
           icon: CheckSquare,
         },
         {
-          title: 'Team',
-          url: '#team',
+          title: "Team",
+          url: "#team",
           icon: Users,
         },
         {
-          title: 'Reports',
-          url: '#reports',
+          title: "Reports",
+          url: "#reports",
           icon: BarChart3,
         },
       ];
     }
 
-    if (currentUser.role === 'fabricator') {
+    if (currentUser.role === "fabricator") {
       return [
         ...baseItems,
         {
-          title: 'Work Log',
-          url: '#worklog',
+          title: "Work Log",
+          url: "#worklog",
           icon: Calendar,
         },
         {
-          title: 'Materials',
-          url: '#materials',
+          title: "Materials",
+          url: "#materials",
           icon: Package,
         },
         {
-          title: 'Tasks',
-          url: '#tasks',
+          title: "Tasks",
+          url: "#tasks",
           icon: CheckSquare,
         },
       ];
     }
 
-    if (currentUser.role === 'client') {
+    if (currentUser.role === "client") {
       return [
         {
-          title: 'Dashboard',
-          url: '#dashboard',
+          title: "Dashboard",
+          url: "#dashboard",
           icon: LayoutDashboard,
         },
         {
-          title: 'Project Status',
-          url: '#project-status',
+          title: "Project Status",
+          url: "#project-status",
           icon: Eye,
         },
         {
-          title: 'Documentation',
-          url: '#documentation',
+          title: "Documentation",
+          url: "#documentation",
           icon: Download,
         },
       ];
     }
 
     return baseItems;
-  };
+  }, [currentUser.role]);
 
-  const navigationItems = getNavigationItems();
+  useEffect(() => {
+    const getHash = () =>
+      window.location.hash || navigationItems[0]?.url || "#dashboard";
+    const updateHash = () => setActiveHash(getHash());
+    updateHash();
+    window.addEventListener("hashchange", updateHash);
+    return () => window.removeEventListener("hashchange", updateHash);
+  }, [navigationItems]);
 
   return (
-    <Sidebar className="border-r-0" collapsible="offcanvas">
-      <SidebarContent className="gap-0 bg-sidebar">
-        <div className="p-4 border-b border-sidebar-border">
-          <h3 className={`text-sm text-sidebar-foreground/70 tracking-wide uppercase transition-opacity ${state === 'collapsed' ? 'opacity-0 w-0 overflow-hidden' : ''}`}>
-            Navigation
-          </h3>
-        </div>
-        <SidebarGroup className="py-2">
-          <SidebarGroupContent>
-            <SidebarMenu className="gap-1 px-2">
-              {navigationItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    className="hover:bg-sidebar-accent rounded-lg transition-colors"
-                    tooltip={state === 'collapsed' ? item.title : undefined}
-                  >
-                    <a
-                      href={item.url}
-                      className="flex items-center gap-3 px-3 py-2.5"
-                      onClick={(e) => {
-                        // Ensure hash updates even if default is prevented by wrappers
-                        const href = item.url;
-                        if (href.startsWith('#')) {
-                          e.preventDefault();
-                          window.location.hash = href;
-                        }
-                        if (isMobile) setOpenMobile(false);
-                      }}
+    <>
+      {showLogoutSpinner && <CustomLogoutSpinner />}
+      <Sidebar className="border-r-0" collapsible="icon">
+        <SidebarContent className="gap-0 bg-sidebar no-scrollbar">
+          <div className="border-b border-sidebar-border px-4 py-3">
+            <CompanyLogo
+              size={isCollapsedDesktop ? "sm" : "md"}
+              showText={!isCollapsedDesktop}
+              clickable={true}
+              className={
+                isCollapsedDesktop
+                  ? "justify-center"
+                  : "max-w-full [&_span]:!text-sidebar-foreground [&_span:last-child]:!text-sidebar-foreground/70"
+              }
+            />
+          </div>
+          <SidebarGroup className="py-2">
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1 px-2 md:group-data-[collapsible=icon]:px-0">
+                {navigationItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={activeHash === item.url}
+                      className="hover:bg-sidebar-accent rounded-lg transition-colors"
+                      tooltip={isCollapsedDesktop ? item.title : undefined}
                     >
-                      <item.icon className="h-4 w-4 flex-shrink-0" />
-                      <span className={state === 'collapsed' ? 'sr-only' : ''}>{item.title}</span>
-                    </a>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      </SidebarContent>
-    </Sidebar>
+                      <a
+                        href={item.url}
+                        className={menuLinkClassName}
+                        onClick={(e) => {
+                          // Ensure hash updates even if default is prevented by wrappers
+                          const href = item.url;
+                          if (href.startsWith("#")) {
+                            e.preventDefault();
+                            window.location.hash = href;
+                          }
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                      >
+                        <item.icon className="h-4 w-4 flex-shrink-0" />
+                        <span className={isCollapsedDesktop ? "sr-only" : ""}>
+                          {item.title}
+                        </span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="pt-2 border-t border-sidebar-border px-4 py-5">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogoutClick}
+                className="h-10 rounded-lg bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 active:bg-destructive active:text-destructive-foreground"
+                tooltip={isCollapsedDesktop ? "Logout" : undefined}
+              >
+                <LogOut className="h-4 w-4 text-destructive-foreground" />
+                <span
+                  className={`${
+                    isCollapsedDesktop ? "sr-only" : ""
+                  } text-destructive-foreground`}
+                >
+                  Logout
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+    </>
   );
 }

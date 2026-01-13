@@ -1,36 +1,43 @@
-import logoImage from "./assets/logo.png";
+import logoImage from "./assets/ehub_logo.png";
 
 interface CompanyLogoProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: "sm" | "md" | "lg" | "xl";
   showText?: boolean;
   className?: string;
   clickable?: boolean;
 }
 
-export function CompanyLogo({ size = 'md', showText = true, className = '', clickable = false }: CompanyLogoProps) {
+export function CompanyLogo({
+  size = "md",
+  showText = true,
+  className = "",
+  clickable = false,
+}: CompanyLogoProps) {
   const sizeClasses = {
-    sm: 'h-10 w-10',
-    md: 'h-14 w-14',
-    lg: 'h-20 w-20',
-    xl: 'h-24 w-24'
+    sm: "h-10 w-10",
+    md: "h-14 w-14",
+    lg: "h-20 w-20",
+    xl: "h-24 w-24",
   };
 
   const textSizeClasses = {
-    sm: 'text-base',
-    md: 'text-lg',
-    lg: 'text-2xl',
-    xl: 'text-3xl'
+    sm: "text-base",
+    md: "text-lg",
+    lg: "text-2xl",
+    xl: "text-3xl",
   };
 
   const handleClick = () => {
     if (clickable) {
-      window.location.hash = 'dashboard';
+      window.location.hash = "dashboard";
     }
   };
 
   return (
     <div
-      className={`flex items-center gap-3 ${clickable ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''} ${className}`}
+      className={`flex items-center gap-3 ${
+        clickable ? "cursor-pointer hover:opacity-80 transition-opacity" : ""
+      } ${className}`}
       onClick={handleClick}
     >
       <img
@@ -40,7 +47,9 @@ export function CompanyLogo({ size = 'md', showText = true, className = '', clic
       />
       {showText && (
         <div className="flex flex-col">
-          <span className={`${textSizeClasses[size]} leading-none tracking-tight text-primary font-bold`}>
+          <span
+            className={`${textSizeClasses[size]} leading-none tracking-tight text-primary font-bold`}
+          >
             Ehub
           </span>
           <span className="text-xs text-muted-foreground mt-0.5">

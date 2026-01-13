@@ -1,17 +1,11 @@
-import { Button } from "../ui/button";
-import Swal from "sweetalert2";
-import { useState } from "react";
-import { CustomLogoutSpinner } from "../ui/CustomLogoutSpinner";
 import { Badge } from "../ui/badge";
-import { LogOut, Shield, Crown } from "lucide-react";
+import { Shield, Crown } from "lucide-react";
 import { User } from "../../types";
-import { CompanyLogo } from "../ui/company-logo";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { SidebarTrigger } from "../ui/sidebar";
 
 interface HeaderProps {
   currentUser: User;
-  onLogout: () => void;
   currentTheme: "light" | "dark" | "auto";
   onThemeChange: (theme: "light" | "dark" | "auto") => void;
   isTransitioning?: boolean;
@@ -19,32 +13,10 @@ interface HeaderProps {
 
 export function Header({
   currentUser,
-  onLogout,
   currentTheme,
   onThemeChange,
   isTransitioning,
 }: HeaderProps) {
-  const [showLogoutSpinner, setShowLogoutSpinner] = useState(false);
-  // SweetAlert logout confirmation
-  const handleLogoutClick = async () => {
-    const result = await Swal.fire({
-      title: "Logout?",
-      text: "Are you sure you want to logout?",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      focusCancel: true,
-    });
-    if (result.isConfirmed) {
-      setShowLogoutSpinner(true);
-      setTimeout(() => {
-        setShowLogoutSpinner(false);
-        onLogout();
-      }, 3000); // 3s delay for spinner effect
-    }
-  };
   const getRoleIcon = () => {
     switch (currentUser.role) {
       case "admin":
@@ -89,11 +61,9 @@ export function Header({
 
   return (
     <>
-      {showLogoutSpinner && <CustomLogoutSpinner />}
-      <header className="flex items-center justify-between px-3 md:px-6 py-3 bg-card border-b shadow-sm">
+      <header className="sticky top-0 z-20 flex items-center justify-between px-3 md:px-6 py-4 bg-card border-b shadow-sm">
         <div className="flex items-center gap-4">
           <SidebarTrigger />
-          <CompanyLogo size="md" showText={true} clickable={true} />
         </div>
 
         <div className="flex items-center gap-4">
@@ -101,35 +71,23 @@ export function Header({
             currentTheme={currentTheme}
             onThemeChange={onThemeChange}
             isTransitioning={isTransitioning}
+            buttonSize="lg"
+            buttonClassName="h-12 w-12"
           />
 
-          <div className="flex items-center gap-2 md:gap-3 px-2 md:px-4 py-2 bg-muted/50 rounded-lg max-w-[150px] md:max-w-none">
-            {getRoleIcon()}
-            <div className="text-right overflow-hidden">
-              <p className="text-xs md:text-sm font-medium truncate">
-                {currentUser.name}
-              </p>
-              <div className="flex items-center justify-end gap-1 md:gap-2">
-                <div className="scale-75 md:scale-100 origin-right">
-                  {getRoleBadge()}
-                </div>
-                <span className="hidden sm:inline text-[10px] md:text-xs text-muted-foreground font-mono">
-                  {currentUser.secureId}
-                </span>
+          <div className="flex h-12 items-center gap-3 px-3 md:px-4 bg-background border border-input rounded-lg max-w-[220px] md:max-w-none">
+            <div className="flex size-8 items-center justify-center rounded-md bg-muted text-primary">
+              {getRoleIcon()}
+            </div>
+            <div className="flex min-w-0 flex-col leading-tight">
+              <div className="flex items-center gap-2">
+                <p className="text-xs md:text-sm font-medium truncate">
+                  {currentUser.name}
+                </p>
+                <div className="scale-75 md:scale-100">{getRoleBadge()}</div>
               </div>
             </div>
           </div>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogoutClick}
-            className="ml-1 md:ml-2 border-border hover:bg-destructive hover:text-destructive-foreground"
-            title="Logout"
-          >
-            <LogOut className="h-4 w-4 md:mr-2" />
-            <span className="hidden md:inline">Logout</span>
-          </Button>
         </div>
       </header>
     </>

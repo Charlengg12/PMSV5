@@ -220,6 +220,9 @@ export default function App() {
     try {
       window.location.hash = "dashboard";
     } catch {}
+    if (backendHealthy !== false) {
+      loadDataFromDatabase().then(() => setLastReloadAt(Date.now()));
+    }
   };
 
   const handleLogout = () => {
@@ -308,7 +311,7 @@ export default function App() {
       if (response.data) {
         // Normalize backend response to frontend shape
         const mapped = mapProjectsFromBackend([response.data])[0];
-        setProjects((prevProjects) => [...prevProjects, mapped]);
+        setProjects((prevProjects) => [mapped, ...prevProjects]);
         return mapped;
       } else {
         throw new Error(response.error || "Failed to create project");
@@ -320,7 +323,7 @@ export default function App() {
         ...projectData,
         id: `project-${Date.now()}`,
       };
-      setProjects((prevProjects) => [...prevProjects, newProject]);
+      setProjects((prevProjects) => [newProject, ...prevProjects]);
       return newProject;
     }
   };

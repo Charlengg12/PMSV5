@@ -1,15 +1,39 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Archive, Calendar, DollarSign, Download, Eye, FileText, GraduationCap, User, Building, Trash2, Edit } from 'lucide-react';
-import { Project, User as UserType, Material, WorkLogEntry } from '../../types';
-import { ProjectDetails } from '../projects/ProjectDetails';
+import { useState } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import {
+  Archive,
+  Calendar,
+  DollarSign,
+  Download,
+  Eye,
+  FileText,
+  GraduationCap,
+  User,
+  Building,
+  Trash2,
+  Edit,
+} from "lucide-react";
+import { Project, User as UserType, Material, WorkLogEntry } from "../../types";
+import { ProjectDetails } from "../projects/ProjectDetails";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +43,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from '../ui/alert-dialog';
-import { CreateProjectForm } from '../projects/CreateProjectForm';
+} from "../ui/alert-dialog";
+import { CreateProjectForm } from "../projects/CreateProjectForm";
 
 interface ProjectArchivesProps {
   projects: Project[];
@@ -41,10 +65,37 @@ export function ProjectArchives({
   currentUser,
   onUpdateProject,
   onDeleteProject,
-  onCreateProject
+  onCreateProject,
 }: ProjectArchivesProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSchool, setSelectedSchool] = useState('all');
+  const safeText = (value?: string) => value || "";
+  const safeNumber = (value: unknown) => {
+    if (typeof value === "number" && Number.isFinite(value)) return value;
+    if (typeof value === "string") {
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  };
+  const getProjectSchool = (project: Project) => {
+    const client = users.find(
+      (u) => u.role === "client" && u.clientProjectId === project.id
+    );
+    const name = safeText(client?.school || project.clientName).trim();
+    return name || "Unknown";
+  };
+  const formatDate = (value?: string) => {
+    if (!value) return "N/A";
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString();
+  };
+  const getAttachments = (project?: Project) =>
+    Array.isArray(project?.attachments) ? project!.attachments! : [];
+  const getFabricatorIds = (project?: Project) =>
+    Array.isArray(project?.fabricatorIds) ? project!.fabricatorIds : [];
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSchool, setSelectedSchool] = useState("all");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -52,26 +103,39 @@ export function ProjectArchives({
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
 
-  // Get completed projects only
-  const completedProjects = projects.filter(project => project.status === 'completed');
+  const isArchivableProject = (project: Project) => {
+    const normalizedStatus = safeText(project.status).toLowerCase().trim();
+    const normalizedToken = normalizedStatus.replace(/[^a-z0-9]+/g, "_");
+    return (
+      normalizedStatus === "completed" ||
+      normalizedStatus === "complete" ||
+      normalizedToken.includes("ready_for_client_signoff") ||
+      safeNumber(project.progress) >= 100
+    );
+  };
+
+  // Get completed/archivable projects only
+  const completedProjects = projects.filter(isArchivableProject);
 
   // Get unique schools from completed projects
-  const schools = Array.from(new Set(
-    completedProjects.map(project =>
-      users.find(u => u.role === 'client' && u.clientProjectId === project.id)?.school ||
-      project.clientName
-    )
-  )).sort();
+  const schools = Array.from(
+    new Set(completedProjects.map(getProjectSchool))
+  ).sort();
 
   // Filter projects based on search and school
-  const filteredProjects = completedProjects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.clientName.toLowerCase().includes(searchTerm.toLowerCase());
+  const filteredProjects = completedProjects.filter((project) => {
+    const matchesSearch =
+      safeText(project.name).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      safeText(project.description)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      safeText(project.clientName)
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
-    const projectSchool = users.find(u => u.role === 'client' && u.clientProjectId === project.id)?.school ||
-      project.clientName;
-    const matchesSchool = selectedSchool === 'all' || projectSchool === selectedSchool;
+    const projectSchool = getProjectSchool(project);
+    const matchesSchool =
+      selectedSchool === "all" || projectSchool === selectedSchool;
 
     return matchesSearch && matchesSchool;
   });
@@ -82,33 +146,40 @@ export function ProjectArchives({
   };
 
   const getProjectMaterials = (projectId: string) => {
-    return materials.filter(material => material.projectId === projectId);
+    return materials.filter((material) => material.projectId === projectId);
   };
 
   const getProjectWorkLogs = (projectId: string) => {
-    return workLogs.filter(log => log.projectId === projectId);
+    return workLogs.filter((log) => log.projectId === projectId);
   };
 
   const calculateTotalMaterialCost = (projectId: string) => {
-    return getProjectMaterials(projectId).reduce((total, material) => total + material.cost, 0);
+    return getProjectMaterials(projectId).reduce(
+      (total, material) => total + safeNumber(material.cost),
+      0
+    );
   };
 
   const getFabricatorDocumentation = (project: Project) => {
-    return project.attachments?.filter(att =>
-      project.fabricatorIds.some(fabId => att.uploadedBy === fabId)
-    ) || [];
+    const attachments = getAttachments(project);
+    const fabricatorIds = getFabricatorIds(project);
+    return attachments.filter((att) =>
+      fabricatorIds.some((fabId) => att.uploadedBy === fabId)
+    );
   };
 
   const getCostAnalysisDocuments = (project: Project) => {
-    return project.attachments?.filter(att =>
-      att.name.toLowerCase().includes('cost') ||
-      att.name.toLowerCase().includes('analysis') ||
-      att.name.toLowerCase().includes('budget') ||
-      att.type.includes('spreadsheet')
-    ) || [];
+    const attachments = getAttachments(project);
+    return attachments.filter(
+      (att) =>
+        safeText(att.name).toLowerCase().includes("cost") ||
+        safeText(att.name).toLowerCase().includes("analysis") ||
+        safeText(att.name).toLowerCase().includes("budget") ||
+        att.type?.includes("spreadsheet")
+    );
   };
 
-  const canViewFinancials = currentUser.role === 'admin';
+  const canViewFinancials = currentUser.role === "admin";
 
   return (
     <div className="space-y-6">
@@ -123,11 +194,16 @@ export function ProjectArchives({
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="text-sm">
+          <Badge variant="secondary" className="h-9 px-3 text-sm">
             {filteredProjects.length} Archived Projects
           </Badge>
-          {(currentUser.role === 'admin' || currentUser.role === 'supervisor') && (
-            <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+          {(currentUser.role === "admin" ||
+            currentUser.role === "supervisor") && (
+            <Button
+              size="sm"
+              className="h-9 px-3"
+              onClick={() => setShowCreateDialog(true)}
+            >
               <Archive className="h-4 w-4 mr-2" />
               Add Record
             </Button>
@@ -159,7 +235,7 @@ export function ProjectArchives({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Schools/Clients</SelectItem>
-                  {schools.map(school => (
+                  {schools.map((school) => (
                     <SelectItem key={school} value={school}>
                       {school}
                     </SelectItem>
@@ -174,31 +250,41 @@ export function ProjectArchives({
       {/* Project Grid */}
       <div className="grid gap-6">
         {filteredProjects.map((project) => {
-          const supervisor = users.find(u => u.id === project.supervisorId);
-          const fabricators = users.filter(u => project.fabricatorIds.includes(u.id));
-          const client = users.find(u => u.role === 'client' && u.clientProjectId === project.id);
-          const projectSchool = client?.school || project.clientName;
+          const supervisor = users.find((u) => u.id === project.supervisorId);
+          const fabricators = users.filter((u) =>
+            getFabricatorIds(project).includes(u.id)
+          );
+          const client = users.find(
+            (u) => u.role === "client" && u.clientProjectId === project.id
+          );
+          const projectSchool = getProjectSchool(project);
           const fabricatorDocs = getFabricatorDocumentation(project);
           const costDocs = getCostAnalysisDocuments(project);
           const materialCost = calculateTotalMaterialCost(project.id);
+          const projectBudget = safeNumber(project.budget);
+          const projectSpent = safeNumber(project.spent);
+          const projectRevenue = safeNumber(project.revenue);
 
           return (
-            <Card key={project.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={project.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardHeader>
                 <div className="flex justify-between items-start">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
+                    <CardTitle className="text-lg">
+                      {safeText(project.name)}
+                    </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
-                      {project.description}
+                      {safeText(project.description)}
                     </p>
                   </div>
                   <div className="flex gap-2 ml-4">
                     <Badge variant="default" className="bg-green-600">
                       Completed
                     </Badge>
-                    <Badge variant="outline">
-                      {project.priority}
-                    </Badge>
+                    <Badge variant="outline">{project.priority}</Badge>
                   </div>
                 </div>
               </CardHeader>
@@ -217,7 +303,8 @@ export function ProjectArchives({
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-muted-foreground" />
                       <span>
-                        {new Date(project.startDate).toLocaleDateString()} - {new Date(project.endDate).toLocaleDateString()}
+                        {formatDate(project.startDate)} -{" "}
+                        {formatDate(project.endDate)}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -231,19 +318,29 @@ export function ProjectArchives({
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground">Budget</p>
-                        <p className="font-medium">${project.budget.toLocaleString()}</p>
+                        <p className="font-medium">
+                          ${projectBudget.toLocaleString()}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground">Spent</p>
-                        <p className="font-medium">${project.spent.toLocaleString()}</p>
+                        <p className="font-medium">
+                          ${projectSpent.toLocaleString()}
+                        </p>
                       </div>
                       <div className="text-center">
-                        <p className="text-sm text-muted-foreground">Materials</p>
-                        <p className="font-medium">${materialCost.toLocaleString()}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Materials
+                        </p>
+                        <p className="font-medium">
+                          ${materialCost.toLocaleString()}
+                        </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground">Revenue</p>
-                        <p className="font-medium text-green-600">${project.revenue.toLocaleString()}</p>
+                        <p className="font-medium text-green-600">
+                          ${projectRevenue.toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -265,7 +362,7 @@ export function ProjectArchives({
                     <div className="flex items-center gap-2">
                       <Archive className="h-4 w-4 text-purple-600" />
                       <span className="text-sm">
-                        {project.attachments?.length || 0} Total Documents
+                        {getAttachments(project).length} Total Documents
                       </span>
                     </div>
                   </div>
@@ -286,13 +383,16 @@ export function ProjectArchives({
                         variant="outline"
                         size="sm"
                         className="w-full lg:flex-1"
-                        onClick={() => window.open(project.documentationUrl, '_blank')}
+                        onClick={() =>
+                          window.open(project.documentationUrl, "_blank")
+                        }
                       >
                         <Download className="h-4 w-4 mr-2" />
                         <span className="truncate">Docs</span>
                       </Button>
                     )}
-                    {(currentUser.role === 'admin' || currentUser.role === 'supervisor') && (
+                    {(currentUser.role === "admin" ||
+                      currentUser.role === "supervisor") && (
                       <>
                         <Button
                           variant="outline"
@@ -335,10 +435,9 @@ export function ProjectArchives({
               <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg mb-2">No Archived Projects Found</h3>
               <p className="text-muted-foreground">
-                {searchTerm || selectedSchool !== 'all'
-                  ? 'Try adjusting your search filters.'
-                  : 'No completed projects available in the archives yet.'
-                }
+                {searchTerm || selectedSchool !== "all"
+                  ? "Try adjusting your search filters."
+                  : "No completed projects available in the archives yet."}
               </p>
             </div>
           </CardContent>
@@ -369,25 +468,31 @@ export function ProjectArchives({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Project Description</Label>
-                      <p className="text-sm mt-1">{selectedProject.description}</p>
+                      <p className="text-sm mt-1">
+                        {safeText(selectedProject.description)}
+                      </p>
                     </div>
                     <div>
                       <Label>Client/School</Label>
                       <p className="text-sm mt-1">
-                        {users.find(u => u.role === 'client' && u.clientProjectId === selectedProject.id)?.school ||
-                          selectedProject.clientName}
+                        {users.find(
+                          (u) =>
+                            u.role === "client" &&
+                            u.clientProjectId === selectedProject.id
+                        )?.school || safeText(selectedProject.clientName)}
                       </p>
                     </div>
                     <div>
                       <Label>Project Duration</Label>
                       <p className="text-sm mt-1">
-                        {new Date(selectedProject.startDate).toLocaleDateString()} - {new Date(selectedProject.endDate).toLocaleDateString()}
+                        {formatDate(selectedProject.startDate)} -{" "}
+                        {formatDate(selectedProject.endDate)}
                       </p>
                     </div>
                     <div>
                       <Label>Completion Date</Label>
                       <p className="text-sm mt-1">
-                        {new Date(selectedProject.endDate).toLocaleDateString()}
+                        {formatDate(selectedProject.endDate)}
                       </p>
                     </div>
                   </div>
@@ -396,19 +501,31 @@ export function ProjectArchives({
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted rounded-lg">
                       <div>
                         <Label>Total Budget</Label>
-                        <p className="text-lg">${selectedProject.budget.toLocaleString()}</p>
+                        <p className="text-lg">
+                          ${safeNumber(selectedProject.budget).toLocaleString()}
+                        </p>
                       </div>
                       <div>
                         <Label>Amount Spent</Label>
-                        <p className="text-lg">${selectedProject.spent.toLocaleString()}</p>
+                        <p className="text-lg">
+                          ${safeNumber(selectedProject.spent).toLocaleString()}
+                        </p>
                       </div>
                       <div>
                         <Label>Material Costs</Label>
-                        <p className="text-lg">${calculateTotalMaterialCost(selectedProject.id).toLocaleString()}</p>
+                        <p className="text-lg">
+                          $
+                          {calculateTotalMaterialCost(
+                            selectedProject.id
+                          ).toLocaleString()}
+                        </p>
                       </div>
                       <div>
                         <Label>Total Revenue</Label>
-                        <p className="text-lg text-green-600">${selectedProject.revenue.toLocaleString()}</p>
+                        <p className="text-lg text-green-600">
+                          $
+                          {safeNumber(selectedProject.revenue).toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -419,14 +536,52 @@ export function ProjectArchives({
                     <div>
                       <h4 className="mb-3">Fabricator Documentation</h4>
                       <div className="grid gap-2">
-                        {getFabricatorDocumentation(selectedProject).map(doc => (
-                          <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        {getFabricatorDocumentation(selectedProject).map(
+                          (doc) => (
+                            <div
+                              key={doc.id}
+                              className="flex items-center justify-between p-3 border rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-4 w-4" />
+                                <div>
+                                  <p className="text-sm">{doc.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    Uploaded by{" "}
+                                    {
+                                      users.find((u) => u.id === doc.uploadedBy)
+                                        ?.name
+                                    }{" "}
+                                    on {formatDate(doc.uploadedAt)}
+                                  </p>
+                                </div>
+                              </div>
+                              <Button variant="outline" size="sm">
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="mb-3">All Project Documents</h4>
+                      <div className="grid gap-2">
+                        {getAttachments(selectedProject).map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="flex items-center justify-between p-3 border rounded-lg"
+                          >
                             <div className="flex items-center gap-3">
                               <FileText className="h-4 w-4" />
                               <div>
                                 <p className="text-sm">{doc.name}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  Uploaded by {users.find(u => u.id === doc.uploadedBy)?.name} on {new Date(doc.uploadedAt).toLocaleDateString()}
+                                  {(safeNumber(doc.size) / 1024 / 1024).toFixed(
+                                    2
+                                  )}{" "}
+                                  MB - {formatDate(doc.uploadedAt)}
                                 </p>
                               </div>
                             </div>
@@ -435,28 +590,11 @@ export function ProjectArchives({
                             </Button>
                           </div>
                         ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="mb-3">All Project Documents</h4>
-                      <div className="grid gap-2">
-                        {selectedProject.attachments?.map(doc => (
-                          <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div className="flex items-center gap-3">
-                              <FileText className="h-4 w-4" />
-                              <div>
-                                <p className="text-sm">{doc.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {(doc.size / 1024 / 1024).toFixed(2)} MB • {new Date(doc.uploadedAt).toLocaleDateString()}
-                                </p>
-                              </div>
-                            </div>
-                            <Button variant="outline" size="sm">
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )) || <p className="text-sm text-muted-foreground">No documents available.</p>}
+                        {getAttachments(selectedProject).length === 0 && (
+                          <p className="text-sm text-muted-foreground">
+                            No documents available.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -468,82 +606,139 @@ export function ProjectArchives({
                       <div>
                         <h4 className="mb-3">Cost Analysis Documents</h4>
                         <div className="grid gap-2">
-                          {getCostAnalysisDocuments(selectedProject).map(doc => (
-                            <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div className="flex items-center gap-3">
-                                <DollarSign className="h-4 w-4 text-green-600" />
-                                <div>
-                                  <p className="text-sm">{doc.name}</p>
-                                  <p className="text-xs text-muted-foreground">
-                                    Created by {users.find(u => u.id === doc.uploadedBy)?.name}
-                                  </p>
+                          {getCostAnalysisDocuments(selectedProject).map(
+                            (doc) => (
+                              <div
+                                key={doc.id}
+                                className="flex items-center justify-between p-3 border rounded-lg"
+                              >
+                                <div className="flex items-center gap-3">
+                                  <DollarSign className="h-4 w-4 text-green-600" />
+                                  <div>
+                                    <p className="text-sm">{doc.name}</p>
+                                    <p className="text-xs text-muted-foreground">
+                                      Created by{" "}
+                                      {
+                                        users.find(
+                                          (u) => u.id === doc.uploadedBy
+                                        )?.name
+                                      }
+                                    </p>
+                                  </div>
                                 </div>
+                                <Button variant="outline" size="sm">
+                                  <Download className="h-4 w-4" />
+                                </Button>
                               </div>
-                              <Button variant="outline" size="sm">
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          ))}
+                            )
+                          )}
                         </div>
                       </div>
 
                       <div>
                         <h4 className="mb-3">Budget Breakdown by Fabricator</h4>
                         <div className="space-y-3">
-                          {selectedProject.fabricatorBudgets?.map(budget => {
-                            const fabricator = users.find(u => u.id === budget.fabricatorId);
-                            const utilizationRate = (budget.spentAmount / budget.allocatedAmount) * 100;
+                          {(selectedProject.fabricatorBudgets || []).map(
+                            (budget) => {
+                              const fabricator = users.find(
+                                (u) => u.id === budget.fabricatorId
+                              );
+                              const allocated = safeNumber(
+                                budget.allocatedAmount
+                              );
+                              const spent = safeNumber(budget.spentAmount);
+                              const utilizationRate =
+                                allocated > 0 ? (spent / allocated) * 100 : 0;
 
-                            return (
-                              <div key={budget.fabricatorId} className="p-4 border rounded-lg">
-                                <div className="flex justify-between items-start mb-2">
-                                  <div>
-                                    <p className="font-medium">{fabricator?.name}</p>
-                                    <p className="text-sm text-muted-foreground">{budget.description}</p>
+                              return (
+                                <div
+                                  key={budget.fabricatorId}
+                                  className="p-4 border rounded-lg"
+                                >
+                                  <div className="flex justify-between items-start mb-2">
+                                    <div>
+                                      <p className="font-medium">
+                                        {fabricator?.name}
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">
+                                        {budget.description}
+                                      </p>
+                                    </div>
+                                    <Badge
+                                      variant={
+                                        utilizationRate > 100
+                                          ? "destructive"
+                                          : "default"
+                                      }
+                                    >
+                                      {utilizationRate.toFixed(1)}% utilized
+                                    </Badge>
                                   </div>
-                                  <Badge variant={utilizationRate > 100 ? 'destructive' : 'default'}>
-                                    {utilizationRate.toFixed(1)}% utilized
-                                  </Badge>
+                                  <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                      <span className="text-muted-foreground">
+                                        Allocated:
+                                      </span>
+                                      <span className="ml-2">
+                                        $
+                                        {safeNumber(
+                                          budget.allocatedAmount
+                                        ).toLocaleString()}
+                                      </span>
+                                    </div>
+                                    <div>
+                                      <span className="text-muted-foreground">
+                                        Spent:
+                                      </span>
+                                      <span className="ml-2">
+                                        $
+                                        {safeNumber(
+                                          budget.spentAmount
+                                        ).toLocaleString()}
+                                      </span>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                  <div>
-                                    <span className="text-muted-foreground">Allocated:</span>
-                                    <span className="ml-2">${budget.allocatedAmount.toLocaleString()}</span>
-                                  </div>
-                                  <div>
-                                    <span className="text-muted-foreground">Spent:</span>
-                                    <span className="ml-2">${budget.spentAmount.toLocaleString()}</span>
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                              );
+                            }
+                          )}
                         </div>
                       </div>
 
                       <div>
                         <h4 className="mb-3">Material Costs</h4>
                         <div className="grid gap-2">
-                          {getProjectMaterials(selectedProject.id).map(material => (
-                            <div key={material.id} className="flex justify-between items-center p-3 border rounded-lg">
-                              <div>
-                                <p className="text-sm">{material.name}</p>
-                                <p className="text-xs text-muted-foreground">
-                                  {material.quantity} {material.unit} • {material.supplier}
+                          {getProjectMaterials(selectedProject.id).map(
+                            (material) => (
+                              <div
+                                key={material.id}
+                                className="flex justify-between items-center p-3 border rounded-lg"
+                              >
+                                <div>
+                                  <p className="text-sm">{material.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {material.quantity} {material.unit} -{" "}
+                                    {material.supplier}
+                                  </p>
+                                </div>
+                                <p className="font-medium">
+                                  ${safeNumber(material.cost).toLocaleString()}
                                 </p>
                               </div>
-                              <p className="font-medium">${material.cost.toLocaleString()}</p>
-                            </div>
-                          ))}
+                            )
+                          )}
                         </div>
                       </div>
                     </div>
                   ) : (
                     <div className="text-center py-8">
                       <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                      <h3 className="text-lg mb-2">Financial Information Restricted</h3>
+                      <h3 className="text-lg mb-2">
+                        Financial Information Restricted
+                      </h3>
                       <p className="text-muted-foreground">
-                        Cost analysis and budget information is only available to administrators.
+                        Cost analysis and budget information is only available
+                        to administrators.
                       </p>
                     </div>
                   )}
@@ -555,7 +750,9 @@ export function ProjectArchives({
                       <h4 className="mb-3">Project Supervisor</h4>
                       <div className="p-4 border rounded-lg">
                         {(() => {
-                          const supervisor = users.find(u => u.id === selectedProject.supervisorId);
+                          const supervisor = users.find(
+                            (u) => u.id === selectedProject.supervisorId
+                          );
                           return supervisor ? (
                             <div className="flex items-center gap-3">
                               <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -564,11 +761,15 @@ export function ProjectArchives({
                               <div>
                                 <p className="font-medium">{supervisor.name}</p>
                                 <p className="text-sm text-muted-foreground">
-                                  {supervisor.school} • {supervisor.secureId}
+                                  {supervisor.school} - {supervisor.secureId}
                                 </p>
                               </div>
                             </div>
-                          ) : <p className="text-sm text-muted-foreground">Supervisor information not available</p>;
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Supervisor information not available
+                            </p>
+                          );
                         })()}
                       </div>
                     </div>
@@ -576,31 +777,52 @@ export function ProjectArchives({
                     <div>
                       <h4 className="mb-3">Fabricators</h4>
                       <div className="grid gap-3">
-                        {selectedProject.fabricatorIds.map(fabricatorId => {
-                          const fabricator = users.find(u => u.id === fabricatorId);
-                          const workLogs = getProjectWorkLogs(selectedProject.id).filter(log => log.fabricatorId === fabricatorId);
-                          const totalHours = workLogs.reduce((sum, log) => sum + log.hoursWorked, 0);
+                        {getFabricatorIds(selectedProject).map(
+                          (fabricatorId) => {
+                            const fabricator = users.find(
+                              (u) => u.id === fabricatorId
+                            );
+                            const workLogs = getProjectWorkLogs(
+                              selectedProject.id
+                            ).filter(
+                              (log) => log.fabricatorId === fabricatorId
+                            );
+                            const totalHours = workLogs.reduce(
+                              (sum, log) => sum + log.hoursWorked,
+                              0
+                            );
 
-                          return fabricator ? (
-                            <div key={fabricatorId} className="p-4 border rounded-lg">
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
-                                  <User className="h-5 w-5" />
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-medium">{fabricator.name}</p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {fabricator.school} • {fabricator.secureId}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="text-sm font-medium">{totalHours} hours</p>
-                                  <p className="text-xs text-muted-foreground">{workLogs.length} work logs</p>
+                            return fabricator ? (
+                              <div
+                                key={fabricatorId}
+                                className="p-4 border rounded-lg"
+                              >
+                                <div className="flex items-center gap-3 mb-2">
+                                  <div className="h-10 w-10 rounded-full bg-secondary/10 flex items-center justify-center">
+                                    <User className="h-5 w-5" />
+                                  </div>
+                                  <div className="flex-1">
+                                    <p className="font-medium">
+                                      {fabricator.name}
+                                    </p>
+                                    <p className="text-sm text-muted-foreground">
+                                      {fabricator.school} -{" "}
+                                      {fabricator.secureId}
+                                    </p>
+                                  </div>
+                                  <div className="text-right">
+                                    <p className="text-sm font-medium">
+                                      {totalHours} hours
+                                    </p>
+                                    <p className="text-xs text-muted-foreground">
+                                      {workLogs.length} work logs
+                                    </p>
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          ) : null;
-                        })}
+                            ) : null;
+                          }
+                        )}
                       </div>
                     </div>
                   </div>
@@ -644,7 +866,11 @@ export function ProjectArchives({
             onSubmit={async (data) => {
               if (onCreateProject) {
                 // Ensure status is completed for archive
-                await onCreateProject({ ...data, status: 'completed', progress: 100 });
+                await onCreateProject({
+                  ...data,
+                  status: "completed",
+                  progress: 100,
+                });
                 setShowCreateDialog(false);
               }
             }}
@@ -658,11 +884,14 @@ export function ProjectArchives({
           <AlertDialogHeader>
             <AlertDialogTitle>Delete Archived Project</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to delete "{projectToDelete?.name}"? This action cannot be undone.
+              Are you sure you want to delete "{projectToDelete?.name}"? This
+              action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
+              Cancel
+            </AlertDialogCancel>
             <AlertDialogAction
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               onClick={() => {

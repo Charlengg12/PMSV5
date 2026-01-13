@@ -15,18 +15,17 @@ interface AppLayoutProps {
 
 export function AppLayout({ children, currentUser, onLogout, currentTheme, onThemeChange, isTransitioning }: AppLayoutProps) {
   return (
-    <SidebarProvider>
+    <SidebarProvider storageKey={`sidebar_state_${currentUser.id}`}>
       <div className="min-h-screen flex w-full">
-        <AppSidebar currentUser={currentUser} />
-        <SidebarInset className="flex-1">
+        <AppSidebar currentUser={currentUser} onLogout={onLogout} />
+        <SidebarInset className="flex-1 flex flex-col h-svh">
           <Header
             currentUser={currentUser}
-            onLogout={onLogout}
             currentTheme={currentTheme}
             onThemeChange={onThemeChange}
             isTransitioning={isTransitioning}
           />
-          <main className="flex-1 p-4 md:p-6">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6">
             {children}
           </main>
         </SidebarInset>

@@ -1,28 +1,70 @@
-import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Progress } from '../ui/progress';
-import { Button } from '../ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Textarea } from '../ui/textarea';
-import { Label } from '../ui/label';
-import { Calendar, DollarSign, Users, Building, FileText, Link, Paperclip, Plus, UserPlus, CheckCircle, Clock, XCircle, MessageSquare, Eye } from 'lucide-react';
-import { Project, User } from '../../types';
-import { CreateProjectForm } from './CreateProjectForm';
-import { ProjectDetails } from './ProjectDetails';
-import { emailService } from '../../utils/emailService';
-import { ClientCreationDialog } from '../client/ClientCreationDialog';
+import { useState } from "react";
+import Swal from "sweetalert2";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Progress } from "../ui/progress";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
+import {
+  Calendar,
+  DollarSign,
+  Users,
+  Building,
+  FileText,
+  Link,
+  Paperclip,
+  Plus,
+  UserPlus,
+  CheckCircle,
+  Clock,
+  XCircle,
+  MessageSquare,
+  Eye,
+} from "lucide-react";
+import { Project, User } from "../../types";
+import { CreateProjectForm } from "./CreateProjectForm";
+import { ProjectDetails } from "./ProjectDetails";
+import { emailService } from "../../utils/emailService";
+import { ClientCreationDialog } from "../client/ClientCreationDialog";
 
 interface ProjectsGridProps {
   projects: Project[];
   users: User[];
   currentUser: User;
-  onCreateProject?: (project: Omit<Project, 'id'>) => void | Promise<void> | Promise<Project>;
-  onAssignFabricator?: (projectId: string, fabricatorId: string, message?: string) => void;
+  onCreateProject?: (
+    project: Omit<Project, "id">
+  ) => void | Promise<void> | Promise<Project>;
+  onAssignFabricator?: (
+    projectId: string,
+    fabricatorId: string,
+    message?: string
+  ) => void;
   onUpdateProject?: (project: Project) => void;
-  onAcceptAssignment?: (assignmentId: string, response?: string, projectId?: string) => void;
-  onDeclineAssignment?: (assignmentId: string, response?: string, projectId?: string) => void;
+  onAcceptAssignment?: (
+    assignmentId: string,
+    response?: string,
+    projectId?: string
+  ) => void;
+  onDeclineAssignment?: (
+    assignmentId: string,
+    response?: string,
+    projectId?: string
+  ) => void;
   onCreateUser?: (user: User) => void;
   onBroadcastFabricators?: (projectId: string, message?: string) => void;
 }
@@ -37,50 +79,61 @@ export function ProjectsGrid({
   onAcceptAssignment,
   onDeclineAssignment,
   onCreateUser,
-  onBroadcastFabricators
+  onBroadcastFabricators,
 }: ProjectsGridProps) {
   // Move all hooks to the top - this is required by React Hooks rules
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
-  const [selectedProjectId, setSelectedProjectId] = useState('');
-  const [selectedFabricatorId, setSelectedFabricatorId] = useState('');
-  const [assignMessage, setAssignMessage] = useState('');
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [selectedFabricatorId, setSelectedFabricatorId] = useState("");
+  const [assignMessage, setAssignMessage] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
-  const [clientDialogProject, setClientDialogProject] = useState<Project | null>(null);
+  const [clientDialogProject, setClientDialogProject] =
+    useState<Project | null>(null);
   // Track locally assigned clients to avoid relying solely on parent refresh
-  const [localClientAssignedProjectIds, setLocalClientAssignedProjectIds] = useState<Set<string>>(new Set());
+  const [localClientAssignedProjectIds, setLocalClientAssignedProjectIds] =
+    useState<Set<string>>(new Set());
   // For fabricator assignment responses
-  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
-  const [assignmentResponse, setAssignmentResponse] = useState('');
+  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(
+    null
+  );
+  const [assignmentResponse, setAssignmentResponse] = useState("");
 
   if (!currentUser) return null; // Safety check
 
   const getFilteredProjects = () => {
     // First filter by role-based access
     let roleFilteredProjects;
-    if (currentUser.role === 'admin') {
+    if (currentUser.role === "admin") {
       roleFilteredProjects = projects;
-    } else if (currentUser.role === 'supervisor') {
-      roleFilteredProjects = projects.filter(p =>
-        p.supervisorId === currentUser.id ||
-        (p.pendingSupervisors && p.pendingSupervisors.includes(currentUser.id))
+    } else if (currentUser.role === "supervisor") {
+      roleFilteredProjects = projects.filter(
+        (p) =>
+          p.supervisorId === currentUser.id ||
+          (p.pendingSupervisors &&
+            p.pendingSupervisors.includes(currentUser.id))
       );
-    } else if (currentUser.role === 'fabricator') {
+    } else if (currentUser.role === "fabricator") {
       // For fabricators, show both assigned projects and pending assignments
-      roleFilteredProjects = projects.filter(p =>
-        p.fabricatorIds.includes(currentUser.id) ||
-        p.pendingAssignments?.some(assignment =>
-          assignment.fabricatorId === currentUser.id && assignment.status === 'pending'
-        )
+      roleFilteredProjects = projects.filter(
+        (p) =>
+          p.fabricatorIds.includes(currentUser.id) ||
+          p.pendingAssignments?.some(
+            (assignment) =>
+              assignment.fabricatorId === currentUser.id &&
+              assignment.status === "pending"
+          )
       );
     } else {
-      roleFilteredProjects = projects.filter(p => p.fabricatorIds.includes(currentUser.id));
+      roleFilteredProjects = projects.filter((p) =>
+        p.fabricatorIds.includes(currentUser.id)
+      );
     }
 
     // Then filter out completed projects (they should only appear in archives)
-    return roleFilteredProjects.filter(p => p.status !== 'completed');
+    return roleFilteredProjects.filter((p) => p.status !== "completed");
   };
 
   const filteredProjects = getFilteredProjects();
@@ -89,89 +142,101 @@ export function ProjectsGrid({
     if (localClientAssignedProjectIds.has(project.id)) return true;
     if (project.clientName && project.clientName.trim().length > 0) return true;
     // Fallback: check if there is a client user linked to this project
-    return users.some(u => u.role === 'client' && u.clientProjectId === project.id);
+    return users.some(
+      (u) => u.role === "client" && u.clientProjectId === project.id
+    );
   };
 
   // Get available fabricators for assignment (exclude already assigned ones)
   const getAvailableFabricators = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
+    const project = projects.find((p) => p.id === projectId);
     if (!project) return [];
 
-    return users.filter(u =>
-      u.role === 'fabricator' &&
-      !project.fabricatorIds.includes(u.id) &&
-      !project.pendingAssignments?.some(pa => pa.fabricatorId === u.id && pa.status === 'pending')
+    return users.filter(
+      (u) =>
+        u.role === "fabricator" &&
+        !project.fabricatorIds.includes(u.id) &&
+        !project.pendingAssignments?.some(
+          (pa) => pa.fabricatorId === u.id && pa.status === "pending"
+        )
     );
   };
 
   const handleAssignFabricator = () => {
     if (onAssignFabricator && selectedProjectId && selectedFabricatorId) {
-      onAssignFabricator(selectedProjectId, selectedFabricatorId, assignMessage || undefined);
+      onAssignFabricator(
+        selectedProjectId,
+        selectedFabricatorId,
+        assignMessage || undefined
+      );
       setShowAssignForm(false);
-      setSelectedProjectId('');
-      setSelectedFabricatorId('');
-      setAssignMessage('');
+      setSelectedProjectId("");
+      setSelectedFabricatorId("");
+      setAssignMessage("");
     }
   };
 
-  const canCreateProject = (currentUser.role === 'admin' || currentUser.role === 'supervisor');
+  const canCreateProject =
+    currentUser.role === "admin" || currentUser.role === "supervisor";
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case '0_Created':
-        return 'outline';
-      case '1_Assigned_to_FAB':
-        return 'secondary';
-      case '2_Ready_for_Supervisor_Review':
-        return 'destructive';
-      case '3_Ready_for_Admin_Review':
-        return 'destructive';
-      case '4_Ready_for_Client_Signoff':
-        return 'default';
+      case "0_Created":
+        return "outline";
+      case "1_Assigned_to_FAB":
+        return "secondary";
+      case "2_Ready_for_Supervisor_Review":
+        return "destructive";
+      case "3_Ready_for_Admin_Review":
+        return "destructive";
+      case "4_Ready_for_Client_Signoff":
+        return "default";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent':
-        return 'destructive';
-      case 'high':
-        return 'destructive';
-      case 'medium':
-        return 'secondary';
-      case 'low':
-        return 'outline';
+      case "urgent":
+        return "destructive";
+      case "high":
+        return "destructive";
+      case "medium":
+        return "secondary";
+      case "low":
+        return "outline";
       default:
-        return 'outline';
+        return "outline";
     }
   };
 
   const getSupervisorName = (supervisorId: string) => {
-    const supervisor = users.find(u => u.id === supervisorId);
-    return supervisor?.name || 'Unknown Supervisor';
+    const supervisor = users.find((u) => u.id === supervisorId);
+    return supervisor?.name || "Unknown Supervisor";
   };
 
   const getFabricatorNames = (fabricatorIds: string[]) => {
     return fabricatorIds
-      .map(id => users.find(u => u.id === id)?.name || 'Unknown')
-      .join(', ');
+      .map((id) => users.find((u) => u.id === id)?.name || "Unknown")
+      .join(", ");
   };
 
   const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
+    if (bytes === 0) return "0 Bytes";
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const sizes = ["Bytes", "KB", "MB", "GB"];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const getFabricatorBudget = (project: Project, fabricatorId: string) => {
-    return project.fabricatorBudgets?.find(fb => fb.fabricatorId === fabricatorId);
+    return project.fabricatorBudgets?.find(
+      (fb) => fb.fabricatorId === fabricatorId
+    );
   };
 
-  const handleCreateProject = async (project: Omit<Project, 'id'>) => {
+  const handleCreateProject = async (project: Omit<Project, "id">) => {
     let result;
     if (onCreateProject) {
       result = await onCreateProject(project);
@@ -188,7 +253,12 @@ export function ProjectsGrid({
     if (onUpdateProject) {
       onUpdateProject(updatedProject);
       // Send email notification about project update
-      emailService.sendProjectUpdate(updatedProject, users, 'progress_update', currentUser);
+      emailService.sendProjectUpdate(
+        updatedProject,
+        users,
+        "progress_update",
+        currentUser
+      );
     }
   };
 
@@ -196,38 +266,69 @@ export function ProjectsGrid({
     if (onUpdateProject) {
       const updatedProject = {
         ...project,
-        status: '4_Ready_for_Client_Signoff' as Project['status'],
-        progress: 100
+        status: "4_Ready_for_Client_Signoff" as Project["status"],
+        progress: 100,
       };
       onUpdateProject(updatedProject);
       // Send email notification about project completion
-      emailService.sendProjectUpdate(updatedProject, users, 'status_change', currentUser);
+      emailService.sendProjectUpdate(
+        updatedProject,
+        users,
+        "status_change",
+        currentUser
+      );
     }
   };
 
   // Archive all projects that are ready to be archived (completed/finalized)
   const getArchivableProjects = () => {
-    return projects.filter(p =>
-      p.status === 'completed' ||
-      p.status === '4_Ready_for_Client_Signoff' ||
-      p.progress >= 100
+    return projects.filter(
+      (p) =>
+        p.status === "completed" ||
+        p.status === "4_Ready_for_Client_Signoff" ||
+        p.progress >= 100
     );
   };
 
   const handleArchiveAllCompleted = () => {
     if (!onUpdateProject) return;
     const archivable = getArchivableProjects();
-    archivable.forEach(p => {
-      const updated: Project = { ...p, status: 'completed' };
+    const readyToArchive = archivable.filter((p) => {
+      const progress =
+        typeof p.progress === "string" ? Number(p.progress) : p.progress;
+      return (
+        Number.isFinite(progress) && progress >= 100 && p.status !== "completed"
+      );
+    });
+    if (readyToArchive.length === 0) return;
+    readyToArchive.forEach((p) => {
+      const updated: Project = { ...p, status: "completed" };
       onUpdateProject(updated);
     });
+    if (readyToArchive.length > 0) {
+      Swal.fire({
+        icon: "success",
+        title: "Project Archived!",
+        text: "The project has been successfully moved to archives.",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    }
   };
 
-  const handleTransition = (project: Project, nextStatus: Project['status']) => {
+  const handleTransition = (
+    project: Project,
+    nextStatus: Project["status"]
+  ) => {
     if (!onUpdateProject) return;
     const updatedProject = { ...project, status: nextStatus };
     onUpdateProject(updatedProject);
-    emailService.sendProjectUpdate(updatedProject, users, 'status_change', currentUser);
+    emailService.sendProjectUpdate(
+      updatedProject,
+      users,
+      "status_change",
+      currentUser
+    );
   };
 
   return (
@@ -235,21 +336,31 @@ export function ProjectsGrid({
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl">Projects</h2>
-          <p className="text-sm text-muted-foreground mt-1">Manage and track your projects</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage and track your projects
+          </p>
         </div>
         <div className="flex gap-2">
-          {(currentUser.role === 'admin' || currentUser.role === 'supervisor') && (
+          {(currentUser.role === "admin" ||
+            currentUser.role === "supervisor") && (
             <Button
               variant="outline"
               onClick={handleArchiveAllCompleted}
               disabled={getArchivableProjects().length === 0}
-              title={getArchivableProjects().length === 0 ? 'No projects ready to archive' : ''}
+              title={
+                getArchivableProjects().length === 0
+                  ? "No projects ready to archive"
+                  : ""
+              }
             >
               Archive Completed ({getArchivableProjects().length})
             </Button>
           )}
           {canCreateProject && (
-            <Button onClick={() => setShowCreateForm(true)} className="bg-accent hover:bg-accent/90">
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="bg-accent hover:bg-accent/90"
+            >
               <Plus className="h-4 w-4 mr-2" />
               Create Project
             </Button>
@@ -259,16 +370,25 @@ export function ProjectsGrid({
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project) => (
-          <Card key={project.id} className="hover:shadow-lg transition-all duration-200 border-0 shadow-md overflow-hidden group">
+          <Card
+            key={project.id}
+            className="hover:shadow-lg transition-all duration-200 border-0 shadow-md overflow-hidden group"
+          >
             <div className="h-2 bg-gradient-to-r from-primary to-accent"></div>
             <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
               <div className="flex justify-between items-start">
                 <CardTitle className="text-lg">{project.name}</CardTitle>
                 <div className="flex gap-2 flex-wrap">
-                  <Badge variant={getStatusColor(project.status)} className="text-xs">
+                  <Badge
+                    variant={getStatusColor(project.status)}
+                    className="text-xs"
+                  >
                     {project.status}
                   </Badge>
-                  <Badge variant={getPriorityColor(project.priority)} className="text-xs">
+                  <Badge
+                    variant={getPriorityColor(project.priority)}
+                    className="text-xs"
+                  >
                     {project.priority}
                   </Badge>
                 </div>
@@ -290,34 +410,41 @@ export function ProjectsGrid({
               <div className="space-y-2 text-xs">
                 <div className="flex items-center gap-2">
                   <Building className="h-3 w-3" />
-                  <span className="truncate">
-                    Client: {project.clientName}
-                  </span>
+                  <span className="truncate">Client: {project.clientName}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <Calendar className="h-3 w-3" />
                   <span>
-                    {new Date(project.startDate).toLocaleDateString()} - {' '}
+                    {new Date(project.startDate).toLocaleDateString()} -{" "}
                     {new Date(project.endDate).toLocaleDateString()}
                   </span>
                 </div>
 
                 {/* Role-based financial information */}
-                {currentUser.role === 'fabricator' && (
+                {currentUser.role === "fabricator" && (
                   <div className="space-y-1">
                     {(() => {
-                      const fabricatorBudget = getFabricatorBudget(project, currentUser.id);
+                      const fabricatorBudget = getFabricatorBudget(
+                        project,
+                        currentUser.id
+                      );
                       if (fabricatorBudget) {
                         return (
                           <>
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-3 w-3" />
-                              <span>My Budget: ₱{fabricatorBudget.allocatedAmount.toLocaleString()}</span>
+                              <span>
+                                My Budget: ₱
+                                {fabricatorBudget.allocatedAmount.toLocaleString()}
+                              </span>
                             </div>
                             <div className="flex items-center gap-2">
                               <DollarSign className="h-3 w-3" />
-                              <span>Spent: ₱{fabricatorBudget.spentAmount.toLocaleString()}</span>
+                              <span>
+                                Spent: ₱
+                                {fabricatorBudget.spentAmount.toLocaleString()}
+                              </span>
                             </div>
                             <div className="text-xs text-muted-foreground ml-5">
                               {fabricatorBudget.description}
@@ -328,7 +455,9 @@ export function ProjectsGrid({
                         return (
                           <div className="flex items-center gap-2">
                             <DollarSign className="h-3 w-3" />
-                            <span>Project Value: ₱{project.revenue.toLocaleString()}</span>
+                            <span>
+                              Project Value: ₱{project.revenue.toLocaleString()}
+                            </span>
                           </div>
                         );
                       }
@@ -336,35 +465,30 @@ export function ProjectsGrid({
                   </div>
                 )}
 
-                {currentUser.role === 'supervisor' && (
+                {currentUser.role === "supervisor" && (
                   <>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-3 w-3" />
-                      <span>
-                        Budget: ₱{project.budget.toLocaleString()}
-                      </span>
+                      <span>Budget: ₱{project.budget.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-3 w-3" />
-                      <span>
-                        Spent: ₱{project.spent.toLocaleString()}
-                      </span>
+                      <span>Spent: ₱{project.spent.toLocaleString()}</span>
                     </div>
                   </>
                 )}
 
-                {currentUser.role === 'admin' && (
+                {currentUser.role === "admin" && (
                   <>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-3 w-3" />
-                      <span>
-                        Revenue: ₱{project.revenue.toLocaleString()}
-                      </span>
+                      <span>Revenue: ₱{project.revenue.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <DollarSign className="h-3 w-3" />
                       <span>
-                        Budget: ₱{project.budget.toLocaleString()} | Spent: ₱{project.spent.toLocaleString()}
+                        Budget: ₱{project.budget.toLocaleString()} | Spent: ₱
+                        {project.spent.toLocaleString()}
                       </span>
                     </div>
                   </>
@@ -408,7 +532,10 @@ export function ProjectsGrid({
                     </div>
                     <div className="ml-5 space-y-1">
                       {project.attachments.slice(0, 2).map((attachment) => (
-                        <div key={attachment.id} className="flex items-center gap-1 text-xs">
+                        <div
+                          key={attachment.id}
+                          className="flex items-center gap-1 text-xs"
+                        >
                           <FileText className="h-3 w-3" />
                           <span className="truncate">{attachment.name}</span>
                           <span className="text-muted-foreground">
@@ -429,49 +556,62 @@ export function ProjectsGrid({
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Users className="h-3 w-3" />
                   <span className="text-xs">
-                    Created by: {users.find(u => u.id === project.createdBy)?.name || 'Unknown'}
+                    Created by:{" "}
+                    {users.find((u) => u.id === project.createdBy)?.name ||
+                      "Unknown"}
                   </span>
                 </div>
               </div>
 
               {/* Pending Supervisor Assignment Banner */}
-              {currentUser.role === 'supervisor' && project.pendingSupervisors?.includes(currentUser.id) && (
-                <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-4 space-y-3 shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                    <span className="font-semibold text-blue-900 dark:text-blue-100">
-                      Pending Project Assignment
-                    </span>
+              {currentUser.role === "supervisor" &&
+                project.pendingSupervisors?.includes(currentUser.id) && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 border-2 border-blue-300 dark:border-blue-700 rounded-lg p-4 space-y-3 shadow-sm">
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      <span className="font-semibold text-blue-900 dark:text-blue-100">
+                        Pending Project Assignment
+                      </span>
+                    </div>
+                    <p className="text-sm text-blue-800 dark:text-blue-200">
+                      You have been invited to supervise this project.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        size="sm"
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white"
+                        onClick={() =>
+                          onAcceptAssignment &&
+                          onAcceptAssignment("", "accepted", project.id)
+                        }
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Accept Project
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
+                        onClick={() =>
+                          onDeclineAssignment &&
+                          onDeclineAssignment("", "declined", project.id)
+                        }
+                      >
+                        <XCircle className="h-4 w-4 mr-2" />
+                        Decline
+                      </Button>
+                    </div>
                   </div>
-                  <p className="text-sm text-blue-800 dark:text-blue-200">
-                    You have been invited to supervise this project.
-                  </p>
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      className="flex-1 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => onAcceptAssignment && onAcceptAssignment('', 'accepted', project.id)}
-                    >
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Accept Project
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="flex-1 border-red-300 text-red-600 hover:bg-red-50"
-                      onClick={() => onDeclineAssignment && onDeclineAssignment('', 'declined', project.id)}
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Decline
-                    </Button>
-                  </div>
-                </div>
-              )}
+                )}
 
               {/* Pending Assignment Banner for Fabricators */}
-              {currentUser.role === 'fabricator' && project.pendingAssignments?.some(
-                assignment => assignment.fabricatorId === currentUser.id && assignment.status === 'pending'
-              ) && !project.fabricatorIds.includes(currentUser.id) && (
+              {currentUser.role === "fabricator" &&
+                project.pendingAssignments?.some(
+                  (assignment) =>
+                    assignment.fabricatorId === currentUser.id &&
+                    assignment.status === "pending"
+                ) &&
+                !project.fabricatorIds.includes(currentUser.id) && (
                   <div className="bg-orange-50 dark:bg-orange-900/20 border-2 border-orange-300 dark:border-orange-700 rounded-lg p-4 space-y-3 shadow-sm">
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-orange-600 dark:text-orange-400" />
@@ -480,11 +620,20 @@ export function ProjectsGrid({
                       </span>
                     </div>
                     {project.pendingAssignments
-                      .filter(a => a.fabricatorId === currentUser.id && a.status === 'pending')
-                      .map(assignment => {
-                        const supervisor = users.find(u => u.id === assignment.assignedBy);
-                        const isAcceptMode = selectedAssignment === `accept-${assignment.id}`;
-                        const isDeclineMode = selectedAssignment === assignment.id && !selectedAssignment?.includes('accept-');
+                      .filter(
+                        (a) =>
+                          a.fabricatorId === currentUser.id &&
+                          a.status === "pending"
+                      )
+                      .map((assignment) => {
+                        const supervisor = users.find(
+                          (u) => u.id === assignment.assignedBy
+                        );
+                        const isAcceptMode =
+                          selectedAssignment === `accept-${assignment.id}`;
+                        const isDeclineMode =
+                          selectedAssignment === assignment.id &&
+                          !selectedAssignment?.includes("accept-");
 
                         return (
                           <div key={assignment.id} className="space-y-3">
@@ -496,14 +645,21 @@ export function ProjectsGrid({
                                     <p className="font-medium text-orange-900 dark:text-orange-100 mb-1">
                                       Message from Supervisor:
                                     </p>
-                                    <p className="text-orange-800 dark:text-orange-200">{assignment.message}</p>
+                                    <p className="text-orange-800 dark:text-orange-200">
+                                      {assignment.message}
+                                    </p>
                                   </div>
                                 </div>
                               </div>
                             )}
                             <div className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-2">
                               <Users className="h-3 w-3" />
-                              <span>Assigned by: <strong>{supervisor?.name || 'Unknown Supervisor'}</strong></span>
+                              <span>
+                                Assigned by:{" "}
+                                <strong>
+                                  {supervisor?.name || "Unknown Supervisor"}
+                                </strong>
+                              </span>
                             </div>
 
                             {/* Action Buttons - Show when no mode is selected */}
@@ -513,8 +669,10 @@ export function ProjectsGrid({
                                   size="sm"
                                   className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                                   onClick={() => {
-                                    setSelectedAssignment(`accept-${assignment.id}`);
-                                    setAssignmentResponse('');
+                                    setSelectedAssignment(
+                                      `accept-${assignment.id}`
+                                    );
+                                    setAssignmentResponse("");
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -526,7 +684,7 @@ export function ProjectsGrid({
                                   className="flex-1 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-400"
                                   onClick={() => {
                                     setSelectedAssignment(assignment.id);
-                                    setAssignmentResponse('');
+                                    setAssignmentResponse("");
                                   }}
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
@@ -543,7 +701,9 @@ export function ProjectsGrid({
                                 </Label>
                                 <Textarea
                                   value={assignmentResponse}
-                                  onChange={(e) => setAssignmentResponse(e.target.value)}
+                                  onChange={(e) =>
+                                    setAssignmentResponse(e.target.value)
+                                  }
                                   placeholder="Add an optional message to the supervisor..."
                                   className="text-sm"
                                   rows={3}
@@ -555,7 +715,7 @@ export function ProjectsGrid({
                                     className="flex-1"
                                     onClick={() => {
                                       setSelectedAssignment(null);
-                                      setAssignmentResponse('');
+                                      setAssignmentResponse("");
                                     }}
                                   >
                                     Cancel
@@ -565,9 +725,12 @@ export function ProjectsGrid({
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                                     onClick={() => {
                                       if (onAcceptAssignment) {
-                                        onAcceptAssignment(assignment.id, assignmentResponse.trim() || undefined);
+                                        onAcceptAssignment(
+                                          assignment.id,
+                                          assignmentResponse.trim() || undefined
+                                        );
                                         setSelectedAssignment(null);
-                                        setAssignmentResponse('');
+                                        setAssignmentResponse("");
                                       }
                                     }}
                                   >
@@ -586,7 +749,9 @@ export function ProjectsGrid({
                                 </Label>
                                 <Textarea
                                   value={assignmentResponse}
-                                  onChange={(e) => setAssignmentResponse(e.target.value)}
+                                  onChange={(e) =>
+                                    setAssignmentResponse(e.target.value)
+                                  }
                                   placeholder="Add an optional reason for declining..."
                                   className="text-sm"
                                   rows={3}
@@ -598,7 +763,7 @@ export function ProjectsGrid({
                                     className="flex-1"
                                     onClick={() => {
                                       setSelectedAssignment(null);
-                                      setAssignmentResponse('');
+                                      setAssignmentResponse("");
                                     }}
                                   >
                                     Cancel
@@ -609,9 +774,12 @@ export function ProjectsGrid({
                                     className="flex-1"
                                     onClick={() => {
                                       if (onDeclineAssignment) {
-                                        onDeclineAssignment(assignment.id, assignmentResponse.trim() || undefined);
+                                        onDeclineAssignment(
+                                          assignment.id,
+                                          assignmentResponse.trim() || undefined
+                                        );
                                         setSelectedAssignment(null);
-                                        setAssignmentResponse('');
+                                        setAssignmentResponse("");
                                       }
                                     }}
                                   >
@@ -637,8 +805,9 @@ export function ProjectsGrid({
                   <Eye className="h-3 w-3 mr-1" />
                   <span className="truncate">Details</span>
                 </Button>
-                {(currentUser.role === 'admin' || currentUser.role === 'supervisor') && (
-                  isClientAssigned(project) ? (
+                {(currentUser.role === "admin" ||
+                  currentUser.role === "supervisor") &&
+                  (isClientAssigned(project) ? (
                     <Button
                       variant="outline"
                       size="sm"
@@ -662,89 +831,115 @@ export function ProjectsGrid({
                       <UserPlus className="h-3 w-3 mr-1" />
                       <span className="truncate">Client</span>
                     </Button>
-                  )
-                )}
-                {currentUser.role === 'supervisor' && project.supervisorId === currentUser.id && (
-                  <>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full lg:flex-1 text-accent"
-                      onClick={() => {
-                        setSelectedProjectId(project.id);
-                        setShowAssignForm(true);
-                      }}
-                    >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      <span className="truncate">Assign</span>
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full lg:flex-1 col-span-2 lg:col-auto"
-                      onClick={() => onBroadcastFabricators && onBroadcastFabricators(project.id)}
-                    >
-                      <Users className="h-3 w-3 mr-1" />
-                      <span className="truncate">Broadcast FABs</span>
-                    </Button>
-                  </>
-                )}
+                  ))}
+                {currentUser.role === "supervisor" &&
+                  project.supervisorId === currentUser.id && (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full lg:flex-1 text-accent"
+                        onClick={() => {
+                          setSelectedProjectId(project.id);
+                          setShowAssignForm(true);
+                        }}
+                      >
+                        <UserPlus className="h-3 w-3 mr-1" />
+                        <span className="truncate">Assign</span>
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full lg:flex-1 col-span-2 lg:col-auto"
+                        onClick={() =>
+                          onBroadcastFabricators &&
+                          onBroadcastFabricators(project.id)
+                        }
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        <span className="truncate">Broadcast FABs</span>
+                      </Button>
+                    </>
+                  )}
 
                 {/* Workflow Actions - Primary buttons should be prominent */}
-                {currentUser.role === 'admin' && project.status === '0_Created' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full lg:flex-1 col-span-2 lg:col-auto bg-primary"
-                    onClick={() => handleTransition(project, '1_Assigned_to_FAB')}
-                  >
-                    Assign Now
-                  </Button>
-                )}
-
-                {currentUser.role === 'fabricator' && project.status === '1_Assigned_to_FAB' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full lg:flex-1 col-span-2 lg:col-auto bg-primary"
-                    onClick={() => handleTransition(project, '2_Ready_for_Supervisor_Review')}
-                    disabled={!(project.documentationUrl || (project.attachments && project.attachments.length > 0))}
-                  >
-                    Submit Review
-                  </Button>
-                )}
-
-                {currentUser.role === 'supervisor' && project.status === '2_Ready_for_Supervisor_Review' && (
-                  <>
+                {currentUser.role === "admin" &&
+                  project.status === "0_Created" && (
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full lg:flex-1 bg-green-600 hover:bg-green-700"
-                      onClick={() => handleTransition(project, '3_Ready_for_Admin_Review')}
+                      className="w-full lg:flex-1 col-span-2 lg:col-auto bg-primary"
+                      onClick={() =>
+                        handleTransition(project, "1_Assigned_to_FAB")
+                      }
                     >
-                      Approve
+                      Assign Now
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full lg:flex-1 text-destructive border-destructive/20"
-                      onClick={() => handleTransition(project, '1_Assigned_to_FAB')}
-                    >
-                      Reject
-                    </Button>
-                  </>
-                )}
+                  )}
 
-                {currentUser.role === 'admin' && project.status === '3_Ready_for_Admin_Review' && (
-                  <Button
-                    variant="default"
-                    size="sm"
-                    className="w-full lg:flex-1 col-span-2 lg:col-auto bg-green-600 hover:bg-green-700"
-                    onClick={() => handleTransition(project, '4_Ready_for_Client_Signoff')}
-                  >
-                    Final Approval
-                  </Button>
-                )}
+                {currentUser.role === "fabricator" &&
+                  project.status === "1_Assigned_to_FAB" && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full lg:flex-1 col-span-2 lg:col-auto bg-primary"
+                      onClick={() =>
+                        handleTransition(
+                          project,
+                          "2_Ready_for_Supervisor_Review"
+                        )
+                      }
+                      disabled={
+                        !(
+                          project.documentationUrl ||
+                          (project.attachments &&
+                            project.attachments.length > 0)
+                        )
+                      }
+                    >
+                      Submit Review
+                    </Button>
+                  )}
+
+                {currentUser.role === "supervisor" &&
+                  project.status === "2_Ready_for_Supervisor_Review" && (
+                    <>
+                      <Button
+                        variant="default"
+                        size="sm"
+                        className="w-full lg:flex-1 bg-green-600 hover:bg-green-700"
+                        onClick={() =>
+                          handleTransition(project, "3_Ready_for_Admin_Review")
+                        }
+                      >
+                        Approve
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full lg:flex-1 text-destructive border-destructive/20"
+                        onClick={() =>
+                          handleTransition(project, "1_Assigned_to_FAB")
+                        }
+                      >
+                        Reject
+                      </Button>
+                    </>
+                  )}
+
+                {currentUser.role === "admin" &&
+                  project.status === "3_Ready_for_Admin_Review" && (
+                    <Button
+                      variant="default"
+                      size="sm"
+                      className="w-full lg:flex-1 col-span-2 lg:col-auto bg-green-600 hover:bg-green-700"
+                      onClick={() =>
+                        handleTransition(project, "4_Ready_for_Client_Signoff")
+                      }
+                    >
+                      Final Approval
+                    </Button>
+                  )}
               </div>
             </CardContent>
           </Card>
@@ -757,12 +952,11 @@ export function ProjectsGrid({
             <div className="text-center">
               <h3 className="text-lg mb-2">No projects found</h3>
               <p className="text-muted-foreground mb-4">
-                {currentUser.role === 'admin'
-                  ? 'Create your first project to get started.'
-                  : currentUser.role === 'supervisor'
-                    ? 'Create your first project to get started.'
-                    : 'Wait for project assignments from your supervisor.'
-                }
+                {currentUser.role === "admin"
+                  ? "Create your first project to get started."
+                  : currentUser.role === "supervisor"
+                  ? "Create your first project to get started."
+                  : "Wait for project assignments from your supervisor."}
               </p>
               {canCreateProject && (
                 <Button onClick={() => setShowCreateForm(true)}>
@@ -792,18 +986,22 @@ export function ProjectsGrid({
             <DialogHeader>
               <DialogTitle>Assign Fabricator to Project</DialogTitle>
               <DialogDescription>
-                Select a fabricator to assign to this project and send them a message.
+                Select a fabricator to assign to this project and send them a
+                message.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="fabricatorId">Select Fabricator</Label>
-                <Select value={selectedFabricatorId} onValueChange={setSelectedFabricatorId}>
+                <Select
+                  value={selectedFabricatorId}
+                  onValueChange={setSelectedFabricatorId}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="Choose a fabricator" />
                   </SelectTrigger>
                   <SelectContent>
-                    {getAvailableFabricators(selectedProjectId).map(user => (
+                    {getAvailableFabricators(selectedProjectId).map((user) => (
                       <SelectItem key={user.id} value={user.id}>
                         {user.name} ({user.secureId})
                       </SelectItem>
@@ -864,7 +1062,9 @@ export function ProjectsGrid({
           onClientCreated={(client) => {
             onCreateUser?.(client);
             // Immediately reflect client assignment in UI without waiting for parent refresh
-            setLocalClientAssignedProjectIds(prev => new Set(prev).add(clientDialogProject.id));
+            setLocalClientAssignedProjectIds((prev) =>
+              new Set(prev).add(clientDialogProject.id)
+            );
             setShowClientDialog(false);
             setClientDialogProject(null);
           }}
