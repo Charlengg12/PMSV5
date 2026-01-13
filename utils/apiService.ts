@@ -133,12 +133,14 @@ class ApiService {
     }
 
     async updateProject(projectId: string, updates: any): Promise<ApiResponse<any>> {
-        await this.request(`/projects/${projectId}`, {
-            method: 'PUT',
-            body: JSON.stringify(updates),
-        }).then((json) => {
-            console.log(json);
-        });
+        // (>> Uncomment this if you want to see the JSON response in the console. 
+        // FYI: the response was sent by handle_update_project() in index.php <<)
+        // await this.request(`/projects/${projectId}`, {
+        //     method: 'PUT',
+        //     body: JSON.stringify(updates),
+        // }).then((json) => {
+        //     console.log(json);
+        // });
 
         return this.request(`/projects/${projectId}`, {
             method: 'PUT',

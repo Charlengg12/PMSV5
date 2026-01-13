@@ -273,8 +273,8 @@ function handle_update_project(PDO $pdo, string $id): void
             $params[":$field"] = $val;
         }
     }
-
-    // Supplemental stuff in case field mismatch with $body's fields & DB fields
+        
+    // Supplemental conditions in case theres a field mismatch with $body's fields & DB fields
     if (isset($body['name'])) {
         $fields[] = "title = :title";
         $params[':title'] = $body['name'];
@@ -302,12 +302,18 @@ function handle_update_project(PDO $pdo, string $id): void
     }
 
     $sql = "UPDATE projects SET " . implode(', ', $fields) . " WHERE id = :id";
-    // json_response($body);
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);
 
     $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
+
+    // the foreach is to handle values meant for ENUM columns (i.e. status)
+    foreach ($params as $key => $val) {
+        $stmt->bindValue($key, $val, PDO::PARAM_STR);
+    }
+
     $stmt->execute([':id' => $id]);
+
     $project = $stmt->fetch();
 
     json_response($project);
