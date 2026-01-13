@@ -5,6 +5,7 @@ const config: Config = {
     './index.html',
     './App.tsx',
     './main.tsx',
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
     './components/**/*.{js,ts,jsx,tsx}',
     './utils/**/*.{js,ts,jsx,tsx}',
   ],
