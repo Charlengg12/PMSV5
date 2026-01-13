@@ -148,6 +148,14 @@ export function UserManagement({
           text: "No information was changed.",
           showConfirmButton: false,
           timer: 1500,
+          customClass: {
+              container: 'swal-container',
+              popup: 'swal-popup',
+              title: 'swal-title',
+              htmlContainer: 'swal-content',
+              cancelButton: 'swal-cancel-button',
+              icon: 'swal-icon'
+          },
         });
         setShowEditDialog(false);
         setEditingUser(null);
@@ -171,12 +179,28 @@ export function UserManagement({
           text: "The user information has been successfully updated.",
           showConfirmButton: false,
           timer: 1500,
+          customClass: {
+              container: 'swal-container',
+              popup: 'swal-popup',
+              title: 'swal-title',
+              htmlContainer: 'swal-content',
+              cancelButton: 'swal-cancel-button',
+              icon: 'swal-icon'
+          },
         });
       } catch (err) {
         Swal.fire({
           icon: "error",
           title: "Update Failed",
           text: "Could not update user information.",
+          customClass: {
+              container: 'swal-container',
+              popup: 'swal-popup',
+              title: 'swal-title',
+              htmlContainer: 'swal-content',
+              cancelButton: 'swal-cancel-button',
+              icon: 'swal-icon'
+          },
         });
       }
     }
@@ -184,14 +208,22 @@ export function UserManagement({
 
   const handleDeleteUser = async (userId: string) => {
     const result = await Swal.fire({
-      title: "Deactivate User?",
-      text: "This action can be undone by reactivating.",
-      icon: "warning",
+      title: 'Are you sure?',
+      text: "Please confirm if you want to proceed.",
+      icon: 'info',
       showCancelButton: true,
-      confirmButtonText: "Yes",
-      cancelButtonText: "Cancel",
-      reverseButtons: true,
-      focusCancel: true,
+      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Confirm',
+      allowOutsideClick: false,
+      customClass: {
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          confirmButton: 'swal-confirm-button',
+          cancelButton: 'swal-cancel-button',
+          icon: 'swal-icon'
+      }
     });
     if (result.isConfirmed) {
       // Optionally, call backend to set is_active = 0
@@ -210,12 +242,30 @@ export function UserManagement({
           text: "The user has been deactivated.",
           timer: 1500,
           showConfirmButton: false,
+          customClass: {
+                container: 'swal-container',
+                popup: 'swal-popup',
+                title: 'swal-title',
+                htmlContainer: 'swal-content',
+                confirmButton: 'swal-confirm-button',
+                cancelButton: 'swal-cancel-button',
+                icon: 'swal-icon'
+            }
         });
       } catch (err) {
         Swal.fire({
           icon: "error",
           title: "Failed to Deactivate",
           text: "Could not deactivate the user.",
+          customClass: {
+              container: 'swal-container',
+              popup: 'swal-popup',
+              title: 'swal-title',
+              htmlContainer: 'swal-content',
+              confirmButton: 'swal-confirm-button',
+              cancelButton: 'swal-cancel-button',
+              icon: 'swal-icon'
+          }
         });
       }
     }

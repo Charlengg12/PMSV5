@@ -1,7 +1,7 @@
-import { ReactNode } from 'react';
+// components/layout/AppLayout.tsx
+import { ReactNode, useState } from 'react';
 import { User } from '../../types';
 import { AppSidebar } from './AppSidebar';
-import { SidebarProvider, SidebarInset } from '../ui/sidebar';
 import { Header } from './Header';
 
 interface AppLayoutProps {
@@ -13,24 +13,47 @@ interface AppLayoutProps {
   isTransitioning?: boolean;
 }
 
-export function AppLayout({ children, currentUser, onLogout, currentTheme, onThemeChange, isTransitioning }: AppLayoutProps) {
+export function AppLayout({
+  children,
+  currentUser,
+  onLogout,
+  currentTheme,
+  onThemeChange,
+  isTransitioning,
+}: AppLayoutProps) {
+  const [isCollapsed, setIsCollapsed] = useState(false);
+
+  const toggleCollapse = () => setIsCollapsed((prev) => !prev);
+
   return (
-    <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar currentUser={currentUser} />
-        <SidebarInset className="flex-1">
-          <Header
-            currentUser={currentUser}
-            onLogout={onLogout}
-            currentTheme={currentTheme}
-            onThemeChange={onThemeChange}
-            isTransitioning={isTransitioning}
-          />
-          <main className="flex-1 p-4 md:p-6">
-            {children}
-          </main>
-        </SidebarInset>
+    <div className="relative min-h-screen w-full">
+      <AppSidebar
+        currentUser={currentUser}
+        onLogout={onLogout}
+        isCollapsed={isCollapsed}
+        onToggleCollapse={toggleCollapse}
+      />
+
+      {/* Main content area – shifts when sidebar collapses */}
+      <div
+        className={`
+          flex flex-col min-h-screen
+          transition-all duration-300 ease-in-out
+          ${isCollapsed ? 'md:ml-16' : 'md:ml-64'}
+        `}
+      >
+        <Header
+          currentUser={currentUser}
+          currentTheme={currentTheme}
+          onThemeChange={onThemeChange}
+          isTransitioning={isTransitioning}
+          isSidebarCollapsed={isCollapsed}
+        />
+
+        <main className="flex-1 overflow-auto p-4 mt-24 bg-background md:p-6">
+          {children}
+        </main>
       </div>
-    </SidebarProvider>
+    </div>
   );
 }

@@ -122,12 +122,44 @@ export function SupervisorSignupForm({
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
+
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Name: " + formData.name + "\nEmail: " + formData.email + "\nDepartment: " + formData.department,
+      icon: 'info',
+      showCancelButton: true,
+      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Confirm',
+      allowOutsideClick: false,
+      customClass: {
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          confirmButton: 'swal-confirm-button',
+          cancelButton: 'swal-cancel-button',
+          icon: 'swal-icon'
+      }});
+
+    if (!result.isConfirmed) {
+      return;
+    }
+
+    // Show loading
+    Swal.fire({
+      title: "Creating supervisor account...",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
 
     setIsLoading(true);
     setErrors({});
@@ -144,26 +176,61 @@ export function SupervisorSignupForm({
 
       if (response.data && response.data.user) {
         const userData = mapUserDataFromBackend(response.data.user);
-        onSignup(userData);
-        Swal.fire({
-          icon: "success",
+        
+        // Fake minimum delay so loading feels consistent (remove/adjust if backend is very fast)
+        await new Promise(resolve => setTimeout(resolve, 2800));
+
+        await Swal.fire({
           title: "Supervisor Created!",
           text: "The supervisor has been successfully added.",
+          icon: "success",
           showConfirmButton: false,
-          timer: 1500,
+          timer: 2200,
+          customClass: {
+            container:     'swal-container',
+            popup:         'swal-popup',
+            title:         'swal-title',
+            htmlContainer: 'swal-content',
+            confirmButton: 'swal-confirm-button',
+            cancelButton:  'swal-cancel-button',
+            icon:          'swal-icon'
+          }
         });
+
+        onSignup(userData);
+        
+        // Optional: close modal / reset form / navigate
+        // onClose?.();
+        // resetForm();
       } else {
         throw new Error(response.error || "Signup failed");
       }
     } catch (err) {
-      setErrors({
-        submit:
-          err instanceof Error
-            ? err.message
-            : "Failed to create supervisor account",
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Failed to create supervisor account";
+
+      setErrors({ submit: errorMessage });
+
+      await Swal.fire({
+        title: "Error",
+        text: errorMessage,
+        icon: "error",
+        confirmButtonText: "OK",
+        confirmButtonColor: "#ef4444",
+        customClass: {
+          container:     'swal-container',
+          popup:         'swal-popup',
+          title:         'swal-title',
+          htmlContainer: 'swal-content',
+          confirmButton: 'swal-confirm-button',
+          icon:          'swal-icon'
+        }
       });
     } finally {
       setIsLoading(false);
+      Swal.close(); // Make sure loading is closed in all cases
     }
   };
 
