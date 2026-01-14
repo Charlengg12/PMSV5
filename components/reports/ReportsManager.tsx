@@ -3,7 +3,6 @@ import Swal from 'sweetalert2';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -32,6 +31,18 @@ interface ReportsManagerProps {
   currentUser: UserType;
 }
 
+const swalCustomClasses = {
+  container: "swal-container !z-[10000]",
+  popup: "swal-popup",
+  title: "swal-title",
+  htmlContainer: "swal-content",
+  confirmButton: "swal-confirm-button",
+  cancelButton: "swal-cancel-button",
+  icon: "swal-icon",
+};
+
+const MIN_LOADING_TIME = 2000;
+
 export function ReportsManager({
   projects,
   users,
@@ -43,9 +54,9 @@ export function ReportsManager({
   const [error, setError] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState(false);
-  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [showViewForm, setShowViewForm] = useState(false);
 
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
@@ -56,6 +67,7 @@ export function ReportsManager({
     status: 'draft' as Report['status'],
     project_id: '',
   });
+
   const allProjectsValue = '__all__';
 
   useEffect(() => {
@@ -90,9 +102,44 @@ export function ReportsManager({
     });
   };
 
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const showLoading = () => {
+    return Swal.fire({
+      title: 'Processing...',
+      text: 'Please wait a moment',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      customClass: swalCustomClasses,
+    });
+  };
+
+  // ────────────────────────────────────────────────
+  // CREATE
+  // ────────────────────────────────────────────────
   const handleCreate = async () => {
     const title = formData.title.trim();
     if (!title || isCreating) return;
+
+    const result = await Swal.fire({
+      title: 'Create this report?',
+      html: `Title: <strong>${title}</strong><br>Type: <strong>${formData.type}</strong>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Create',
+      cancelButtonText: 'Cancel',
+      customClass: swalCustomClasses,
+    });
+
+    if (!result.isConfirmed) return;
+
+    const loadingSwal = showLoading();
+    const startTime = Date.now();
+
     try {
       setIsCreating(true);
       const payload = {
@@ -106,18 +153,61 @@ export function ReportsManager({
       if (response.error) throw new Error(response.error);
 
       if (!response.data) throw new Error('No report returned');
+
       setReports(prev => [response.data, ...prev]);
       resetForm();
-      setShowCreateDialog(false);
+      setShowCreateForm(false);
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
+
+      loadingSwal.close();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Created!',
+        text: 'New report has been created successfully.',
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: swalCustomClasses,
+      });
     } catch (err: any) {
-      alert('Failed to create report: ' + (err.message || 'Unknown error'));
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
+
+      loadingSwal.close();
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed',
+        text: err.message || 'Could not create report.',
+        customClass: swalCustomClasses,
+      });
     } finally {
       setIsCreating(false);
     }
   };
 
+  // ────────────────────────────────────────────────
+  // UPDATE / EDIT
+  // ────────────────────────────────────────────────
   const handleUpdate = async () => {
     if (!selectedReport || !formData.title.trim()) return;
+
+    const result = await Swal.fire({
+      title: 'Save changes?',
+      html: `Update report: <strong>${formData.title}</strong>`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Update',
+      cancelButtonText: 'Cancel',
+      customClass: swalCustomClasses,
+    });
+
+    if (!result.isConfirmed) return;
+
+    const loadingSwal = showLoading();
+    const startTime = Date.now();
 
     try {
       const payload = {
@@ -136,39 +226,64 @@ export function ReportsManager({
         body: JSON.stringify(payload),
       });
 
-      if (response.error) {
-        throw new Error(response.error);
-      }
+      if (response.error) throw new Error(response.error);
 
       const updated = response.data || response;
 
       setReports(prev =>
-        prev.map(r =>
-          r.id === selectedReport.id ? { ...r, ...updated } : r
-        )
+        prev.map(r => (r.id === selectedReport.id ? { ...r, ...updated } : r))
       );
 
       setSelectedReport(null);
       resetForm();
-      setShowEditDialog(false);
+      setShowEditForm(false);
+
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
+
+      loadingSwal.close();
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Updated!',
+        text: 'Report has been successfully updated.',
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: swalCustomClasses,
+      });
     } catch (err: any) {
-      console.error('Update error:', err);
-      alert('Failed to update report: ' + (err.message || 'Unknown error'));
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
+
+      loadingSwal.close();
+
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed',
+        text: err.message || 'Could not update report.',
+        customClass: swalCustomClasses,
+      });
     }
   };
 
+  // ────────────────────────────────────────────────
+  // DELETE
+  // ────────────────────────────────────────────────
   const handleDelete = async (report: Report) => {
     const result = await Swal.fire({
       title: 'Delete report?',
-      text: `This will permanently delete "${report.title}".`,
+      html: `This will permanently delete <strong>"${report.title}"</strong>.<br/>This action cannot be undone.`,
       icon: 'warning',
       showCancelButton: true,
       confirmButtonText: 'Delete',
       cancelButtonText: 'Cancel',
-      reverseButtons: true,
+      customClass: swalCustomClasses,
     });
 
     if (!result.isConfirmed) return;
+
+    const loadingSwal = showLoading();
+    const startTime = Date.now();
 
     try {
       const response = await apiService.deleteReport(report.id);
@@ -179,18 +294,30 @@ export function ReportsManager({
         setSelectedReport(null);
       }
 
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
+
+      loadingSwal.close();
+
       Swal.fire({
         icon: 'success',
         title: 'Deleted',
-        text: 'Report deleted successfully.',
-        timer: 1200,
+        text: 'Report has been deleted successfully.',
+        timer: 1800,
         showConfirmButton: false,
+        customClass: swalCustomClasses,
       });
     } catch (err: any) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
+
+      loadingSwal.close();
+
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: err.message || 'Failed to delete report.',
+        customClass: swalCustomClasses,
       });
     }
   };
@@ -204,46 +331,35 @@ export function ReportsManager({
       status: report.status,
       project_id: report.project_id || '',
     });
-    setShowEditDialog(true);
+    setShowEditForm(true);
   };
 
   const handleView = (report: Report) => {
     setSelectedReport(report);
-    setShowViewDialog(true);
+    setShowViewForm(true);
   };
 
   const getStatusColor = (status: Report['status']) => {
     switch (status) {
-      case 'published':
-        return 'default';
-      case 'draft':
-        return 'secondary';
-      case 'archived':
-        return 'outline';
-      default:
-        return 'outline';
+      case 'published': return 'default';
+      case 'draft':     return 'secondary';
+      case 'archived':  return 'outline';
+      default:          return 'outline';
     }
   };
 
   const getTypeColor = (type: Report['type']) => {
     switch (type) {
-      case 'project':
-        return 'default';
-      case 'task':
-        return 'secondary';
-      case 'user':
-        return 'outline';
-      case 'financial':
-        return 'destructive';
-      case 'custom':
-        return 'outline';
-      default:
-        return 'outline';
+      case 'project':   return 'default';
+      case 'task':      return 'secondary';
+      case 'user':      return 'outline';
+      case 'financial': return 'destructive';
+      case 'custom':    return 'outline';
+      default:          return 'outline';
     }
   };
 
   const canCreateReport = currentUser.role === 'admin' || currentUser.role === 'supervisor';
-
   const canEditReport = (report: Report) =>
     currentUser.role === 'admin' || report.created_by === currentUser.id;
 
@@ -262,7 +378,7 @@ export function ReportsManager({
   const filteredReports = getFilteredReports();
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Reports & Analytics</h2>
@@ -271,7 +387,7 @@ export function ReportsManager({
           </p>
         </div>
         {canCreateReport && (
-          <Button onClick={() => setShowCreateDialog(true)}>
+          <Button onClick={() => setShowCreateForm(true)}>
             <Plus className="h-4 w-4 mr-2" />
             Create Report
           </Button>
@@ -298,7 +414,7 @@ export function ReportsManager({
 
           <TabsContent value="all" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredReports.map((report) => (
+              {filteredReports.map(report => (
                 <Card key={report.id} className="hover:shadow-md transition-shadow">
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
@@ -353,29 +469,17 @@ export function ReportsManager({
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleView(report)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => handleView(report)}>
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => alert('Export feature coming soon')}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => alert('Export feature coming soon')}>
                         <Download className="h-4 w-4 mr-2" />
                         Export
                       </Button>
                       {canEditReport(report) && (
                         <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(report)}
-                          >
+                          <Button variant="outline" size="sm" onClick={() => handleEdit(report)}>
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </Button>
@@ -428,7 +532,7 @@ export function ReportsManager({
                 : "No published reports are available yet."}
             </p>
             {canCreateReport && (
-              <Button onClick={() => setShowCreateDialog(true)} className="mt-4">
+              <Button onClick={() => setShowCreateForm(true)} className="mt-4">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Report
               </Button>
@@ -437,257 +541,316 @@ export function ReportsManager({
         </Card>
       )}
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Create New Report</DialogTitle>
-            <DialogDescription>
-              Generate a comprehensive report with customizable filters and data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">Report Title</Label>
-              <Input
-                id="title"
-                value={formData.title}
-                onChange={e => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter report title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter report description"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={v => setFormData({ ...formData, type: v as Report['type'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="project">Project Report</SelectItem>
-                    <SelectItem value="task">Task Report</SelectItem>
-                    <SelectItem value="user">User Report</SelectItem>
-                    <SelectItem value="financial">Financial Report</SelectItem>
-                    <SelectItem value="custom">Custom Report</SelectItem>
-                  </SelectContent>
-                </Select>
+      {/* ────────────────────────────────────────────────
+          CREATE FORM (replaces Dialog)
+      ──────────────────────────────────────────────── */}
+      {showCreateForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Create New Report</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
+                  ×
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={v => setFormData({ ...formData, status: v as Report['status'] })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Generate a comprehensive report with customizable filters and data.
+              </p>
 
-            {formData.type === 'project' && (
-              <div className="space-y-2">
-                <Label>Associated Project (optional)</Label>
-                <Select
-                  value={formData.project_id || allProjectsValue}
-                  onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project or leave blank for all" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={allProjectsValue}>All Projects</SelectItem>
-                    {projects
-                      .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
-                      .map(project => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Report Title</Label>
+                  <Input
+                    id="title"
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Enter report title"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Enter report description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={v => setFormData({ ...formData, type: v as Report['type'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="project">Project Report</SelectItem>
+                        <SelectItem value="task">Task Report</SelectItem>
+                        <SelectItem value="user">User Report</SelectItem>
+                        <SelectItem value="financial">Financial Report</SelectItem>
+                        <SelectItem value="custom">Custom Report</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={v => setFormData({ ...formData, status: v as Report['status'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {formData.type === 'project' && (
+                  <div className="space-y-2">
+                    <Label>Associated Project (optional)</Label>
+                    <Select
+                      value={formData.project_id || allProjectsValue}
+                      onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project or leave blank for all" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={allProjectsValue}>All Projects</SelectItem>
+                        {projects
+                          .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
+                          .map(project => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
               </div>
-            )}
+
+              <div className="flex justify-end gap-3 mt-8">
+                <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleCreate}
+                  disabled={!formData.title.trim() || isCreating}
+                >
+                  {isCreating ? 'Creating...' : 'Create Report'}
+                </Button>
+              </div>
+            </div>
           </div>
+        </div>
+      )}
 
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
-              Cancel
-            </Button>
-            <Button onClick={handleCreate} disabled={!formData.title.trim() || isCreating}>
-              {isCreating ? 'Creating...' : 'Create Report'}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* ────────────────────────────────────────────────
+          EDIT FORM (replaces Dialog)
+      ──────────────────────────────────────────────── */}
+      {showEditForm && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Edit Report</h2>
+                <Button variant="ghost" size="icon" onClick={() => {
+                  setShowEditForm(false);
+                  setSelectedReport(null);
+                  resetForm();
+                }}>
+                  ×
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Update report details and regenerate data.
+              </p>
 
-      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Edit Report</DialogTitle>
-            <DialogDescription>
-              Update report details and regenerate data.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="edit-title">Report Title</Label>
-              <Input
-                id="edit-title"
-                value={formData.title}
-                onChange={e => setFormData({ ...formData, title: e.target.value })}
-                placeholder="Enter report title"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={formData.description}
-                onChange={e => setFormData({ ...formData, description: e.target.value })}
-                placeholder="Enter report description"
-                rows={3}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Type</Label>
-                <Select
-                  value={formData.type}
-                  onValueChange={v => setFormData({ ...formData, type: v as Report['type'] })}
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-title">Report Title</Label>
+                  <Input
+                    id="edit-title"
+                    value={formData.title}
+                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Enter report title"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Enter report description"
+                    rows={3}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Type</Label>
+                    <Select
+                      value={formData.type}
+                      onValueChange={v => setFormData({ ...formData, type: v as Report['type'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="project">Project Report</SelectItem>
+                        <SelectItem value="task">Task Report</SelectItem>
+                        <SelectItem value="user">User Report</SelectItem>
+                        <SelectItem value="financial">Financial Report</SelectItem>
+                        <SelectItem value="custom">Custom Report</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={formData.status}
+                      onValueChange={v => setFormData({ ...formData, status: v as Report['status'] })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="draft">Draft</SelectItem>
+                        <SelectItem value="published">Published</SelectItem>
+                        <SelectItem value="archived">Archived</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {formData.type === 'project' && (
+                  <div className="space-y-2">
+                    <Label>Associated Project (optional)</Label>
+                    <Select
+                      value={formData.project_id || allProjectsValue}
+                      onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project or leave blank" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={allProjectsValue}>All Projects</SelectItem>
+                        {projects
+                          .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
+                          .map(project => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 mt-8">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setSelectedReport(null);
+                    resetForm();
+                  }}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="project">Project Report</SelectItem>
-                    <SelectItem value="task">Task Report</SelectItem>
-                    <SelectItem value="user">User Report</SelectItem>
-                    <SelectItem value="financial">Financial Report</SelectItem>
-                    <SelectItem value="custom">Custom Report</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={v => setFormData({ ...formData, status: v as Report['status'] })}
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdate}
+                  disabled={!formData.title.trim()}
                 >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="draft">Draft</SelectItem>
-                    <SelectItem value="published">Published</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
-                  </SelectContent>
-                </Select>
+                  Update Report
+                </Button>
               </div>
             </div>
-
-            {formData.type === 'project' && (
-              <div className="space-y-2">
-                <Label>Associated Project (optional)</Label>
-                <Select
-                  value={formData.project_id || allProjectsValue}
-                  onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select project or leave blank" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={allProjectsValue}>All Projects</SelectItem>
-                    {projects
-                      .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
-                      .map(project => (
-                        <SelectItem key={project.id} value={project.id}>
-                          {project.name}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
+        </div>
+      )}
 
-          <div className="flex justify-end gap-3">
-            <Button variant="outline" onClick={() => {
-              setShowEditDialog(false);
-              setSelectedReport(null);
-              resetForm();
-            }}>
-              Cancel
-            </Button>
-            <Button onClick={handleUpdate} disabled={!formData.title.trim()}>
-              Update Report
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* ────────────────────────────────────────────────
+          VIEW FORM (replaces Dialog)
+      ──────────────────────────────────────────────── */}
+      {showViewForm && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-background border rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">{selectedReport.title}</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowViewForm(false)}>
+                  ×
+                </Button>
+              </div>
 
-      <Dialog open={showViewDialog} onOpenChange={setShowViewDialog}>
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedReport?.title}</DialogTitle>
-            <DialogDescription>
-              {selectedReport?.description || 'No description provided.'}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-6 py-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-sm">
-              <div>
-                <p className="text-muted-foreground">Type</p>
-                <p className="font-medium mt-1">{selectedReport?.type}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Status</p>
-                <p className="font-medium mt-1">{selectedReport?.status}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Created</p>
-                <p className="font-medium mt-1">
-                  {selectedReport && new Date(selectedReport.created_at).toLocaleString('en-PH')}
+              {selectedReport.description && (
+                <p className="text-sm text-muted-foreground mb-6">
+                  {selectedReport.description}
                 </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Last Updated</p>
-                <p className="font-medium mt-1">
-                  {selectedReport && new Date(selectedReport.updated_at).toLocaleString('en-PH')}
-                </p>
-              </div>
-            </div>
+              )}
 
-            <div className="border rounded-lg p-6 bg-muted/40 min-h-[200px] flex items-center justify-center text-muted-foreground">
-              <div className="text-center">
-                <FileText className="h-10 w-10 mx-auto mb-3 opacity-70" />
-                <p>Report content, charts, and detailed analytics will appear here</p>
-                <p className="text-xs mt-2">(Implementation pending)</p>
+              <div className="space-y-8">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Type</p>
+                    <p className="font-medium mt-1">{selectedReport.type}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Status</p>
+                    <p className="font-medium mt-1">{selectedReport.status}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Created</p>
+                    <p className="font-medium mt-1">
+                      {new Date(selectedReport.created_at).toLocaleString('en-PH')}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Last Updated</p>
+                    <p className="font-medium mt-1">
+                      {new Date(selectedReport.updated_at).toLocaleString('en-PH')}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="border rounded-lg p-8 bg-muted/40 min-h-[240px] flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-70" />
+                    <p className="text-lg font-medium mb-1">Report Preview Area</p>
+                    <p className="text-sm">Report content, charts, and detailed analytics will appear here</p>
+                    <p className="text-xs mt-3 opacity-70">(Implementation pending)</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-8">
+                <Button variant="outline" onClick={() => setShowViewForm(false)}>
+                  Close
+                </Button>
               </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
     </div>
   );
 }
-
-
-
