@@ -328,28 +328,48 @@ export default function App() {
     }
   };
 
-  const handleAddWorkLog = (
+  const handleAddWorkLog = async (
     workLogData: Omit<WorkLogEntry, "id" | "createdAt">
   ) => {
-    const newWorkLog: WorkLogEntry = {
-      ...workLogData,
-      id: `wl-${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    setWorkLogs((prevLogs) => [...prevLogs, newWorkLog]);
+    try {
+      // 1. CALL THE API (Send data to PHP)
+      // Note: We use the existing apiService to keep your code clean
+      const response = await apiService.createWorkLog(workLogData);
 
-    // Update project progress based on work log
-    const progressIncrease = workLogData.progressPercentage;
-    setProjects((prevProjects) =>
-      prevProjects.map((project) =>
-        project.id === workLogData.projectId
-          ? {
-              ...project,
-              progress: Math.min(100, project.progress + progressIncrease),
-            }
-          : project
-      )
-    );
+      // 2. CHECK FOR ERRORS
+      if (response.error) {
+        console.error("Backend refused the log:", response.error);
+        alert("Failed to save work log: " + response.error + "----" + response.data);
+        return;
+      }
+
+      // 3. GET THE REAL LOG (With the ID from the database)
+      const savedLog = response.data;
+
+      if (!savedLog) {
+        alert("Server responded but returned no data.");
+        return;
+      }
+
+      // 4. UPDATE THE UI (State)
+      setWorkLogs((prevLogs) => [savedLog, ...prevLogs]);
+
+      // Update project progress based on real work log data
+      const progressIncrease = savedLog.progressPercentage;
+      setProjects((prevProjects) =>
+        prevProjects.map((project) =>
+          project.id === savedLog.projectId
+            ? {
+                ...project,
+                progress: Math.min(100, project.progress + progressIncrease),
+              }
+            : project
+        )
+      );
+    } catch (error) {
+      console.error("Network crash:", error);
+      alert("Network Error: Could not save work log.");
+    }
   };
 
   const handleAddMaterial = (
@@ -677,6 +697,8 @@ export default function App() {
       "worklog",
       "revenue",
       "assignments",
+      "fabricators",
+      "spent",
       "archives",
       "project-status",
       "documentation",

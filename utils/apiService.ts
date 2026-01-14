@@ -88,6 +88,12 @@ class ApiService {
 
         return response;
     }
+    // async verifyPassword(password: string): Promise<ApiResponse<any>> {
+    //     return this.request('/auth/verify-password', {
+    //         method: 'POST',
+    //         body: JSON.stringify({ password }),
+    //     });
+    // }
 
     async signup(userData: {
         email: string;

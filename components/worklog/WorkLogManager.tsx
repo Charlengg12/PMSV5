@@ -40,6 +40,7 @@ export function WorkLogManager({
     date: new Date().toISOString().split('T')[0],
     description: '',
     progressPercentage: '',
+    hoursWorked: '0',           // ← add default
     materialsUsed: [] as string[]
   });
 
@@ -83,7 +84,7 @@ export function WorkLogManager({
       projectId: selectedProject,
       fabricatorId: currentUser.id,
       date: formData.date,
-      hoursWorked: 0,
+      hoursWorked: Number(formData.hoursWorked) || 0,   // ← make sure it's number
       description: formData.description,
       progressPercentage: parseInt(formData.progressPercentage),
       materials: formData.materialsUsed.length > 0 ? formData.materialsUsed : undefined
@@ -281,6 +282,23 @@ export function WorkLogManager({
                   How much of the project does this work session complete?
                 </p>
               </div>
+
+              <div className="space-y-2">
+  <Label htmlFor="hours">Hours Worked</Label>
+  <Input
+    id="hours"
+    type="number"
+    min="0"
+    step="0.5"
+    placeholder="4.5"
+    value={formData.hoursWorked ?? ''}
+    onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
+    required
+  />
+  <p className="text-xs text-muted-foreground">
+    How many hours did you spend on this session?
+  </p>
+</div>
 
               <div className="space-y-2">
                 <Label htmlFor="description">Work Description</Label>
