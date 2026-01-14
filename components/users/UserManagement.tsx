@@ -33,6 +33,8 @@ import {
   UserX,
   Users,
   UserCheck,
+  Lock,      // Added
+  Loader2,   // Added
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
 import { User } from "../../types";
@@ -60,7 +62,15 @@ export function UserManagement({
   currentUser,
 }: UserManagementProps) {
   const [showSupervisorForm, setShowSupervisorForm] = useState(false);
+  
+  // -- Secure ID Logic --
   const [showSecureIds, setShowSecureIds] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [verifyPassword, setVerifyPassword] = useState("");
+  const [verifyError, setVerifyError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  // -------------------
+
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInactiveModal, setShowInactiveModal] = useState(false);
@@ -95,6 +105,52 @@ export function UserManagement({
       fetchInactive();
     }
   }, [showInactiveModal, currentUser.role]);
+
+  // --- NEW: Handle Password Verification ---
+  const handleToggleSecureIds = () => {
+    if (showSecureIds) {
+      // Hide immediately
+      setShowSecureIds(false);
+    } else {
+      // Show password modal
+      setVerifyPassword("");
+      setVerifyError("");
+      setShowPasswordModal(true);
+    }
+  };
+
+  const handleVerifyPassword = async () => {
+    if (!verifyPassword) {
+      setVerifyError("Please enter your password");
+      return;
+    }
+
+    setIsVerifying(true);
+    setVerifyError("");
+
+    try {
+      // Call the API function we added earlier
+      await apiService.verifyPassword(verifyPassword);
+      
+      // If successful:
+      setShowSecureIds(true);
+      setShowPasswordModal(false);
+      
+      Swal.fire({
+        icon: "success",
+        title: "Verified",
+        text: "Secure IDs are now visible.",
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: swalCustomClasses,
+      });
+
+    } catch (err: any) {
+      setVerifyError("Incorrect password. Please try again.");
+    } finally {
+      setIsVerifying(false);
+    }
+  };
 
   const handleCreateSupervisor = async (newSupervisor: User) => {
     try {
@@ -399,14 +455,18 @@ export function UserManagement({
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <CardTitle>Active Users</CardTitle>
+            
+            {/* --- UPDATED BUTTON --- */}
             <Button
-              variant="outline"
+              variant={showSecureIds ? "destructive" : "outline"} // Red when showing
               size="sm"
-              onClick={() => setShowSecureIds(!showSecureIds)}
+              onClick={handleToggleSecureIds}
             >
-              {showSecureIds ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              {showSecureIds ? "Hide" : "Show"} Secure IDs
+              {showSecureIds ? <EyeOff className="h-4 w-4 mr-2" /> : <Lock className="h-4 w-4 mr-2" />}
+              {showSecureIds ? "Hide Secure IDs" : "Show Secure IDs"}
             </Button>
+            {/* ---------------------- */}
+
           </div>
         </CardHeader>
         <CardContent>
@@ -456,7 +516,7 @@ export function UserManagement({
                     </TableCell>
                     {showSecureIds && (
                       <TableCell>
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">
+                        <code className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded break-all border border-red-100">
                           {user.secureId || "—"}
                         </code>
                       </TableCell>
@@ -496,10 +556,74 @@ export function UserManagement({
         </CardContent>
       </Card>
 
+      {/* --- NEW: Password Verification Modal --- */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-md">
+            <div className="p-5 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-primary" />
+                  Security Verification
+                </h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowPasswordModal(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Please enter your admin password to reveal Secure IDs.
+              </p>
+            </div>
+
+            <div className="p-5 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="verify-pass">Password</Label>
+                <Input
+                    id="verify-pass"
+                    type="password"
+                    placeholder="Enter password..."
+                    value={verifyPassword}
+                    onChange={(e) => {
+                        setVerifyPassword(e.target.value);
+                        setVerifyError("");
+                    }}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") handleVerifyPassword();
+                    }}
+                    className={verifyError ? "border-destructive" : ""}
+                    autoFocus
+                />
+                {verifyError && (
+                    <p className="text-sm text-destructive">{verifyError}</p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleVerifyPassword} disabled={isVerifying}>
+                  {isVerifying ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Verifying...
+                    </>
+                  ) : (
+                    "Verify & Show"
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* ------------------------------------- */}
+
       {/* Inactive Users Modal */}
       {showInactiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+             {/* ... (Existing Inactive Modal Content) ... */}
             <div className="p-5 sm:p-6 border-b">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -572,7 +696,7 @@ export function UserManagement({
                           </TableCell>
                           {showSecureIds && (
                             <TableCell>
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">
+                              <code className="text-xs bg-red-50 text-red-600 px-1.5 py-0.5 rounded break-all border border-red-100">
                                 {user.secureId || "—"}
                               </code>
                             </TableCell>
@@ -615,6 +739,7 @@ export function UserManagement({
       {showEditModal && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+             {/* ... (Existing Edit Modal Content - matching your code) ... */}
             <div className="p-5 sm:p-6 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Edit User</h2>

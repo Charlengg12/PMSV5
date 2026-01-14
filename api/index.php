@@ -371,34 +371,56 @@ function handle_get_reports($pdo) {
 
 function handle_create_report($pdo) {
     require_login();
-    $body = json_input();
+    $body = sanitize_recursive(json_input());
 
-    if (empty($body['title'])) {
+    $title = trim($body['title'] ?? '');
+    if ($title === '') {
         json_response(['error' => 'Title is required'], 400);
+    }
+
+    $allowedTypes = ['project', 'task', 'user', 'financial', 'custom'];
+    $type = $body['type'] ?? 'custom';
+    if (!in_array($type, $allowedTypes, true)) {
+        $type = 'custom';
+    }
+
+    $allowedStatus = ['draft', 'published', 'archived'];
+    $status = $body['status'] ?? 'draft';
+    if (!in_array($status, $allowedStatus, true)) {
+        $status = 'draft';
+    }
+
+    $projectId = $body['project_id'] ?? null;
+    if ($projectId === '') {
+        $projectId = null;
     }
 
     $id = 'report_' . time() . '_' . substr(md5(microtime()), 0, 8);
 
-    $stmt = $pdo->prepare("
-        INSERT INTO reports (id, title, description, type, status, project_id, created_by, created_at, updated_at)
-        VALUES (:id, :title, :description, :type, :status, :project_id, :created_by, NOW(), NOW())
-    ");
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO reports (id, title, description, type, status, project_id, created_by, created_at, updated_at)
+            VALUES (:id, :title, :description, :type, :status, :project_id, :created_by, NOW(), NOW())
+        ");
 
-    $stmt->execute([
-        ':id' => $id,
-        ':title' => trim($body['title']),
-        ':description' => trim($body['description'] ?? ''),
-        ':type' => $body['type'] ?? 'custom',
-        ':status' => $body['status'] ?? 'draft',
-        ':project_id' => $body['project_id'] ?? null,
-        ':created_by' => $_SESSION['user_id']
-    ]);
+        $stmt->execute([
+            ':id' => $id,
+            ':title' => $title,
+            ':description' => trim($body['description'] ?? ''),
+            ':type' => $type,
+            ':status' => $status,
+            ':project_id' => $projectId,
+            ':created_by' => $_SESSION['user_id']
+        ]);
 
-    $stmt = $pdo->prepare("SELECT * FROM reports WHERE id = :id");
-    $stmt->execute([':id' => $id]);
-    $report = $stmt->fetch(PDO::FETCH_ASSOC);
+        $stmt = $pdo->prepare("SELECT * FROM reports WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $report = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    json_response($report);
+        json_response($report);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
 }
 
 function handle_edit_report($pdo, $id) {
