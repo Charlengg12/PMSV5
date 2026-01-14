@@ -16,6 +16,7 @@ import { TaskManager } from "./components/tasks/TaskManager";
 import { ReportsManager } from "./components/reports/ReportsManager";
 import { ProjectArchives } from "./components/archives/ProjectArchives";
 import { ClientDashboard } from "./components/client/ClientDashboard";
+import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
 // import { AdminProjectsManager } from './components/admin/AdminProjectsManager';
 // import { AdminTasksManager } from './components/admin/AdminTasksManager';
 import {
@@ -223,6 +224,22 @@ export default function App() {
     if (backendHealthy !== false) {
       loadDataFromDatabase().then(() => setLastReloadAt(Date.now()));
     }
+  };
+
+  const handleUpdateCurrentUser = (updatedUser: User) => {
+    setCurrentUser(updatedUser);
+    try {
+      localStorage.setItem("currentUser", JSON.stringify(updatedUser));
+    } catch {}
+    setUsers((prevUsers) => {
+      const exists = prevUsers.some((user) => user.id === updatedUser.id);
+      if (!exists) {
+        return [...prevUsers, updatedUser];
+      }
+      return prevUsers.map((user) =>
+        user.id === updatedUser.id ? updatedUser : user
+      );
+    });
   };
 
   const handleLogout = () => {
@@ -1079,6 +1096,26 @@ export default function App() {
             setUsers={setUsers}
             currentUser={currentUser}
           />
+        );
+
+      case "settings":
+        if (currentUser.role === "admin") {
+          return (
+            <AdminSettingsPage
+              currentUser={currentUser}
+              onUpdateCurrentUser={handleUpdateCurrentUser}
+            />
+          );
+        }
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg mb-2">Access Restricted</h3>
+              <p className="text-muted-foreground">
+                Settings are only available for system administrators.
+              </p>
+            </div>
+          </div>
         );
 
       case "tasks":
