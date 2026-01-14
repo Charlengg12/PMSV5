@@ -501,10 +501,8 @@ export function UserManagement({
     selectedUserIds.includes(id)
   ).length;
   const allVisibleSelected =
-    visibleUserIds.length > 0 &&
-    selectedVisibleCount === visibleUserIds.length;
-  const someVisibleSelected =
-    selectedVisibleCount > 0 && !allVisibleSelected;
+    visibleUserIds.length > 0 && selectedVisibleCount === visibleUserIds.length;
+  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
   const columnCount = 5 + (showSecureIds ? 1 : 0) + (canManageUsers ? 2 : 0);
 
   useEffect(() => {
@@ -550,7 +548,7 @@ export function UserManagement({
       <Card>
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <CardTitle>Active Users</CardTitle>
+            <CardTitle>System Users</CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -608,8 +606,8 @@ export function UserManagement({
               )}
             </div>
           </div>
-          <div className="overflow-x-hidden">
-            <Table className="table-fixed [&_th]:whitespace-normal [&_td]:whitespace-normal">
+          <div className="overflow-x-auto max-w-full">
+            <Table className="w-full min-w-[900px] table-fixed [&_th]:whitespace-normal [&_td]:whitespace-normal">
               <TableHeader>
                 <TableRow>
                   {canManageUsers && (
@@ -620,8 +618,8 @@ export function UserManagement({
                             allVisibleSelected
                               ? true
                               : someVisibleSelected
-                                ? "indeterminate"
-                                : false
+                              ? "indeterminate"
+                              : false
                           }
                           onCheckedChange={(value) => {
                             if (value) {
@@ -630,7 +628,9 @@ export function UserManagement({
                               setSelectedUserIds(Array.from(next));
                             } else {
                               setSelectedUserIds((prev) =>
-                                prev.filter((id) => !visibleUserIds.includes(id))
+                                prev.filter(
+                                  (id) => !visibleUserIds.includes(id)
+                                )
                               );
                             }
                           }}
@@ -643,9 +643,7 @@ export function UserManagement({
                   <TableHead>Role</TableHead>
                   <TableHead>School</TableHead>
                   <TableHead>Contact</TableHead>
-                  {showSecureIds && (
-                    <TableHead>Secure ID</TableHead>
-                  )}
+                  {showSecureIds && <TableHead>Secure ID</TableHead>}
                   <TableHead>Employee #</TableHead>
                   {canManageUsers && (
                     <TableHead className="text-right">Actions</TableHead>
@@ -693,20 +691,20 @@ export function UserManagement({
                         <div>{user.name}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                           <Mail className="h-3.5 w-3.5 shrink-0" />
-                          <span className="truncate max-w-[180px]">
+                          <span className="break-all">
                             {user.email}
                           </span>
                         </div>
                       </TableCell>
                       <TableCell>
-                      <Badge variant={getRoleBadgeVariant(user.role)}>
-                        <span className="md:hidden">
-                          {getRoleIcon(user.role)}
-                        </span>
-                        <span className="hidden md:inline">
-                          {user.role.toUpperCase()}
-                        </span>
-                      </Badge>
+                        <Badge variant={getRoleBadgeVariant(user.role)}>
+                          <span className="md:hidden">
+                            {getRoleIcon(user.role)}
+                          </span>
+                          <span className="hidden md:inline">
+                            {user.role.toUpperCase()}
+                          </span>
+                        </Badge>
                       </TableCell>
                       <TableCell className="text-muted-foreground">
                         {user.school || "N/A"}
@@ -740,29 +738,29 @@ export function UserManagement({
                       </TableCell>
                       {canManageUsers && (
                         <TableCell className="text-right">
-                          <div className="flex flex-col sm:flex-row gap-2 justify-end">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            aria-label="Edit"
-                            onClick={() => handleEditUser(user)}
-                          >
-                            <Edit className="h-4 w-4 md:hidden" />
-                            <span className="hidden md:inline">Edit</span>
-                          </Button>
-                          {user.id !== currentUser.id && (
+                          <div className="flex flex-row flex-nowrap gap-2 justify-end">
                             <Button
-                              variant="destructive"
+                              variant="outline"
                               size="sm"
-                              aria-label="Deactivate"
-                              onClick={() => handleDeactivateUser(user.id)}
+                              aria-label="Edit"
+                              onClick={() => handleEditUser(user)}
                             >
-                              <Trash2 className="h-4 w-4 md:hidden" />
-                              <span className="hidden md:inline">
-                                Deactivate
-                              </span>
+                              <Edit className="h-4 w-4 md:hidden" />
+                              <span className="hidden md:inline">Edit</span>
                             </Button>
-                          )}
+                            {user.id !== currentUser.id && (
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                aria-label="Deactivate"
+                                onClick={() => handleDeactivateUser(user.id)}
+                              >
+                                <Trash2 className="h-4 w-4 md:hidden" />
+                                <span className="hidden md:inline">
+                                  Deactivate
+                                </span>
+                              </Button>
+                            )}
                           </div>
                         </TableCell>
                       )}
@@ -869,7 +867,7 @@ export function UserManagement({
                             <div className="font-medium">{user.name}</div>
                             <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                               <Mail className="h-3.5 w-3.5 shrink-0" />
-                              <span className="truncate max-w-[180px]">
+                              <span className="break-all">
                                 {user.email}
                               </span>
                             </div>
