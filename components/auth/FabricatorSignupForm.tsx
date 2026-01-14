@@ -72,7 +72,7 @@ export function FabricatorSignupForm({
   // Validation regex patterns
   const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/; // Only gmail.com allowed
   const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-])[A-Za-z\d@$!%*?&_\-]{8,}$/;
   const phoneRegex = /^\+63 \d{3} \d{3} \d{4}$/; // Format: +63 934 836 1937
   const gcashRegex = /^09\d{9}$/; // Format: 09374638264 (11 digits starting with 09)
 
@@ -122,7 +122,7 @@ export function FabricatorSignupForm({
       return "Please enter a valid Gmail address (e.g., example@gmail.com)";
     if (!formData.password) return "Password is required";
     if (!passwordRegex.test(formData.password))
-      return "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)";
+      return "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&_-)";
     if (formData.password !== formData.confirmPassword)
       return "Passwords do not match";
     if (!formData.school) return "School is required";

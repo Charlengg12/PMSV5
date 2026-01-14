@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { apiService } from "../../utils/apiService";
 import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
+import { Checkbox } from "../ui/checkbox";
 import {
   Table,
   TableBody,
@@ -35,7 +36,12 @@ import {
   Shield,
   Eye,
   EyeOff,
-  /* Edit, Trash2, */ Save,
+  Crown,
+  Wrench,
+  User as UserIcon,
+  Edit,
+  Trash2,
+  Save,
   X,
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
@@ -60,6 +66,10 @@ export function UserManagement({
   const [editEmailError, setEditEmailError] = useState<string>("");
   const [editPhoneError, setEditPhoneError] = useState<string>("");
   const [editGcashError, setEditGcashError] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
   const handleCreateSupervisor = async (newSupervisor: User) => {
     // After adding, fetch the latest users from backend for true refresh
@@ -239,17 +249,93 @@ export function UserManagement({
     }
   };
 
+  const getRoleIcon = (role: string) => {
+    switch (role) {
+      case "admin":
+        return <Crown className="h-3.5 w-3.5" />;
+      case "supervisor":
+        return <Shield className="h-3.5 w-3.5" />;
+      case "fabricator":
+        return <Wrench className="h-3.5 w-3.5" />;
+      case "client":
+        return <UserIcon className="h-3.5 w-3.5" />;
+      default:
+        return <UserIcon className="h-3.5 w-3.5" />;
+    }
+  };
+
   const canManageUsers = currentUser.role === "admin";
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const filteredUsers = useMemo(() => {
+    if (!normalizedSearch) return users;
+    return users.filter((user) => {
+      const haystack = [
+        user.name,
+        user.email,
+        user.role,
+        user.school,
+        user.employeeNumber,
+        user.secureId,
+        user.phone,
+        user.gcashNumber,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(normalizedSearch);
+    });
+  }, [normalizedSearch, users]);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / rowsPerPage)
+  );
+  const safePage = Math.min(currentPage, totalPages);
+  const startIndex = (safePage - 1) * rowsPerPage;
+  const endIndex = Math.min(
+    startIndex + rowsPerPage,
+    filteredUsers.length
+  );
+  const paginatedUsers = filteredUsers.slice(
+    startIndex,
+    startIndex + rowsPerPage
+  );
+  const columnCount =
+    5 + (showSecureIds ? 1 : 0) + (currentUser.role === "admin" ? 1 : 0);
+  const visibleUserIds = useMemo(
+    () => paginatedUsers.map((user) => user.id),
+    [paginatedUsers]
+  );
+  const selectedVisibleCount = visibleUserIds.filter((id) =>
+    selectedUserIds.includes(id)
+  ).length;
+  const allVisibleSelected =
+    visibleUserIds.length > 0 &&
+    selectedVisibleCount === visibleUserIds.length;
+  const someVisibleSelected =
+    selectedVisibleCount > 0 && !allVisibleSelected;
+
+  useEffect(() => {
+    const userIds = new Set(users.map((user) => user.id));
+    setSelectedUserIds((prev) => prev.filter((id) => userIds.has(id)));
+  }, [users]);
+
+  useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h2>User Management</h2>
         {canManageUsers && (
-          <Button onClick={() => setShowSupervisorForm(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Supervisor
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setShowSupervisorForm(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Supervisor
+            </Button>
+          </div>
         )}
       </div>
 
@@ -272,9 +358,64 @@ export function UserManagement({
           </div>
         </CardHeader>
         <CardContent>
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
+            <div className="w-full md:w-72">
+              <Input
+                placeholder="Search by name, email, role, or school..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <span className="text-sm text-muted-foreground">Rows</span>
+              <Select
+                value={String(rowsPerPage)}
+                onValueChange={(value) => {
+                  setRowsPerPage(Number(value));
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="8">8</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-10">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected
+                        ? true
+                        : someVisibleSelected
+                          ? "indeterminate"
+                          : false
+                    }
+                    onCheckedChange={(value) => {
+                      if (value) {
+                        const next = new Set(selectedUserIds);
+                        visibleUserIds.forEach((id) => next.add(id));
+                        setSelectedUserIds(Array.from(next));
+                      } else {
+                        setSelectedUserIds((prev) =>
+                          prev.filter((id) => !visibleUserIds.includes(id))
+                        );
+                      }
+                    }}
+                    aria-label="Select all visible users"
+                  />
+                </TableHead>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>School/Institution</TableHead>
@@ -285,74 +426,151 @@ export function UserManagement({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div>
-                      <div>{user.name}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </div>
-                    </div>
+              {paginatedUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={columnCount + 1}
+                    className="text-center text-muted-foreground"
+                  >
+                    No users match your search.
                   </TableCell>
+                </TableRow>
+              ) : (
+                paginatedUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedUserIds.includes(user.id)}
+                        disabled={user.id === currentUser.id}
+                        onCheckedChange={(value) => {
+                          if (value) {
+                            setSelectedUserIds((prev) =>
+                              prev.includes(user.id)
+                                ? prev
+                                : [...prev, user.id]
+                            );
+                          } else {
+                            setSelectedUserIds((prev) =>
+                              prev.filter((id) => id !== user.id)
+                            );
+                          }
+                        }}
+                        aria-label={`Select ${user.name}`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div>{user.name}</div>
+                        <div className="text-sm text-muted-foreground flex items-center gap-1">
+                          <Mail className="h-3 w-3" />
+                          {user.email}
+                        </div>
+                      </div>
+                    </TableCell>
                   <TableCell>
                     <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {user.role.toUpperCase()}
+                      <span className="md:hidden">
+                        {getRoleIcon(user.role)}
+                      </span>
+                      <span className="hidden md:inline">
+                        {user.role.toUpperCase()}
+                      </span>
                     </Badge>
                   </TableCell>
-                  <TableCell>{user.school}</TableCell>
-                  <TableCell>
-                    <div className="space-y-1">
-                      {user.phone && (
-                        <div className="text-sm flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {user.phone}
-                        </div>
-                      )}
-                      {user.gcashNumber && (
-                        <div className="text-sm text-muted-foreground">
-                          GCash: {user.gcashNumber}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  {showSecureIds && (
+                    <TableCell>{user.school}</TableCell>
                     <TableCell>
-                      <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                        {user.secureId}
-                      </code>
-                    </TableCell>
-                  )}
-                  <TableCell>
-                    <code className="text-xs">{user.employeeNumber}</code>
-                  </TableCell>
-                  {currentUser.role === "admin" && (
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          Edit
-                        </Button>
-                        {user.id !== currentUser.id && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
-                          >
-                            Deactivate
-                          </Button>
+                      <div className="space-y-1">
+                        {user.phone && (
+                          <div className="text-sm flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {user.phone}
+                          </div>
+                        )}
+                        {user.gcashNumber && (
+                          <div className="text-sm text-muted-foreground">
+                            GCash: {user.gcashNumber}
+                          </div>
                         )}
                       </div>
                     </TableCell>
-                  )}
-                </TableRow>
-              ))}
+                    {showSecureIds && (
+                      <TableCell>
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded">
+                          {user.secureId}
+                        </code>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <code className="text-xs">{user.employeeNumber}</code>
+                    </TableCell>
+                    {currentUser.role === "admin" && (
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            aria-label="Edit"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            <Edit className="h-4 w-4 md:hidden" />
+                            <span className="hidden md:inline">Edit</span>
+                          </Button>
+                          {user.id !== currentUser.id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="border-destructive text-destructive hover:text-destructive hover:bg-destructive/10"
+                              aria-label="Deactivate"
+                              onClick={() => handleDeleteUser(user.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive md:hidden" />
+                              <span className="hidden md:inline">
+                                Deactivate
+                              </span>
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              {filteredUsers.length === 0
+                ? "No users found."
+                : `Showing ${startIndex + 1}-${endIndex} of ${
+                    filteredUsers.length
+                  }`}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage === 1}
+                onClick={() =>
+                  setCurrentPage((page) => Math.max(1, page - 1))
+                }
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                {safePage} / {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={safePage === totalPages}
+                onClick={() =>
+                  setCurrentPage((page) => Math.min(totalPages, page + 1))
+                }
+              >
+                Next
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
