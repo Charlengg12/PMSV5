@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import Swal from 'sweetalert2';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -156,19 +157,41 @@ export function ReportsManager({
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedReport) return;
+  const handleDelete = async (report: Report) => {
+    const result = await Swal.fire({
+      title: 'Delete report?',
+      text: `This will permanently delete "${report.title}".`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+    });
+
+    if (!result.isConfirmed) return;
+
     try {
-      console.log('Deleting report with ID:', selectedReport.id);
-      const response = await apiService.request(`/reports/${selectedReport.id}`, {
-      method: 'DELETE',
-  });
+      const response = await apiService.deleteReport(report.id);
       if (response.error) throw new Error(response.error);
 
-      setReports(prev => prev.filter(r => r.id !== selectedReport.id));
-      setSelectedReport(null);
+      setReports(prev => prev.filter(r => r.id !== report.id));
+      if (selectedReport?.id === report.id) {
+        setSelectedReport(null);
+      }
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Deleted',
+        text: 'Report deleted successfully.',
+        timer: 1200,
+        showConfirmButton: false,
+      });
     } catch (err: any) {
-      alert('Failed to delete report: ' + (err.message || 'Unknown error'));
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.message || 'Failed to delete report.',
+      });
     }
   };
 
@@ -360,10 +383,7 @@ export function ReportsManager({
                             variant="outline"
                             size="sm"
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => {
-                              setSelectedReport(report);
-                              handleDelete();
-                            }}
+                            onClick={() => handleDelete(report)}
                           >
                             <Trash2 className="h-4 w-4 mr-2" />
                             Delete
