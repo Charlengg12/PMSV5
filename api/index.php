@@ -423,9 +423,17 @@ function handle_create_report($pdo) {
     }
 }
 
-function handle_edit_report($pdo, $id) {
+function handle_update_report($pdo, $id = null, $body = null) {
     require_login();
-    $body = json_input();
+    $body = sanitize_recursive($body ?? json_input());
+
+    if (!$id) {
+        $id = $body['id'] ?? null;
+    }
+
+    if (!$id) {
+        json_response(['error' => 'Report ID is required'], 400);
+    }
 
     $fields = [];
     $params = [':id' => $id];
@@ -439,10 +447,18 @@ function handle_edit_report($pdo, $id) {
         $params[':description'] = trim($body['description']);
     }
     if (isset($body['type'])) {
+        $allowedTypes = ['project', 'task', 'user', 'financial', 'custom'];
+        if (!in_array($body['type'], $allowedTypes, true)) {
+            json_response(['error' => 'Invalid report type'], 400);
+        }
         $fields[] = "type = :type";
         $params[':type'] = $body['type'];
     }
     if (isset($body['status'])) {
+        $allowedStatus = ['draft', 'published', 'archived'];
+        if (!in_array($body['status'], $allowedStatus, true)) {
+            json_response(['error' => 'Invalid report status'], 400);
+        }
         $fields[] = "status = :status";
         $params[':status'] = $body['status'];
     }
@@ -457,19 +473,27 @@ function handle_edit_report($pdo, $id) {
 
     $fields[] = "updated_at = NOW()";
     $sql = "UPDATE reports SET " . implode(', ', $fields) . " WHERE id = :id";
-    
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
 
-    $stmt = $pdo->prepare("SELECT * FROM reports WHERE id = :id");
-    $stmt->execute([':id' => $id]);
-    $report = $stmt->fetch(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
 
-    if (!$report) {
-        json_response(['error' => 'Report not found'], 404);
+        $stmt = $pdo->prepare("SELECT * FROM reports WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+        $report = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$report) {
+            json_response(['error' => 'Report not found'], 404);
+        }
+
+        json_response($report);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
     }
+}
 
-    json_response($report);
+function handle_edit_report($pdo, $id = null) {
+    handle_update_report($pdo, $id);
 }
 
 function handle_delete_report($pdo, $id) {
