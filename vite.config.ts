@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: {
         "/api": {
-          target: "http://localhost/EHUB_PMS_TEAM/api",
+          target: "http://localhost/EHUB_PMSV4/api",
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
         },
