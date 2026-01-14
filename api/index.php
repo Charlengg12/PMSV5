@@ -493,8 +493,8 @@ function handle_create_project(PDO $pdo): void
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO projects (id, title, description, status, priority, progress, start_date, due_date, budget, spent, revenue, fabricator_budgets, client_id, supervisor_id, fabricator_ids, pending_supervisors)
-         VALUES (:id, :title, :description, :status, :priority, :progress, :start_date, :due_date, :budget, :spent, :revenue, :fabricator_budgets, :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors)'
+        'INSERT INTO projects (id, title, description, status, priority, progress, start_date, due_date, budget, spent, revenue, fabricator_budgets, client_id, supervisor_id, fabricator_ids, created_by, pending_supervisors)
+         VALUES (:id, :title, :description, :status, :priority, :progress, :start_date, :due_date, :budget, :spent, :revenue, :fabricator_budgets, :client_id, :supervisor_id, :fabricator_ids, :created_by, :pending_supervisors)'
     );
 
     $stmt->execute([
@@ -513,6 +513,7 @@ function handle_create_project(PDO $pdo): void
         ':client_id' => $body['clientId'] ?? null,
         ':supervisor_id' => $body['supervisorId'] ?? null,
         ':fabricator_ids' => isset($body['fabricatorIds']) ? json_encode($body['fabricatorIds']) : json_encode([]),
+        ':created_by' => $_SESSION['user_id'],
         ':pending_supervisors' => json_encode($pendingSupervisors),
     ]);
 
