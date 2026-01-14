@@ -99,6 +99,23 @@ CREATE TABLE IF NOT EXISTS `materials` (
   INDEX `idx_project_id` (`project_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Reports table
+CREATE TABLE IF NOT EXISTS `reports` (
+  `id` VARCHAR(255) NOT NULL PRIMARY KEY,
+  `title` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `type` ENUM('project', 'task', 'user', 'financial', 'custom') DEFAULT 'custom',
+  `status` ENUM('draft', 'published', 'archived') DEFAULT 'draft',
+  `project_id` VARCHAR(255) DEFAULT NULL,
+  `created_by` VARCHAR(255) NOT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_reports_status` (`status`),
+  INDEX `idx_reports_type` (`type`),
+  INDEX `idx_reports_project` (`project_id`),
+  INDEX `idx_reports_creator` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert default admin user
 INSERT IGNORE INTO `users` (
   `id`, `name`, `email`, `password_hash`, `role`, `secure_id`, `employee_number`, `is_active`

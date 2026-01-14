@@ -276,6 +276,7 @@ class ApiService {
         return this.request('/reports/create', {
             method: 'POST',
             body: JSON.stringify(reportData),
+            credentials: 'include',
         });
     }
 

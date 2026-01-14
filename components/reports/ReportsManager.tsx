@@ -40,6 +40,7 @@ export function ReportsManager({
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
 
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
@@ -54,6 +55,7 @@ export function ReportsManager({
     status: 'draft' as Report['status'],
     project_id: '',
   });
+  const allProjectsValue = '__all__';
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -88,27 +90,28 @@ export function ReportsManager({
   };
 
   const handleCreate = async () => {
-    if (!formData.title.trim()) return;
+    const title = formData.title.trim();
+    if (!title || isCreating) return;
     try {
+      setIsCreating(true);
       const payload = {
-        title: formData.title.trim(),
+        title,
         description: formData.description.trim(),
         type: formData.type,
         status: formData.status,
         project_id: formData.project_id || null,
       };
-      const response = await apiService.request('/reports/create', {
-        method: 'POST',
-        body: JSON.stringify(payload),
-      });
+      const response = await apiService.createReport(payload);
       if (response.error) throw new Error(response.error);
 
-      const newReport = response.data || response;
-      setReports(prev => [...prev, newReport]);
+      if (!response.data) throw new Error('No report returned');
+      setReports(prev => [response.data, ...prev]);
       resetForm();
       setShowCreateDialog(false);
     } catch (err: any) {
       alert('Failed to create report: ' + (err.message || 'Unknown error'));
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -483,14 +486,14 @@ export function ReportsManager({
               <div className="space-y-2">
                 <Label>Associated Project (optional)</Label>
                 <Select
-                  value={formData.project_id}
-                  onValueChange={v => setFormData({ ...formData, project_id: v })}
+                  value={formData.project_id || allProjectsValue}
+                  onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select project or leave blank for all" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Projects</SelectItem>
+                    <SelectItem value={allProjectsValue}>All Projects</SelectItem>
                     {projects
                       .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
                       .map(project => (
@@ -508,8 +511,8 @@ export function ReportsManager({
             <Button variant="outline" onClick={() => setShowCreateDialog(false)}>
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={!formData.title.trim()}>
-              Create Report
+            <Button onClick={handleCreate} disabled={!formData.title.trim() || isCreating}>
+              {isCreating ? 'Creating...' : 'Create Report'}
             </Button>
           </div>
         </DialogContent>
@@ -584,14 +587,14 @@ export function ReportsManager({
               <div className="space-y-2">
                 <Label>Associated Project (optional)</Label>
                 <Select
-                  value={formData.project_id}
-                  onValueChange={v => setFormData({ ...formData, project_id: v })}
+                  value={formData.project_id || allProjectsValue}
+                  onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select project or leave blank" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Projects</SelectItem>
+                    <SelectItem value={allProjectsValue}>All Projects</SelectItem>
                     {projects
                       .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
                       .map(project => (
@@ -665,3 +668,6 @@ export function ReportsManager({
     </div>
   );
 }
+
+
+
