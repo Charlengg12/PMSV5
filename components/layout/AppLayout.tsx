@@ -16,16 +16,16 @@ interface AppLayoutProps {
 export function AppLayout({ children, currentUser, onLogout, currentTheme, onThemeChange, isTransitioning }: AppLayoutProps) {
   return (
     <SidebarProvider storageKey={`sidebar_state_${currentUser.id}`}>
-      <div className="min-h-screen flex w-full">
+      <div className="h-screen flex w-full bg-background overflow-hidden">
         <AppSidebar currentUser={currentUser} onLogout={onLogout} />
-        <SidebarInset className="flex-1 flex flex-col h-svh">
+        <SidebarInset className="flex-1 flex flex-col h-screen">
           <Header
             currentUser={currentUser}
             currentTheme={currentTheme}
             onThemeChange={onThemeChange}
             isTransitioning={isTransitioning}
           />
-          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6">
+          <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-6 bg-background">
             {children}
           </main>
         </SidebarInset>

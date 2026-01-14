@@ -39,8 +39,8 @@ import {
   User as UserIcon,
   Edit,
   Trash2,
-  Lock,      // Added
-  Loader2,   // Added
+  Lock, // Added
+  Loader2, // Added
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
 import { User } from "../../types";
@@ -68,7 +68,7 @@ export function UserManagement({
   currentUser,
 }: UserManagementProps) {
   const [showSupervisorForm, setShowSupervisorForm] = useState(false);
-  
+
   // -- Secure ID Logic --
   const [showSecureIds, setShowSecureIds] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -141,11 +141,11 @@ export function UserManagement({
     try {
       // Call the API function we added earlier
       await apiService.verifyPassword(verifyPassword);
-      
+
       // If successful:
       setShowSecureIds(true);
       setShowPasswordModal(false);
-      
+
       Swal.fire({
         icon: "success",
         title: "Verified",
@@ -154,7 +154,6 @@ export function UserManagement({
         showConfirmButton: false,
         customClass: swalCustomClasses,
       });
-
     } catch (err: any) {
       setVerifyError("Incorrect password. Please try again.");
     } finally {
@@ -618,7 +617,6 @@ export function UserManagement({
               {showSecureIds ? "Hide" : "Show"} Secure IDs
             </Button>
             {/* ---------------------- */}
-
           </div>
         </CardHeader>
         <CardContent>
@@ -749,9 +747,7 @@ export function UserManagement({
                         <div>{user.name}</div>
                         <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                           <Mail className="h-3.5 w-3.5 shrink-0" />
-                          <span className="break-all">
-                            {user.email}
-                          </span>
+                          <span className="break-all">{user.email}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -873,7 +869,11 @@ export function UserManagement({
                   <Shield className="h-5 w-5 text-primary" />
                   Security Verification
                 </h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowPasswordModal(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPasswordModal(false)}
+                >
                   <X className="h-5 w-5" />
                 </Button>
               </div>
@@ -886,27 +886,30 @@ export function UserManagement({
               <div className="space-y-2">
                 <Label htmlFor="verify-pass">Password</Label>
                 <Input
-                    id="verify-pass"
-                    type="password"
-                    placeholder="Enter password..."
-                    value={verifyPassword}
-                    onChange={(e) => {
-                        setVerifyPassword(e.target.value);
-                        setVerifyError("");
-                    }}
-                    onKeyDown={(e) => {
-                        if (e.key === "Enter") handleVerifyPassword();
-                    }}
-                    className={verifyError ? "border-destructive" : ""}
-                    autoFocus
+                  id="verify-pass"
+                  type="password"
+                  placeholder="Enter password..."
+                  value={verifyPassword}
+                  onChange={(e) => {
+                    setVerifyPassword(e.target.value);
+                    setVerifyError("");
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleVerifyPassword();
+                  }}
+                  className={verifyError ? "border-destructive" : ""}
+                  autoFocus
                 />
                 {verifyError && (
-                    <p className="text-sm text-destructive">{verifyError}</p>
+                  <p className="text-sm text-destructive">{verifyError}</p>
                 )}
               </div>
 
               <div className="flex justify-end gap-3 pt-2">
-                <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPasswordModal(false)}
+                >
                   Cancel
                 </Button>
                 <Button onClick={handleVerifyPassword} disabled={isVerifying}>
@@ -930,7 +933,7 @@ export function UserManagement({
       {showInactiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-             {/* ... (Existing Inactive Modal Content) ... */}
+            {/* ... (Existing Inactive Modal Content) ... */}
             <div className="p-5 sm:p-6 border-b">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -989,9 +992,7 @@ export function UserManagement({
                             <div className="font-medium">{user.name}</div>
                             <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
                               <Mail className="h-3.5 w-3.5 shrink-0" />
-                              <span className="break-all">
-                                {user.email}
-                              </span>
+                              <span className="break-all">{user.email}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -1062,7 +1063,7 @@ export function UserManagement({
       {showEditModal && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-             {/* ... (Existing Edit Modal Content - matching your code) ... */}
+            {/* ... (Existing Edit Modal Content - matching your code) ... */}
             <div className="p-5 sm:p-6 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Edit User</h2>

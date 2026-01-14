@@ -227,6 +227,16 @@ html {
   scrollbar-gutter: stable;
 }
 
+html,
+body,
+#root {
+  height: 100%;
+}
+
+#root {
+  background-color: var(--background);
+}
+
 /* Prevent content shift when modal/dialog opens - override Radix scroll lock */
 html body {
   margin-right: 0 !important;
