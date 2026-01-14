@@ -2,17 +2,7 @@
 
 
 // --- PASTE THIS DEBUG BLOCK HERE ---
-$debugFile = 'global_debug.txt';
-$debugMsg = "Timestamp: " . date('Y-m-d H:i:s') . "\n";
-$debugMsg .= "Method: " . $_SERVER['REQUEST_METHOD'] . "\n";
-$debugMsg .= "URI: " . $_SERVER['REQUEST_URI'] . "\n";
-$debugMsg .= "Raw Input: " . file_get_contents('php://input') . "\n";
-$debugMsg .= "-----------------------------------\n";
-file_put_contents($debugFile, $debugMsg, FILE_APPEND);
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    http_response_code(200);
-    exit;
-}
+
 
 
 // Simple PHP API router to replace Node/Express backend
@@ -375,6 +365,8 @@ function handle_update_project(PDO $pdo, string $id): void
         'due_date',
         'budget',
         'client_id',
+        'spent', 
+        'revenue',
         'supervisor_id'
     ];
 

@@ -694,6 +694,8 @@ export default function App() {
       "worklog",
       "revenue",
       "assignments",
+      "fabricators",
+      "spent",
       "archives",
       "project-status",
       "documentation",

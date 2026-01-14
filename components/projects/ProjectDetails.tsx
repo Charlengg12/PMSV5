@@ -480,7 +480,7 @@ export function ProjectDetails({
                             />
                           ) : (
                             <p className="text-2xl">
-                              ₱{project.spent.toLocaleString()}
+                              ₱{editedProject.spent.toLocaleString()}
                             </p>
                           )}
                         </CardContent>
