@@ -1,15 +1,13 @@
-// components/layout/Header.tsx
-import { useState } from 'react';
-import { CustomLogoutSpinner } from '../ui/CustomLogoutSpinner';
-import { Badge } from '../ui/badge';
-import { Shield, Crown } from 'lucide-react';
-import { User } from '../../types';
-import { ThemeToggle } from '../ui/theme-toggle';
+import { Badge } from "../ui/badge";
+import { Shield, Crown } from "lucide-react";
+import { User } from "../../types";
+import { ThemeToggle } from "../ui/theme-toggle";
+import { SidebarTrigger } from "../ui/sidebar";
 
 interface HeaderProps {
   currentUser: User;
-  currentTheme: 'light' | 'dark' | 'auto';
-  onThemeChange: (theme: 'light' | 'dark' | 'auto') => void;
+  currentTheme: "light" | "dark" | "auto";
+  onThemeChange: (theme: "light" | "dark" | "auto") => void;
   isTransitioning?: boolean;
   isSidebarCollapsed: boolean;
 }
@@ -21,8 +19,6 @@ export function Header({
   isTransitioning,
   isSidebarCollapsed,
 }: HeaderProps) {
-  const [showLogoutSpinner] = useState(false);
-
   const getRoleIcon = () => {
     switch (currentUser.role) {
       case 'admin':
@@ -49,21 +45,9 @@ export function Header({
 
   return (
     <>
-      {showLogoutSpinner && <CustomLogoutSpinner />}
-
-      <header
-        className={`
-          fixed top-0 z-20
-          left-0 right-0
-          flex items-center justify-between
-          px-4 md:px-6 py-5
-          bg-card border-b shadow-sm
-          transition-all duration-300 ease-in-out
-          ${isSidebarCollapsed ? 'md:left-16' : 'md:left-64'}
-        `}
-      >
+      <header className="sticky top-0 z-20 flex items-center justify-between px-3 md:px-6 py-4 bg-card border-b shadow-sm">
         <div className="flex items-center gap-4">
-          {/* You can add mobile sidebar trigger here later if needed */}
+          <SidebarTrigger />
         </div>
 
         <div className="flex items-center gap-4">
@@ -71,20 +55,20 @@ export function Header({
             currentTheme={currentTheme}
             onThemeChange={onThemeChange}
             isTransitioning={isTransitioning}
+            buttonSize="lg"
+            buttonClassName="h-12 w-12"
           />
 
-          <div className="flex items-center gap-3 px-3 py-2 bg-muted/50 rounded-lg">
-            {getRoleIcon()}
-
-            <div className="text-right">
-              <p className="text-sm font-medium truncate max-w-[140px] md:max-w-[220px]">
-                {currentUser.name}
-              </p>
-              <div className="flex items-center justify-end gap-2">
-                {getRoleBadge()}
-                <span className="hidden sm:inline text-xs text-muted-foreground font-mono">
-                  {currentUser.secureId}
-                </span>
+          <div className="flex h-12 items-center gap-3 px-3 md:px-4 bg-background border border-input rounded-lg max-w-[220px] md:max-w-none">
+            <div className="flex size-8 items-center justify-center rounded-md bg-muted text-primary">
+              {getRoleIcon()}
+            </div>
+            <div className="flex min-w-0 flex-col leading-tight">
+              <div className="flex items-center gap-2">
+                <p className="text-xs md:text-sm font-medium truncate">
+                  {currentUser.name}
+                </p>
+                <div className="scale-75 md:scale-100">{getRoleBadge()}</div>
               </div>
             </div>
           </div>

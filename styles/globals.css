@@ -73,7 +73,7 @@
   --chart-5: #8b5cf6;
   --sidebar: #103054;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #103054;
+  --sidebar-primary: #e1862d;
   --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #1a4572;
   --sidebar-accent-foreground: #ffffff;
@@ -402,4 +402,13 @@ html body[data-scroll-locked] {
 .btn-interactive:hover {
   transform: translateY(-2px);
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }

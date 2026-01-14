@@ -1,4 +1,13 @@
-// components/AppSidebar.tsx
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from "../ui/sidebar";
 import {
   LayoutDashboard,
   FolderOpen,
@@ -13,200 +22,252 @@ import {
   Eye,
   Download,
   LogOut,
-  ChevronLeft,
-  ChevronRight,
-} from 'lucide-react';
-import { User } from '../../types';
-import { CompanyLogo } from '../ui/company-logo';
-import Swal from 'sweetalert2';
+} from "lucide-react";
+import { User } from "../../types";
+import { useSidebar } from "../ui/sidebar";
+import Swal from "sweetalert2";
+import { useEffect, useMemo, useState } from "react";
+import { CustomLogoutSpinner } from "../ui/CustomLogoutSpinner";
+import { CompanyLogo } from "../ui/company-logo";
 
 interface AppSidebarProps {
   currentUser: User;
   onLogout: () => void;
-  isCollapsed: boolean;
-  onToggleCollapse: () => void;
 }
 
-export function AppSidebar({
-  currentUser,
-  onLogout,
-  isCollapsed,
-  onToggleCollapse,
-}: AppSidebarProps) {
-  const getNavigationItems = () => {
+export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
+  const { isMobile, setOpenMobile, state } = useSidebar();
+  const [showLogoutSpinner, setShowLogoutSpinner] = useState(false);
+  const [activeHash, setActiveHash] = useState("");
+  const isCollapsed = state === "collapsed";
+  const isCollapsedDesktop = isCollapsed && !isMobile;
+  const menuLinkClassName = isCollapsedDesktop
+    ? "flex items-center justify-center px-2 py-2"
+    : "flex items-center gap-3 px-3 py-2.5";
+  // SweetAlert logout confirmation
+  const handleLogoutClick = async () => {
+    const result = await Swal.fire({
+      title: "Logout?",
+      text: "Are you sure you want to logout?",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes",
+      cancelButtonText: "Cancel",
+      reverseButtons: true,
+      focusCancel: true,
+    });
+    if (result.isConfirmed) {
+      setShowLogoutSpinner(true);
+      setTimeout(() => {
+        setShowLogoutSpinner(false);
+        onLogout();
+      }, 3000); // 3s delay for spinner effect
+    }
+  };
+  // Base navigation items for all users
+  const navigationItems = useMemo(() => {
     const baseItems = [
-      { title: 'Dashboard', url: '#dashboard', icon: LayoutDashboard },
-      { title: 'Projects', url: '#projects', icon: FolderOpen },
+      {
+        title: "Dashboard",
+        url: "#dashboard",
+        icon: LayoutDashboard,
+      },
+      {
+        title: "Projects",
+        url: "#projects",
+        icon: FolderOpen,
+      },
     ];
 
-    if (currentUser.role === 'admin') {
+    // Role-specific navigation items
+    if (currentUser.role === "admin") {
       return [
         ...baseItems,
-        { title: 'Archives', url: '#archives', icon: Archive },
-        { title: 'Tasks', url: '#tasks', icon: CheckSquare },
-        { title: 'Users', url: '#users', icon: Users },
-        { title: 'Revenue', url: '#revenue', icon: DollarSign },
-        { title: 'Reports', url: '#reports', icon: BarChart3 },
-        { title: 'Settings', url: '#settings', icon: Settings },
+        {
+          title: "Archives",
+          url: "#archives",
+          icon: Archive,
+        },
+        {
+          title: "Tasks",
+          url: "#tasks",
+          icon: CheckSquare,
+        },
+        {
+          title: "Users",
+          url: "#users",
+          icon: Users,
+        },
+        {
+          title: "Revenue",
+          url: "#revenue",
+          icon: DollarSign,
+        },
+        {
+          title: "Reports",
+          url: "#reports",
+          icon: BarChart3,
+        },
+        {
+          title: "Settings",
+          url: "#settings",
+          icon: Settings,
+        },
       ];
     }
-    if (currentUser.role === 'supervisor') {
+
+    if (currentUser.role === "supervisor") {
       return [
         ...baseItems,
-        { title: 'Archives', url: '#archives', icon: Archive },
-        { title: 'Tasks', url: '#tasks', icon: CheckSquare },
-        { title: 'Team', url: '#team', icon: Users },
-        { title: 'Reports', url: '#reports', icon: BarChart3 },
+        {
+          title: "Archives",
+          url: "#archives",
+          icon: Archive,
+        },
+        {
+          title: "Tasks",
+          url: "#tasks",
+          icon: CheckSquare,
+        },
+        {
+          title: "Team",
+          url: "#team",
+          icon: Users,
+        },
+        {
+          title: "Reports",
+          url: "#reports",
+          icon: BarChart3,
+        },
       ];
     }
-    if (currentUser.role === 'fabricator') {
+
+    if (currentUser.role === "fabricator") {
       return [
         ...baseItems,
-        { title: 'Work Log', url: '#worklog', icon: Calendar },
-        { title: 'Materials', url: '#materials', icon: Package },
-        { title: 'Tasks', url: '#tasks', icon: CheckSquare },
+        {
+          title: "Work Log",
+          url: "#worklog",
+          icon: Calendar,
+        },
+        {
+          title: "Materials",
+          url: "#materials",
+          icon: Package,
+        },
+        {
+          title: "Tasks",
+          url: "#tasks",
+          icon: CheckSquare,
+        },
       ];
     }
-    if (currentUser.role === 'client') {
+
+    if (currentUser.role === "client") {
       return [
-        { title: 'Dashboard', url: '#dashboard', icon: LayoutDashboard },
-        { title: 'Project Status', url: '#project-status', icon: Eye },
-        { title: 'Documentation', url: '#documentation', icon: Download },
+        {
+          title: "Dashboard",
+          url: "#dashboard",
+          icon: LayoutDashboard,
+        },
+        {
+          title: "Project Status",
+          url: "#project-status",
+          icon: Eye,
+        },
+        {
+          title: "Documentation",
+          url: "#documentation",
+          icon: Download,
+        },
       ];
     }
     return baseItems;
-  };
+  }, [currentUser.role]);
 
-  const navigationItems = getNavigationItems();
-
-  const handleLogoutClick = async () => {
-    const result = await Swal.fire({
-      title: 'Logout?',
-      text: 'Are you sure you want to log out of your account?',
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Logout',
-      cancelButtonText: 'Cancel',
-      focusCancel: true,
-      allowOutsideClick: true,
-      customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        confirmButton: 'swal-confirm-button',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon',
-      },
-    });
-
-    if (result.isConfirmed) {
-      await Swal.fire({
-        title: 'Logging out...',
-        text: 'Please wait a moment',
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        showConfirmButton: false,
-        customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          icon: 'swal-icon',
-        },
-        didOpen: () => {
-          Swal.showLoading();
-
-          setTimeout(() => {
-            onLogout();
-            Swal.close();
-          }, 2000);
-        },
-      });
-    }
-  };
+  useEffect(() => {
+    const getHash = () =>
+      window.location.hash || navigationItems[0]?.url || "#dashboard";
+    const updateHash = () => setActiveHash(getHash());
+    updateHash();
+    window.addEventListener("hashchange", updateHash);
+    return () => window.removeEventListener("hashchange", updateHash);
+  }, [navigationItems]);
 
   return (
-    <aside
-      className={`
-        hidden md:block bg-card border-r border-border
-        fixed top-0 left-0 z-30 h-screen
-        transition-all duration-300 ease-in-out
-        ${isCollapsed ? 'w-16' : 'w-64'}
-      `}
-    >
-      <div className="relative flex items-center justify-between px-4 pt-5 pb-4 border-b border-border">
-        <div
-          className={`transition-all duration-200 ${
-            isCollapsed ? 'opacity-0 w-0 overflow-hidden' : 'opacity-100'
-          }`}
-        >
-          <CompanyLogo size="md" showText={!isCollapsed} clickable={true} />
-        </div>
-
-        <button
-          onClick={onToggleCollapse}
-          className="absolute -right-3 top-6 bg-background border border-border rounded-full p-1.5 hover:bg-muted transition-colors shadow-sm"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </button>
-      </div>
-
-      <div className="flex flex-col h-[calc(100vh-80px)]">
-        <nav className="flex-1 px-3 py-4 overflow-y-auto">
-          <ul className="space-y-1">
-            {navigationItems.map((item) => (
-              <li key={item.title}>
-                <a
-                  href={item.url}
-                  className={`
-                    group flex items-center gap-3 px-3 py-2.5 rounded-md text-sm
-                    hover:bg-accent hover:text-accent-foreground transition-colors
-                    ${
-                      window.location.hash === item.url
-                        ? 'bg-accent/70 text-accent-foreground font-medium'
-                        : 'text-muted-foreground'
-                    }
-                    ${isCollapsed ? 'justify-center' : ''}
-                  `}
-                  title={isCollapsed ? item.title : undefined}
-                  onClick={(e) => {
-                    if (item.url.startsWith('#')) {
-                      e.preventDefault();
-                      window.location.hash = item.url;
-                    }
-                  }}
+    <>
+      {showLogoutSpinner && <CustomLogoutSpinner />}
+      <Sidebar className="border-r-0" collapsible="icon">
+        <SidebarContent className="gap-0 bg-sidebar no-scrollbar">
+          <div className="border-b border-sidebar-border px-4 py-3">
+            <CompanyLogo
+              size={isCollapsedDesktop ? "sm" : "md"}
+              showText={!isCollapsedDesktop}
+              clickable={true}
+              className={
+                isCollapsedDesktop
+                  ? "justify-center"
+                  : "max-w-full [&_span]:!text-sidebar-foreground [&_span:last-child]:!text-sidebar-foreground/70"
+              }
+            />
+          </div>
+          <SidebarGroup className="py-2">
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-1 px-2 md:group-data-[collapsible=icon]:px-0">
+                {navigationItems.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={activeHash === item.url}
+                      className="hover:bg-sidebar-accent rounded-lg transition-colors"
+                      tooltip={isCollapsedDesktop ? item.title : undefined}
+                    >
+                      <a
+                        href={item.url}
+                        className={menuLinkClassName}
+                        onClick={(e) => {
+                          // Ensure hash updates even if default is prevented by wrappers
+                          const href = item.url;
+                          if (href.startsWith("#")) {
+                            e.preventDefault();
+                            window.location.hash = href;
+                          }
+                          if (isMobile) setOpenMobile(false);
+                        }}
+                      >
+                        <item.icon className="h-4 w-4 flex-shrink-0" />
+                        <span className={isCollapsedDesktop ? "sr-only" : ""}>
+                          {item.title}
+                        </span>
+                      </a>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+        <SidebarFooter className="pt-2 border-t border-sidebar-border px-4 py-5">
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                onClick={handleLogoutClick}
+                className="h-10 rounded-lg bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 active:bg-destructive active:text-destructive-foreground"
+                tooltip={isCollapsedDesktop ? "Logout" : undefined}
+              >
+                <LogOut className="h-4 w-4 text-destructive-foreground" />
+                <span
+                  className={`${
+                    isCollapsedDesktop ? "sr-only" : ""
+                  } text-destructive-foreground`}
                 >
-                  <item.icon className="h-5 w-5 flex-shrink-0" />
-                  {!isCollapsed && <span>{item.title}</span>}
-                </a>
-              </li>
-            ))}
-          </ul>
-        </nav>
-
-        <div className="border-t border-border p-3 bg-muted/30 mt-auto mb-3">
-          <button
-            onClick={handleLogoutClick}
-            className={`
-              w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-sm
-              text-red-600 dark:text-red-400
-              hover:bg-red-50 dark:hover:bg-red-950/30 hover:text-red-700 dark:hover:text-red-300
-              transition-colors
-              ${isCollapsed ? 'justify-center' : ''}
-            `}
-            title={isCollapsed ? 'Logout' : undefined}
-          >
-            <LogOut className="h-5 w-5 flex-shrink-0" />
-            {!isCollapsed && <span>Logout</span>}
-          </button>
-        </div>
-      </div>
-    </aside>
+                  Logout
+                </span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarFooter>
+      </Sidebar>
+    </>
   );
 }

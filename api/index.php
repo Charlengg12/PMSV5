@@ -14,7 +14,7 @@ if ($scriptDir !== '' && strpos($requestUri, $scriptDir) === 0) {
 } else {
     $path = $requestUri;
 }
-// $path = '/' . trim($path, '/');
+$path = '/' . trim($path, '/');
 
 // Basic routing
 switch ($method . ' ' . $path) {
@@ -134,6 +134,8 @@ switch ($method . ' ' . $path) {
         handle_update_project($pdo, $matches[1]);
     } elseif (preg_match('#^PUT /users/([^/]+)$#', $method . ' ' . $path, $matches)) {
         handle_update_user($pdo, $matches[1]);
+    } elseif (preg_match('#^DELETE /projects/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_delete_project($pdo, $matches[1]);
     } else {
         json_response(['error' => 'Not found'], 404);
     }

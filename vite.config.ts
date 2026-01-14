@@ -39,7 +39,7 @@ export default defineConfig(({ mode }) => {
       host: true,
       proxy: {
         "/api": {
-          target: "http://localhost/ELECTRONIK-HUB/EHUB_PMS_TEAM/api",
+          target: "http://localhost/EHUB_PMS_TEAM/api",
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api/, ""),
         },

@@ -11,13 +11,15 @@ interface ThemeToggleProps {
     currentTheme: 'light' | 'dark' | 'auto';
     onThemeChange: (theme: 'light' | 'dark' | 'auto') => void;
     isTransitioning?: boolean;
+    buttonClassName?: string;
+    buttonSize?: 'default' | 'sm' | 'lg' | 'icon';
 }
 
-export function ThemeToggle({ currentTheme, onThemeChange, isTransitioning = false }: ThemeToggleProps) {
+export function ThemeToggle({ currentTheme, onThemeChange, isTransitioning = false, buttonClassName, buttonSize = 'icon' }: ThemeToggleProps) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="relative">
+                <Button variant="outline" size={buttonSize} className={`relative ${buttonClassName ?? ''}`}>
                     <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
                     <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
                     <span className="sr-only">Toggle theme</span>
