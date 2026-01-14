@@ -291,6 +291,14 @@ class ApiService {
             method: 'DELETE',
         });
     }
+
+    async exportReport(reportId: string, supervisorId: string): Promise<ApiResponse<any>> {
+        return this.request('/reports/export', {
+            method: 'POST',
+            body: JSON.stringify({ reportId, supervisorId }),
+            credentials: 'include',
+        });
+    }
     
 }
 
