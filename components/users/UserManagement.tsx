@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { apiService } from "../../utils/apiService";
 import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -12,13 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import {
@@ -35,8 +28,11 @@ import {
   Shield,
   Eye,
   EyeOff,
-  /* Edit, Trash2, */ Save,
+  Save,
   X,
+  UserX,
+  Users,
+  UserCheck,
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
 import { User } from "../../types";
@@ -48,6 +44,16 @@ interface UserManagementProps {
   currentUser: User;
 }
 
+const swalCustomClasses = {
+  container: "swal-container",
+  popup: "swal-popup",
+  title: "swal-title",
+  htmlContainer: "swal-content",
+  confirmButton: "swal-confirm-button",
+  cancelButton: "swal-cancel-button",
+  icon: "swal-icon",
+};
+
 export function UserManagement({
   users,
   setUsers,
@@ -56,24 +62,48 @@ export function UserManagement({
   const [showSupervisorForm, setShowSupervisorForm] = useState(false);
   const [showSecureIds, setShowSecureIds] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showInactiveModal, setShowInactiveModal] = useState(false);
+  const [inactiveUsers, setInactiveUsers] = useState<User[]>([]);
+  const [loadingInactive, setLoadingInactive] = useState(false);
   const [editEmailError, setEditEmailError] = useState<string>("");
   const [editPhoneError, setEditPhoneError] = useState<string>("");
   const [editGcashError, setEditGcashError] = useState<string>("");
 
+  useEffect(() => {
+    if (showInactiveModal && currentUser.role === "admin") {
+      const fetchInactive = async () => {
+        setLoadingInactive(true);
+        try {
+          const response = await apiService.getInactiveUsers();
+          if (response.data) {
+            setInactiveUsers(response.data.map(mapUserDataFromBackend));
+          }
+        } catch (err) {
+          console.error("Failed to load inactive users", err);
+          Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: "Could not load inactive users.",
+            timer: 2500,
+            customClass: swalCustomClasses,
+          });
+        } finally {
+          setLoadingInactive(false);
+        }
+      };
+      fetchInactive();
+    }
+  }, [showInactiveModal, currentUser.role]);
+
   const handleCreateSupervisor = async (newSupervisor: User) => {
-    // After adding, fetch the latest users from backend for true refresh
     try {
       const response = await apiService.getUsers();
       if (response.data) {
-        const mapped = response.data.map(mapUserDataFromBackend);
-        setUsers(mapped);
-      } else {
-        // fallback: add locally if fetch fails
-        setUsers([...users, newSupervisor]);
+        setUsers(response.data.map(mapUserDataFromBackend));
       }
     } catch (err) {
-      setUsers([...users, newSupervisor]);
+      console.error("Refresh after supervisor creation failed", err);
     }
     setShowSupervisorForm(false);
   };
@@ -83,196 +113,246 @@ export function UserManagement({
     setEditEmailError("");
     setEditPhoneError("");
     setEditGcashError("");
-    setShowEditDialog(true);
+    setShowEditModal(true);
   };
 
   const handleSaveUser = async () => {
-    if (editingUser) {
-      const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-      const phoneRegex = /^(\+639|09)\d{9}$/;
-      const gcashRegex = /^09\d{9}$/;
-      let hasError = false;
+    if (!editingUser) return;
 
-      if (!emailRegex.test(editingUser.email)) {
-        setEditEmailError(
-          "Please enter a valid Gmail address (e.g., example@gmail.com)"
-        );
-        hasError = true;
-      } else {
-        setEditEmailError("");
-      }
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+    const phoneRegex = /^(\+639|09)\d{9}$/;
+    const gcashRegex = /^09\d{9}$/;
 
-      if (editingUser.phone && !phoneRegex.test(editingUser.phone)) {
-        setEditPhoneError("Phone must be +639123456789 or 09123456789");
-        hasError = true;
-      } else if (
-        editingUser.phone &&
-        editingUser.phone.length !== 13 &&
-        editingUser.phone.length !== 11
-      ) {
-        setEditPhoneError("Phone must be 13 or 11 digits");
-        hasError = true;
-      } else {
-        setEditPhoneError("");
-      }
+    let hasError = false;
 
-      if (
-        editingUser.gcashNumber &&
-        !gcashRegex.test(editingUser.gcashNumber)
-      ) {
-        setEditGcashError(
-          "GCash number must be 11 digits starting with 09 (e.g., 09123456789)"
-        );
-        hasError = true;
-      } else if (
-        editingUser.gcashNumber &&
-        editingUser.gcashNumber.length !== 11
-      ) {
-        setEditGcashError("GCash number must be exactly 11 digits");
-        hasError = true;
-      } else {
-        setEditGcashError("");
-      }
+    if (!emailRegex.test(editingUser.email)) {
+      setEditEmailError("Please enter a valid Gmail address (example@gmail.com)");
+      hasError = true;
+    } else setEditEmailError("");
 
-      if (hasError) return;
+    if (editingUser.phone && !phoneRegex.test(editingUser.phone)) {
+      setEditPhoneError("Phone must be +639xxxxxxxxx or 09xxxxxxxxx");
+      hasError = true;
+    } else if (
+      editingUser.phone &&
+      editingUser.phone.length !== 13 &&
+      editingUser.phone.length !== 11
+    ) {
+      setEditPhoneError("Phone must be 11 or 13 digits");
+      hasError = true;
+    } else setEditPhoneError("");
 
-      // Check if any field actually changed
-      const originalUser = users.find((u) => u.id === editingUser.id);
-      if (
-        originalUser &&
-        JSON.stringify(originalUser) === JSON.stringify(editingUser)
-      ) {
-        Swal.fire({
-          icon: "info",
-          title: "No Changes Detected",
-          text: "No information was changed.",
-          showConfirmButton: false,
-          timer: 1500,
-          customClass: {
-              container: 'swal-container',
-              popup: 'swal-popup',
-              title: 'swal-title',
-              htmlContainer: 'swal-content',
-              cancelButton: 'swal-cancel-button',
-              icon: 'swal-icon'
-          },
-        });
-        setShowEditDialog(false);
-        setEditingUser(null);
-        return;
-      }
+    if (editingUser.gcashNumber && !gcashRegex.test(editingUser.gcashNumber)) {
+      setEditGcashError("GCash must start with 09 and be 11 digits");
+      hasError = true;
+    } else if (editingUser.gcashNumber && editingUser.gcashNumber.length !== 11) {
+      setEditGcashError("GCash number must be exactly 11 digits");
+      hasError = true;
+    } else setEditGcashError("");
 
-      // Update user in database
+    if (hasError) return;
+
+    const original = users.find((u) => u.id === editingUser.id);
+    if (original && JSON.stringify(original) === JSON.stringify(editingUser)) {
+      Swal.fire({
+        icon: "info",
+        title: "No changes",
+        text: "Nothing was modified.",
+        timer: 1400,
+        showConfirmButton: false,
+        customClass: swalCustomClasses,
+      });
+      setShowEditModal(false);
+      setEditingUser(null);
+      return;
+    }
+
+    // Show confirmation first
+    const result = await Swal.fire({
+      title: "Save changes?",
+      text: "This will update the user's information.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, save",
+      cancelButtonText: "Cancel",
+      customClass: swalCustomClasses,
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Show loading for ~2 seconds
+    Swal.fire({
+      title: "Saving...",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      customClass: swalCustomClasses,
+    });
+
+    // Fake delay + actual save
+    setTimeout(async () => {
       try {
         await apiService.updateUser(editingUser.id, editingUser);
-        // Refresh user list from backend
-        const response = await apiService.getUsers();
-        if (response.data) {
-          const mapped = response.data.map(mapUserDataFromBackend);
-          setUsers(mapped);
-        }
-        setShowEditDialog(false);
-        setEditingUser(null);
+        const res = await apiService.getUsers();
+        if (res.data) setUsers(res.data.map(mapUserDataFromBackend));
+
+        Swal.close();
         Swal.fire({
           icon: "success",
-          title: "User Updated!",
-          text: "The user information has been successfully updated.",
+          title: "User Updated",
+          timer: 1600,
           showConfirmButton: false,
-          timer: 1500,
-          customClass: {
-              container: 'swal-container',
-              popup: 'swal-popup',
-              title: 'swal-title',
-              htmlContainer: 'swal-content',
-              cancelButton: 'swal-cancel-button',
-              icon: 'swal-icon'
-          },
+          customClass: swalCustomClasses,
         });
+
+        setShowEditModal(false);
+        setEditingUser(null);
       } catch (err) {
+        Swal.close();
         Swal.fire({
           icon: "error",
           title: "Update Failed",
-          text: "Could not update user information.",
-          customClass: {
-              container: 'swal-container',
-              popup: 'swal-popup',
-              title: 'swal-title',
-              htmlContainer: 'swal-content',
-              cancelButton: 'swal-cancel-button',
-              icon: 'swal-icon'
-          },
+          text: "Could not save changes.",
+          customClass: swalCustomClasses,
         });
       }
-    }
+    }, 1800); // ~2 seconds visible loading
   };
 
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeactivateUser = async (userId: string) => {
+    if (userId === currentUser.id) {
+      Swal.fire({
+        icon: "warning",
+        title: "Cannot deactivate yourself",
+        text: "Please ask another admin to do this.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
     const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Please confirm if you want to proceed.",
-      icon: 'info',
+      title: "Deactivate user?",
+      text: "User will no longer be able to log in.",
+      icon: "warning",
       showCancelButton: true,
-      cancelButtonText: 'Cancel',
-      confirmButtonText: 'Confirm',
-      allowOutsideClick: false,
-      customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          confirmButton: 'swal-confirm-button',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon'
-      }
+      confirmButtonText: "Yes, deactivate",
+      cancelButtonText: "Cancel",
+      customClass: swalCustomClasses,
     });
-    if (result.isConfirmed) {
-      // Optionally, call backend to set is_active = 0
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: "Deactivating...",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      customClass: swalCustomClasses,
+    });
+
+    setTimeout(async () => {
       try {
-        await apiService.updateUser(userId, { is_active: 0 });
-        const response = await apiService.getUsers();
-        if (response.data) {
-          const mapped = response.data.map(mapUserDataFromBackend);
-          setUsers(mapped);
-        } else {
-          setUsers(users.filter((u) => u.id !== userId));
+        await apiService.makeUserInactive(userId);
+        const [activeRes, inactiveRes] = await Promise.all([
+          apiService.getUsers(),
+          apiService.getInactiveUsers(),
+        ]);
+        if (activeRes.data) {
+          setUsers(activeRes.data.map(mapUserDataFromBackend));
         }
+        if (inactiveRes.data) {
+          setInactiveUsers(inactiveRes.data.map(mapUserDataFromBackend));
+        }
+
+        Swal.close();
         Swal.fire({
           icon: "success",
           title: "User Deactivated",
-          text: "The user has been deactivated.",
-          timer: 1500,
+          timer: 1600,
           showConfirmButton: false,
-          customClass: {
-                container: 'swal-container',
-                popup: 'swal-popup',
-                title: 'swal-title',
-                htmlContainer: 'swal-content',
-                confirmButton: 'swal-confirm-button',
-                cancelButton: 'swal-cancel-button',
-                icon: 'swal-icon'
-            }
+          customClass: swalCustomClasses,
         });
-      } catch (err) {
+      } catch (err: any) {
+        Swal.close();
+        console.error("Deactivation failed:", err);
         Swal.fire({
           icon: "error",
-          title: "Failed to Deactivate",
-          text: "Could not deactivate the user.",
-          customClass: {
-              container: 'swal-container',
-              popup: 'swal-popup',
-              title: 'swal-title',
-              htmlContainer: 'swal-content',
-              confirmButton: 'swal-confirm-button',
-              cancelButton: 'swal-cancel-button',
-              icon: 'swal-icon'
-          }
+          title: "Deactivation Failed",
+          text: err?.response?.data?.message || "Server error",
+          customClass: swalCustomClasses,
         });
       }
-    }
+    }, 1800);
+  };
+
+  const handleRestoreUser = async (userId: string) => {
+    const result = await Swal.fire({
+      title: "Restore user?",
+      text: "User will be able to log in again.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, restore",
+      cancelButtonText: "Cancel",
+      customClass: swalCustomClasses,
+    });
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: "Restoring...",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      customClass: swalCustomClasses,
+    });
+
+    setTimeout(async () => {
+      try {
+        await apiService.makeUserActive(userId);
+        const [activeRes, inactiveRes] = await Promise.all([
+          apiService.getUsers(),
+          apiService.getInactiveUsers(),
+        ]);
+        if (activeRes.data) {
+          setUsers(activeRes.data.map(mapUserDataFromBackend));
+        }
+        if (inactiveRes.data) {
+          setInactiveUsers(inactiveRes.data.map(mapUserDataFromBackend));
+        }
+
+        Swal.close();
+        Swal.fire({
+          icon: "success",
+          title: "User Restored",
+          text: "Account is now active again.",
+          timer: 1800,
+          showConfirmButton: false,
+          customClass: swalCustomClasses,
+        });
+      } catch (err: any) {
+        Swal.close();
+        console.error("Restore failed:", err);
+        Swal.fire({
+          icon: "error",
+          title: "Restore Failed",
+          text: err?.response?.data?.message || "Server error",
+          customClass: swalCustomClasses,
+        });
+      }
+    }, 1800);
   };
 
   const handleCancelEdit = () => {
-    setShowEditDialog(false);
+    setShowEditModal(false);
     setEditingUser(null);
   };
 
@@ -294,29 +374,36 @@ export function UserManagement({
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2>User Management</h2>
-        {canManageUsers && (
-          <Button onClick={() => setShowSupervisorForm(true)}>
-            <UserPlus className="h-4 w-4 mr-2" />
-            Add Supervisor
-          </Button>
-        )}
+        <h2 className="text-2xl font-bold">User Management</h2>
+        <div className="flex gap-3">
+          {canManageUsers && (
+            <Button
+              variant="outline"
+              onClick={() => setShowInactiveModal(true)}
+            >
+              <UserX className="h-4 w-4 mr-2" />
+              Inactive Users
+            </Button>
+          )}
+          {canManageUsers && (
+            <Button onClick={() => setShowSupervisorForm(true)}>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Add Supervisor
+            </Button>
+          )}
+        </div>
       </div>
 
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>System Users</CardTitle>
+            <CardTitle>Active Users</CardTitle>
             <Button
               variant="outline"
               size="sm"
               onClick={() => setShowSecureIds(!showSecureIds)}
             >
-              {showSecureIds ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              {showSecureIds ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               {showSecureIds ? "Hide" : "Show"} Secure IDs
             </Button>
           </div>
@@ -327,23 +414,21 @@ export function UserManagement({
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Role</TableHead>
-                <TableHead>School/Institution</TableHead>
+                <TableHead>School</TableHead>
                 <TableHead>Contact</TableHead>
                 {showSecureIds && <TableHead>Secure ID</TableHead>}
                 <TableHead>Employee #</TableHead>
-                {currentUser.role === "admin" && <TableHead>Actions</TableHead>}
+                {canManageUsers && <TableHead>Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id}>
                   <TableCell>
-                    <div>
-                      <div>{user.name}</div>
-                      <div className="text-sm text-muted-foreground flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </div>
+                    <div className="font-medium">{user.name}</div>
+                    <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <Mail className="h-3.5 w-3.5" />
+                      {user.email}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -351,12 +436,12 @@ export function UserManagement({
                       {user.role.toUpperCase()}
                     </Badge>
                   </TableCell>
-                  <TableCell>{user.school}</TableCell>
+                  <TableCell>{user.school || "—"}</TableCell>
                   <TableCell>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       {user.phone && (
-                        <div className="text-sm flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
+                        <div className="text-sm flex items-center gap-1.5">
+                          <Phone className="h-3.5 w-3.5" />
                           {user.phone}
                         </div>
                       )}
@@ -369,15 +454,15 @@ export function UserManagement({
                   </TableCell>
                   {showSecureIds && (
                     <TableCell>
-                      <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                        {user.secureId}
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                        {user.secureId || "—"}
                       </code>
                     </TableCell>
                   )}
                   <TableCell>
-                    <code className="text-xs">{user.employeeNumber}</code>
+                    <code className="text-xs">{user.employeeNumber || "—"}</code>
                   </TableCell>
-                  {currentUser.role === "admin" && (
+                  {canManageUsers && (
                     <TableCell>
                       <div className="flex gap-2">
                         <Button
@@ -389,9 +474,9 @@ export function UserManagement({
                         </Button>
                         {user.id !== currentUser.id && (
                           <Button
-                            variant="outline"
+                            variant="destructive"
                             size="sm"
-                            onClick={() => handleDeleteUser(user.id)}
+                            onClick={() => handleDeactivateUser(user.id)}
                           >
                             Deactivate
                           </Button>
@@ -406,21 +491,120 @@ export function UserManagement({
         </CardContent>
       </Card>
 
-      {!canManageUsers && (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
-              <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg mb-2">Limited Access</h3>
-              <p className="text-muted-foreground">
-                Only administrators can manage users and create supervisor
-                accounts.
+      {/* Inactive Users Modal – plain div */}
+      {showInactiveModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-background border rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col m-4">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold flex items-center gap-2">
+                  <UserX className="h-5 w-5" />
+                  Inactive / Deactivated Users
+                </h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowInactiveModal(false)}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                These accounts are deactivated and cannot log in.
               </p>
             </div>
-          </CardContent>
-        </Card>
+
+            <div className="flex-1 overflow-hidden p-6">
+              {loadingInactive ? (
+                <div className="h-full flex items-center justify-center">
+                  Loading inactive users...
+                </div>
+              ) : inactiveUsers.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center">
+                  <Users className="h-14 w-14 text-muted-foreground mb-4 opacity-50" />
+                  <p className="text-lg font-medium text-muted-foreground">
+                    No inactive users found
+                  </p>
+                </div>
+              ) : (
+                <div className="h-full overflow-auto">
+                  <Table>
+                    <TableHeader className="sticky top-0 bg-background z-10">
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Role</TableHead>
+                        <TableHead>School</TableHead>
+                        <TableHead>Contact</TableHead>
+                        {showSecureIds && <TableHead>Secure ID</TableHead>}
+                        <TableHead>Employee #</TableHead>
+                        <TableHead className="text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {inactiveUsers.map((user) => (
+                        <TableRow key={user.id}>
+                          <TableCell>
+                            <div className="font-medium">{user.name}</div>
+                            <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                              <Mail className="h-3.5 w-3.5" />
+                              {user.email}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={getRoleBadgeVariant(user.role)}>
+                              {user.role.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{user.school || "—"}</TableCell>
+                          <TableCell>
+                            <div className="space-y-0.5">
+                              {user.phone && (
+                                <div className="text-sm flex items-center gap-1.5">
+                                  <Phone className="h-3.5 w-3.5" />
+                                  {user.phone}
+                                </div>
+                              )}
+                              {user.gcashNumber && (
+                                <div className="text-sm text-muted-foreground">
+                                  GCash: {user.gcashNumber}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          {showSecureIds && (
+                            <TableCell>
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                                {user.secureId || "—"}
+                              </code>
+                            </TableCell>
+                          )}
+                          <TableCell>
+                            <code className="text-xs font-mono">{user.employeeNumber || "—"}</code>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleRestoreUser(user.id)}
+                            >
+                              <UserCheck className="h-4 w-4 mr-1.5" />
+                              Restore
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </div>
+
+            {/* <div className="p-6 border-t flex justify-end">
+              <Button variant="outline" onClick={() => setShowInactiveModal(false)}>
+                Close
+              </Button>
+            </div> */}
+          </div>
+        </div>
       )}
 
+      {/* Supervisor Signup Form (assuming it has its own modal) */}
       {showSupervisorForm && (
         <SupervisorSignupForm
           onSignup={handleCreateSupervisor}
@@ -428,31 +612,34 @@ export function UserManagement({
         />
       )}
 
-      {showEditDialog && editingUser && (
-        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Edit User</DialogTitle>
-              <DialogDescription>
-                Update user information and settings.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+      {/* Edit User Modal – plain div */}
+      {showEditModal && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-background border rounded-lg shadow-2xl w-full max-w-4xl m-4">
+            <div className="p-6 border-b">
+              <div className="flex items-center justify-between">
+                <h2 className="text-xl font-semibold">Edit User</h2>
+                <Button variant="ghost" size="icon" onClick={handleCancelEdit}>
+                  <X className="h-5 w-5" />
+                </Button>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Update user information.
+              </p>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="name">Name</Label>
+                  <Label>Name</Label>
                   <Input
-                    id="name"
                     value={editingUser.name || ""}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, name: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
                   />
                 </div>
                 <div>
-                  <Label htmlFor="email">Email</Label>
+                  <Label>Email</Label>
                   <Input
-                    id="email"
                     value={editingUser.email || ""}
                     onChange={(e) => {
                       setEditingUser({ ...editingUser, email: e.target.value });
@@ -460,75 +647,55 @@ export function UserManagement({
                     }}
                     className={editEmailError ? "border-destructive" : ""}
                   />
-                  {editEmailError && (
-                    <p className="text-sm text-destructive">{editEmailError}</p>
-                  )}
+                  {editEmailError && <p className="text-sm text-destructive mt-1">{editEmailError}</p>}
                 </div>
+
                 <div>
-                  <Label htmlFor="phone">Phone</Label>
+                  <Label>Phone</Label>
                   <Input
-                    id="phone"
                     value={editingUser.phone || ""}
                     maxLength={13}
                     onChange={(e) => {
                       let val = e.target.value.replace(/[^\d+]/g, "");
-                      if (val.includes("+")) {
-                        val = "+" + val.replace(/\+/g, "");
-                      }
-                      if (val.startsWith("+")) {
-                        val = val.slice(0, 13);
-                      } else {
-                        val = val.slice(0, 11);
-                      }
+                      if (val.includes("+")) val = "+" + val.replace(/\+/g, "");
+                      val = val.startsWith("+") ? val.slice(0, 13) : val.slice(0, 11);
                       setEditingUser({ ...editingUser, phone: val });
                       setEditPhoneError("");
                     }}
                     className={editPhoneError ? "border-destructive" : ""}
                   />
-                  {editPhoneError && (
-                    <p className="text-sm text-destructive">{editPhoneError}</p>
-                  )}
+                  {editPhoneError && <p className="text-sm text-destructive mt-1">{editPhoneError}</p>}
                 </div>
+
                 <div>
-                  <Label htmlFor="gcashNumber">GCash Number</Label>
+                  <Label>GCash Number</Label>
                   <Input
-                    id="gcashNumber"
                     value={editingUser.gcashNumber || ""}
                     maxLength={11}
                     onChange={(e) => {
-                      let val = e.target.value.replace(/[^\d]/g, "");
-                      val = val.slice(0, 11);
-                      setEditingUser({
-                        ...editingUser,
-                        gcashNumber: val,
-                      });
+                      const val = e.target.value.replace(/[^\d]/g, "").slice(0, 11);
+                      setEditingUser({ ...editingUser, gcashNumber: val });
                       setEditGcashError("");
                     }}
                     className={editGcashError ? "border-destructive" : ""}
                   />
-                  {editGcashError && (
-                    <p className="text-sm text-destructive">{editGcashError}</p>
-                  )}
+                  {editGcashError && <p className="text-sm text-destructive mt-1">{editGcashError}</p>}
                 </div>
+
                 <div>
-                  <Label htmlFor="school">School/Institution</Label>
+                  <Label>School / Institution</Label>
                   <Input
-                    id="school"
                     value={editingUser.school || ""}
-                    onChange={(e) =>
-                      setEditingUser({ ...editingUser, school: e.target.value })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, school: e.target.value })}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="role">Role</Label>
+                  <Label>Role</Label>
                   <Select
                     value={editingUser.role}
-                    onValueChange={(value) =>
-                      setEditingUser({
-                        ...editingUser,
-                        role: value as User["role"],
-                      })
+                    onValueChange={(v) =>
+                      setEditingUser({ ...editingUser, role: v as User["role"] })
                     }
                   >
                     <SelectTrigger>
@@ -542,34 +709,25 @@ export function UserManagement({
                     </SelectContent>
                   </Select>
                 </div>
+
                 <div>
-                  <Label htmlFor="secureId">Secure ID</Label>
+                  <Label>Secure ID</Label>
                   <Input
-                    id="secureId"
                     value={editingUser.secureId || ""}
-                    onChange={(e) =>
-                      setEditingUser({
-                        ...editingUser,
-                        secureId: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, secureId: e.target.value })}
                   />
                 </div>
+
                 <div>
-                  <Label htmlFor="employeeNumber">Employee #</Label>
+                  <Label>Employee #</Label>
                   <Input
-                    id="employeeNumber"
                     value={editingUser.employeeNumber || ""}
-                    onChange={(e) =>
-                      setEditingUser({
-                        ...editingUser,
-                        employeeNumber: e.target.value,
-                      })
-                    }
+                    onChange={(e) => setEditingUser({ ...editingUser, employeeNumber: e.target.value })}
                   />
                 </div>
               </div>
-              <div className="flex gap-2 justify-end">
+
+              <div className="flex justify-end gap-3 pt-4">
                 <Button variant="outline" onClick={handleCancelEdit}>
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -580,8 +738,20 @@ export function UserManagement({
                 </Button>
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </div>
+        </div>
+      )}
+
+      {!canManageUsers && (
+        <Card className="mt-8">
+          <CardContent className="py-12 text-center">
+            <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">Limited Access</h3>
+            <p className="text-muted-foreground">
+              Only administrators can manage users and view inactive accounts.
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   );

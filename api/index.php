@@ -68,6 +68,18 @@ switch ($method . ' ' . $path) {
     case 'GET /users':
         handle_get_users($pdo);
         break;
+    // get all user where is_active = 0
+    case 'GET /users/inactive':
+        handle_get_inactive_users($pdo);
+        break;
+    // make user inactive 
+    case 'PUT /users/:id':
+        handle_update_user_inactive($pdo, $path);
+        break;
+    // make the user active again set is_active = 1
+    case 'PUT /users/active/:id':
+        handle_update_user_active($pdo, $path);
+        break;
 
     case 'POST /users/client':
         handle_create_client($pdo);
@@ -152,7 +164,12 @@ switch ($method . ' ' . $path) {
         handle_update_project($pdo, $matches[1]);
     } elseif (preg_match('#^PUT /users/([^/]+)$#', $method . ' ' . $path, $matches)) {
         handle_update_user($pdo, $matches[1]);
-        // add route for reports
+        // add routes for making inactive the user the is_active will set to 0
+    } elseif (preg_match('#^PUT /users/inactive/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_user_inactive($pdo, $matches[1]);
+        // add routes for making active the user the is_active will set to 1
+    } elseif (preg_match('#^PUT /users/active/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_user_active($pdo, $matches[1]);
     } elseif ($method === 'DELETE' && preg_match('#^/reports/([^/]+)$#', $path, $m)) {
         $id = $m[1];
         handle_delete_report($pdo, $id);
@@ -291,7 +308,39 @@ function handle_update_user(PDO $pdo, string $id): void
     }
     json_response(['user' => $user, 'message' => 'User updated successfully']);
 }
+// --- Handler to make user inactive set the is_active = 0 ---
+function handle_update_user_inactive(PDO $pdo, string $id): void
+{
+    require_login();
+    $body = sanitize_recursive(json_input());
 
+    $stmt = $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+
+    $stmt = $pdo->prepare("SELECT id, name, email, role, school, phone, gcash_number, secure_id, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        json_response(['error' => 'User not found after update'], 404);
+    }
+    json_response(['user' => $user, 'message' => 'User updated successfully']);
+}
+// --- Handler to make user active set the is_active = 1 ---
+function handle_update_user_active(PDO $pdo, string $id): void
+{
+    require_login();
+    $body = sanitize_recursive(json_input());
+
+    $stmt = $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+    $stmt = $pdo->prepare("SELECT id, name, email, role, school, phone, gcash_number, secure_id, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $user = $stmt->fetch();
+    if (!$user) {
+        json_response(['error' => 'User not found after update'], 404);
+    }
+    json_response(['user' => $user, 'message' => 'User updated successfully']);
+}
 // --- Handlers ---
 // reports handlers
 function handle_get_reports($pdo) {
@@ -1013,12 +1062,22 @@ function handle_get_users(PDO $pdo): void
 {
     require_login();
     $stmt = $pdo->query(
-        'SELECT id, name, email, role, school, phone, gcash_number, secure_id, employee_number, is_active, created_at
-         FROM users ORDER BY created_at DESC'
+        'SELECT * FROM users WHERE is_active = 1 ORDER BY created_at DESC'
     );
     $users = $stmt->fetchAll();
     json_response($users);
 }
+function handle_get_inactive_users(PDO $pdo): void
+{
+    require_login();
+    $stmt = $pdo->query(
+        'SELECT * FROM users WHERE is_active = 0 ORDER BY created_at DESC'
+    );
+    $users = $stmt->fetchAll();
+    json_response($users);
+}
+
+
 
 function handle_create_client(PDO $pdo): void
 {
