@@ -847,7 +847,7 @@ export function ProjectDetails({
                         placeholder="https://drive.google.com/drive/folders/..."
                       />
                     </div>
-                  ) : project.documentationUrl ? (
+                  ) : editedProject.documentationUrl ? (
                     <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
                       <div className="flex items-center gap-3">
                         <Link className="h-5 w-5 text-primary" />
@@ -860,7 +860,7 @@ export function ProjectDetails({
                       </div>
                       <Button variant="outline" asChild>
                         <a
-                          href={project.documentationUrl}
+                          href={editedProject.documentationUrl}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
