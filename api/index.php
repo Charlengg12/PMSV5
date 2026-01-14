@@ -493,8 +493,8 @@ function handle_create_project(PDO $pdo): void
     }
 
     $stmt = $pdo->prepare(
-        'INSERT INTO projects (id, title, description, status, priority, progress, start_date, due_date, budget, client_id, supervisor_id, fabricator_ids, pending_supervisors)
-         VALUES (:id, :title, :description, :status, :priority, :progress, :start_date, :due_date, :budget, :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors)'
+        'INSERT INTO projects (id, title, description, status, priority, progress, start_date, due_date, budget, spent, revenue, fabricator_budgets, client_id, supervisor_id, fabricator_ids, pending_supervisors)
+         VALUES (:id, :title, :description, :status, :priority, :progress, :start_date, :due_date, :budget, :spent, :revenue, :fabricator_budgets, :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors)'
     );
 
     $stmt->execute([
@@ -507,6 +507,9 @@ function handle_create_project(PDO $pdo): void
         ':start_date' => $body['startDate'] ?? null,
         ':due_date' => $body['endDate'] ?? ($body['dueDate'] ?? null),
         ':budget' => $body['budget'] ?? null,
+        ':spent' => $body['spent'] ?? null,
+        ':revenue' => $body['revenue'] ?? null,
+        ':fabricator_budgets' => isset($body['fabricatorBudgets']) ? json_encode($body['fabricatorBudgets']) : json_encode([]),
         ':client_id' => $body['clientId'] ?? null,
         ':supervisor_id' => $body['supervisorId'] ?? null,
         ':fabricator_ids' => isset($body['fabricatorIds']) ? json_encode($body['fabricatorIds']) : json_encode([]),
@@ -539,6 +542,8 @@ function handle_update_project(PDO $pdo, string $id): void
         'start_date',
         'due_date',
         'budget',
+        'spent',
+        'revenue',
         'client_id',
         'supervisor_id'
     ];

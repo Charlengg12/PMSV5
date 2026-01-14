@@ -1,5 +1,5 @@
 import { Badge } from "../ui/badge";
-import { Shield, Crown } from "lucide-react";
+import { Shield, Crown, Wrench, User as UserIcon } from "lucide-react";
 import { User } from "../../types";
 import { ThemeToggle } from "../ui/theme-toggle";
 import { SidebarTrigger } from "../ui/sidebar";
@@ -23,8 +23,14 @@ export function Header({
     switch (currentUser.role) {
       case 'admin':
         return <Crown className="h-4 w-4" />;
-      default:
+      case "supervisor":
         return <Shield className="h-4 w-4" />;
+      case "fabricator":
+        return <Wrench className="h-4 w-4" />;
+      case "client":
+        return <UserIcon className="h-4 w-4" />;
+      default:
+        return <UserIcon className="h-4 w-4" />;
     }
   };
 

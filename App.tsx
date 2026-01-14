@@ -1009,8 +1009,8 @@ export default function App() {
         return (
           <RevenueOverview
             projects={projects}
-            companyRevenue={mockCompanyRevenue}
             currentUser={currentUser}
+            onUpdateProject={handleUpdateProject}
           />
         );
 
