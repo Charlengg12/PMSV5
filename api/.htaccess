@@ -1,6 +1,14 @@
 <IfModule mod_rewrite.c>
-    RewriteEngine On
-    RewriteCond %{REQUEST_FILENAME} !-f
-    RewriteCond %{REQUEST_FILENAME} !-d
-    RewriteRule ^ index.php [QSA,L]
+  RewriteEngine On
+
+  # Ensure the base is the current directory
+  RewriteBase /ELECTRONIK-HUB/EHUB_PMS_TEAM/api/
+
+  # If the requested file or directory exists, serve it directly
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # Otherwise, send everything to index.php
+  RewriteRule ^(.*)$ index.php/$1 [L,QSA]
 </IfModule>
