@@ -167,7 +167,6 @@ export function UserManagement({
       return;
     }
 
-    // Show confirmation first
     const result = await Swal.fire({
       title: "Save changes?",
       text: "This will update the user's information.",
@@ -180,7 +179,6 @@ export function UserManagement({
 
     if (!result.isConfirmed) return;
 
-    // Show loading for ~2 seconds
     Swal.fire({
       title: "Saving...",
       allowOutsideClick: false,
@@ -192,7 +190,6 @@ export function UserManagement({
       customClass: swalCustomClasses,
     });
 
-    // Fake delay + actual save
     setTimeout(async () => {
       try {
         await apiService.updateUser(editingUser.id, editingUser);
@@ -219,7 +216,7 @@ export function UserManagement({
           customClass: swalCustomClasses,
         });
       }
-    }, 1800); // ~2 seconds visible loading
+    }, 1800);
   };
 
   const handleDeactivateUser = async (userId: string) => {
@@ -247,6 +244,7 @@ export function UserManagement({
 
     Swal.fire({
       title: "Deactivating...",
+      text: "Please wait a moment.",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -306,6 +304,7 @@ export function UserManagement({
 
     Swal.fire({
       title: "Restoring...",
+      text: "Please wait a moment.",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -372,13 +371,15 @@ export function UserManagement({
   const canManageUsers = currentUser.role === "admin";
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 px-1 sm:px-0">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <h2 className="text-2xl font-bold">User Management</h2>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           {canManageUsers && (
             <Button
               variant="outline"
+              size="sm"
+              className="whitespace-nowrap"
               onClick={() => setShowInactiveModal(true)}
             >
               <UserX className="h-4 w-4 mr-2" />
@@ -386,7 +387,7 @@ export function UserManagement({
             </Button>
           )}
           {canManageUsers && (
-            <Button onClick={() => setShowSupervisorForm(true)}>
+            <Button size="sm" className="whitespace-nowrap" onClick={() => setShowSupervisorForm(true)}>
               <UserPlus className="h-4 w-4 mr-2" />
               Add Supervisor
             </Button>
@@ -395,8 +396,8 @@ export function UserManagement({
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
             <CardTitle>Active Users</CardTitle>
             <Button
               variant="outline"
@@ -409,93 +410,97 @@ export function UserManagement({
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>School</TableHead>
-                <TableHead>Contact</TableHead>
-                {showSecureIds && <TableHead>Secure ID</TableHead>}
-                <TableHead>Employee #</TableHead>
-                {canManageUsers && <TableHead>Actions</TableHead>}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {users.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell>
-                    <div className="font-medium">{user.name}</div>
-                    <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                      <Mail className="h-3.5 w-3.5" />
-                      {user.email}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={getRoleBadgeVariant(user.role)}>
-                      {user.role.toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{user.school || "—"}</TableCell>
-                  <TableCell>
-                    <div className="space-y-0.5">
-                      {user.phone && (
-                        <div className="text-sm flex items-center gap-1.5">
-                          <Phone className="h-3.5 w-3.5" />
-                          {user.phone}
-                        </div>
-                      )}
-                      {user.gcashNumber && (
-                        <div className="text-sm text-muted-foreground">
-                          GCash: {user.gcashNumber}
-                        </div>
-                      )}
-                    </div>
-                  </TableCell>
-                  {showSecureIds && (
-                    <TableCell>
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                        {user.secureId || "—"}
-                      </code>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="min-w-[180px]">Name</TableHead>
+                  <TableHead className="min-w-[110px]">Role</TableHead>
+                  <TableHead className="min-w-[140px]">School</TableHead>
+                  <TableHead className="min-w-[160px]">Contact</TableHead>
+                  {showSecureIds && <TableHead className="min-w-[140px]">Secure ID</TableHead>}
+                  <TableHead className="min-w-[110px]">Employee #</TableHead>
+                  {canManageUsers && <TableHead className="min-w-[160px] text-right">Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id} className="hover:bg-muted/40">
+                    <TableCell className="font-medium">
+                      <div>{user.name}</div>
+                      <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                        <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <span className="truncate max-w-[180px]">{user.email}</span>
+                      </div>
                     </TableCell>
-                  )}
-                  <TableCell>
-                    <code className="text-xs">{user.employeeNumber || "—"}</code>
-                  </TableCell>
-                  {canManageUsers && (
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleEditUser(user)}
-                        >
-                          Edit
-                        </Button>
-                        {user.id !== currentUser.id && (
-                          <Button
-                            variant="destructive"
-                            size="sm"
-                            onClick={() => handleDeactivateUser(user.id)}
-                          >
-                            Deactivate
-                          </Button>
+                      <Badge variant={getRoleBadgeVariant(user.role)}>
+                        {user.role.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{user.school || "—"}</TableCell>
+                    <TableCell>
+                      <div className="space-y-1 text-sm">
+                        {user.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone className="h-3.5 w-3.5 shrink-0" />
+                            {user.phone}
+                          </div>
+                        )}
+                        {user.gcashNumber && (
+                          <div className="text-muted-foreground">
+                            GCash: {user.gcashNumber}
+                          </div>
                         )}
                       </div>
                     </TableCell>
-                  )}
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+                    {showSecureIds && (
+                      <TableCell>
+                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">
+                          {user.secureId || "—"}
+                        </code>
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <code className="text-xs font-mono">
+                        {user.employeeNumber || "—"}
+                      </code>
+                    </TableCell>
+                    {canManageUsers && (
+                      <TableCell className="text-right">
+                        <div className="flex flex-col sm:flex-row gap-2 justify-end">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditUser(user)}
+                          >
+                            Edit
+                          </Button>
+                          {user.id !== currentUser.id && (
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleDeactivateUser(user.id)}
+                            >
+                              Deactivate
+                            </Button>
+                          )}
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Inactive Users Modal – plain div */}
+      {/* Inactive Users Modal */}
       {showInactiveModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col m-4">
-            <div className="p-6 border-b">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+            <div className="p-5 sm:p-6 border-b">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold flex items-center gap-2">
                   <UserX className="h-5 w-5" />
@@ -510,30 +515,28 @@ export function UserManagement({
               </p>
             </div>
 
-            <div className="flex-1 overflow-hidden p-6">
+            <div className="flex-1 overflow-hidden p-4 sm:p-6">
               {loadingInactive ? (
-                <div className="h-full flex items-center justify-center">
+                <div className="h-full flex items-center justify-center text-muted-foreground">
                   Loading inactive users...
                 </div>
               ) : inactiveUsers.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <Users className="h-14 w-14 text-muted-foreground mb-4 opacity-50" />
-                  <p className="text-lg font-medium text-muted-foreground">
-                    No inactive users found
-                  </p>
+                <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
+                  <Users className="h-14 w-14 mb-4 opacity-50" />
+                  <p className="text-lg font-medium">No inactive users found</p>
                 </div>
               ) : (
                 <div className="h-full overflow-auto">
                   <Table>
                     <TableHeader className="sticky top-0 bg-background z-10">
                       <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>School</TableHead>
-                        <TableHead>Contact</TableHead>
-                        {showSecureIds && <TableHead>Secure ID</TableHead>}
-                        <TableHead>Employee #</TableHead>
-                        <TableHead className="text-right">Action</TableHead>
+                        <TableHead className="min-w-[180px]">Name</TableHead>
+                        <TableHead className="min-w-[110px]">Role</TableHead>
+                        <TableHead className="min-w-[140px]">School</TableHead>
+                        <TableHead className="min-w-[160px]">Contact</TableHead>
+                        {showSecureIds && <TableHead className="min-w-[140px]">Secure ID</TableHead>}
+                        <TableHead className="min-w-[110px]">Employee #</TableHead>
+                        <TableHead className="min-w-[140px] text-right">Action</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -541,9 +544,9 @@ export function UserManagement({
                         <TableRow key={user.id}>
                           <TableCell>
                             <div className="font-medium">{user.name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                              <Mail className="h-3.5 w-3.5" />
-                              {user.email}
+                            <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
+                              <Mail className="h-3.5 w-3.5 shrink-0" />
+                              <span className="truncate max-w-[180px]">{user.email}</span>
                             </div>
                           </TableCell>
                           <TableCell>
@@ -551,17 +554,17 @@ export function UserManagement({
                               {user.role.toUpperCase()}
                             </Badge>
                           </TableCell>
-                          <TableCell>{user.school || "—"}</TableCell>
+                          <TableCell className="text-muted-foreground">{user.school || "—"}</TableCell>
                           <TableCell>
-                            <div className="space-y-0.5">
+                            <div className="space-y-1 text-sm">
                               {user.phone && (
-                                <div className="text-sm flex items-center gap-1.5">
-                                  <Phone className="h-3.5 w-3.5" />
+                                <div className="flex items-center gap-1.5">
+                                  <Phone className="h-3.5 w-3.5 shrink-0" />
                                   {user.phone}
                                 </div>
                               )}
                               {user.gcashNumber && (
-                                <div className="text-sm text-muted-foreground">
+                                <div className="text-muted-foreground">
                                   GCash: {user.gcashNumber}
                                 </div>
                               )}
@@ -569,13 +572,15 @@ export function UserManagement({
                           </TableCell>
                           {showSecureIds && (
                             <TableCell>
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">
+                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">
                                 {user.secureId || "—"}
                               </code>
                             </TableCell>
                           )}
                           <TableCell>
-                            <code className="text-xs font-mono">{user.employeeNumber || "—"}</code>
+                            <code className="text-xs font-mono">
+                              {user.employeeNumber || "—"}
+                            </code>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -594,17 +599,11 @@ export function UserManagement({
                 </div>
               )}
             </div>
-
-            {/* <div className="p-6 border-t flex justify-end">
-              <Button variant="outline" onClick={() => setShowInactiveModal(false)}>
-                Close
-              </Button>
-            </div> */}
           </div>
         </div>
       )}
 
-      {/* Supervisor Signup Form (assuming it has its own modal) */}
+      {/* Supervisor Signup Form */}
       {showSupervisorForm && (
         <SupervisorSignupForm
           onSignup={handleCreateSupervisor}
@@ -612,11 +611,11 @@ export function UserManagement({
         />
       )}
 
-      {/* Edit User Modal – plain div */}
+      {/* Edit User Modal */}
       {showEditModal && editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-background border rounded-lg shadow-2xl w-full max-w-4xl m-4">
-            <div className="p-6 border-b">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-5 sm:p-6 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Edit User</h2>
                 <Button variant="ghost" size="icon" onClick={handleCancelEdit}>
@@ -628,8 +627,8 @@ export function UserManagement({
               </p>
             </div>
 
-            <div className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-5 sm:p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
                 <div>
                   <Label>Name</Label>
                   <Input
@@ -647,7 +646,9 @@ export function UserManagement({
                     }}
                     className={editEmailError ? "border-destructive" : ""}
                   />
-                  {editEmailError && <p className="text-sm text-destructive mt-1">{editEmailError}</p>}
+                  {editEmailError && (
+                    <p className="text-sm text-destructive mt-1.5">{editEmailError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -664,7 +665,9 @@ export function UserManagement({
                     }}
                     className={editPhoneError ? "border-destructive" : ""}
                   />
-                  {editPhoneError && <p className="text-sm text-destructive mt-1">{editPhoneError}</p>}
+                  {editPhoneError && (
+                    <p className="text-sm text-destructive mt-1.5">{editPhoneError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -679,7 +682,9 @@ export function UserManagement({
                     }}
                     className={editGcashError ? "border-destructive" : ""}
                   />
-                  {editGcashError && <p className="text-sm text-destructive mt-1">{editGcashError}</p>}
+                  {editGcashError && (
+                    <p className="text-sm text-destructive mt-1.5">{editGcashError}</p>
+                  )}
                 </div>
 
                 <div>
@@ -727,12 +732,12 @@ export function UserManagement({
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
-                <Button variant="outline" onClick={handleCancelEdit}>
+              <div className="flex flex-col sm:flex-row justify-end gap-3 pt-6">
+                <Button variant="outline" onClick={handleCancelEdit} className="w-full sm:w-auto">
                   <X className="h-4 w-4 mr-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveUser}>
+                <Button onClick={handleSaveUser} className="w-full sm:w-auto">
                   <Save className="h-4 w-4 mr-2" />
                   Save Changes
                 </Button>
