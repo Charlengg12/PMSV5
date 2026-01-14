@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Separator } from "../ui/separator";
-import { IdCard, Mail, Phone } from "lucide-react";
+import { IdCard, Mail, Phone, UploadCloud } from "lucide-react";
 import { User } from "../../types";
 import { apiService } from "../../utils/apiService";
 import { mapUserDataFromBackend } from "../../utils/userDataMapper";
@@ -57,6 +56,8 @@ export function AdminSettingsPage({
 }: AdminSettingsPageProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [gcashQr, setGcashQr] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const { firstName, lastName } = getNameParts(currentUser.name);
   const displayRole = getDisplayRole(currentUser.role);
   const employeeId =
@@ -67,6 +68,7 @@ export function AdminSettingsPage({
   const secureId = currentUser.secureId || "N/A";
   const gcashNumber = currentUser.gcashNumber || "N/A";
   const clientProject = currentUser.clientProjectId || "N/A";
+  const storageKey = `gcash-qr:${currentUser.id}`;
   const [formData, setFormData] = useState({
     firstName,
     lastName,
@@ -86,6 +88,12 @@ export function AdminSettingsPage({
       gcashNumber: currentUser.gcashNumber || "",
     });
     setIsEditing(false);
+    try {
+      const stored = localStorage.getItem(storageKey);
+      setGcashQr(stored || null);
+    } catch {
+      setGcashQr(null);
+    }
   }, [
     currentUser.id,
     currentUser.name,
@@ -181,6 +189,59 @@ export function AdminSettingsPage({
     }
   };
 
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleQrUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      Swal.fire({
+        icon: "error",
+        title: "Invalid file",
+        text: "Please upload an image file.",
+      });
+      event.target.value = "";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = typeof reader.result === "string" ? reader.result : null;
+      if (!result) return;
+      setGcashQr(result);
+      try {
+        localStorage.setItem(storageKey, result);
+      } catch {}
+      Swal.fire({
+        icon: "success",
+        title: "Uploaded",
+        text: "GCash QR code saved.",
+        timer: 1200,
+        showConfirmButton: false,
+      });
+      event.target.value = "";
+    };
+    reader.onerror = () => {
+      Swal.fire({
+        icon: "error",
+        title: "Upload failed",
+        text: "Could not read the file.",
+      });
+      event.target.value = "";
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveQr = () => {
+    setGcashQr(null);
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
+  };
+
   return (
     <Card className="border bg-card shadow-sm">
       <CardContent className="p-0">
@@ -224,166 +285,192 @@ export function AdminSettingsPage({
 
         <Separator />
 
-        <Tabs defaultValue="details" className="w-full">
-          <div className="border-b border-border px-6 pt-3">
-            <TabsList className="w-full flex-wrap justify-start gap-4 rounded-none bg-transparent p-0 pb-2">
-              <TabsTrigger
-                value="details"
-                className="rounded-none border-b-2 border-transparent px-0 data-[state=active]:border-primary data-[state=active]:bg-transparent"
-              >
-                Details
-              </TabsTrigger>
-              <TabsTrigger
-                value="attachments"
-                className="rounded-none border-b-2 border-transparent px-0 data-[state=active]:border-primary data-[state=active]:bg-transparent"
-              >
-                Attachments
-              </TabsTrigger>
-            </TabsList>
+        <div className="border-b border-border px-6 py-3">
+          <h3 className="text-sm font-semibold text-foreground">Details</h3>
+        </div>
+
+        <div className="space-y-4 px-6 py-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <h3 className="text-base font-semibold text-foreground">
+                Personal Information
+              </h3>
+              {isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleUploadClick}
+                >
+                  <UploadCloud className="h-4 w-4" />
+                  Upload QR
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {isEditing ? (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleCancel}
+                    disabled={isSaving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSave} disabled={isSaving}>
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                </>
+              ) : (
+                <Button variant="outline" onClick={handleEdit}>
+                  Edit
+                </Button>
+              )}
+            </div>
           </div>
-
-          <TabsContent value="details">
-            <div className="space-y-4 px-6 py-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-base font-semibold text-foreground">
-                  Personal Information
-                </h3>
-                <div className="flex items-center gap-2">
-                  {isEditing ? (
-                    <>
-                      <Button
-                        variant="outline"
-                        onClick={handleCancel}
-                        disabled={isSaving}
-                      >
-                        Cancel
-                      </Button>
-                      <Button onClick={handleSave} disabled={isSaving}>
-                        {isSaving ? "Saving..." : "Save"}
-                      </Button>
-                    </>
-                  ) : (
-                    <Button variant="outline" onClick={handleEdit}>
-                      Edit
-                    </Button>
-                  )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleQrUpload}
+          />
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {isEditing ? (
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="first-name">First Name</Label>
+                  <Input
+                    id="first-name"
+                    value={formData.firstName}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        firstName: event.target.value,
+                      }))
+                    }
+                  />
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="last-name">Last Name</Label>
+                  <Input
+                    id="last-name"
+                    value={formData.lastName}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        lastName: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <InfoItem label="Role" value={displayRole} />
+                <InfoItem label="Status" value="Active" />
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email Id</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        email: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="phone">Phone Number</Label>
+                  <Input
+                    id="phone"
+                    value={formData.phone}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        phone: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <InfoItem label="Employee #" value={employeeId} />
+                <InfoItem label="Secure ID" value={secureId} />
+                <div className="space-y-2">
+                  <Label htmlFor="department">Department</Label>
+                  <Input
+                    id="department"
+                    value={formData.department}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        department: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <InfoItem label="User ID" value={currentUser.id} />
+                <div className="space-y-2">
+                  <Label htmlFor="gcash-number">GCash Number</Label>
+                  <Input
+                    id="gcash-number"
+                    value={formData.gcashNumber}
+                    onChange={(event) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        gcashNumber: event.target.value,
+                      }))
+                    }
+                  />
+                </div>
+                <InfoItem label="Client Project" value={clientProject} />
+              </>
+            ) : (
+              <>
+                <InfoItem label="First Name" value={firstName} />
+                <InfoItem label="Last Name" value={lastName} />
+                <InfoItem label="Role" value={displayRole} />
+                <InfoItem label="Status" value="Active" />
+                <InfoItem label="Email Id" value={email} />
+                <InfoItem label="Phone Number" value={phone} />
+                <InfoItem label="Employee #" value={employeeId} />
+                <InfoItem label="Secure ID" value={secureId} />
+                <InfoItem label="Department" value={department} />
+                <InfoItem label="User ID" value={currentUser.id} />
+                <InfoItem label="GCash Number" value={gcashNumber} />
+                <InfoItem label="Client Project" value={clientProject} />
+              </>
+            )}
+          </div>
+          <div className="rounded-lg border border-dashed border-border bg-muted/40 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  GCash QR Code
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Upload your QR code for payment sharing.
+                </p>
               </div>
-              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                {isEditing ? (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="first-name">First Name</Label>
-                      <Input
-                        id="first-name"
-                        value={formData.firstName}
-                        onChange={(event) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            firstName: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="last-name">Last Name</Label>
-                      <Input
-                        id="last-name"
-                        value={formData.lastName}
-                        onChange={(event) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            lastName: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <InfoItem label="Role" value={displayRole} />
-                    <InfoItem label="Status" value="Active" />
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Id</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        value={formData.email}
-                        onChange={(event) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            email: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        value={formData.phone}
-                        onChange={(event) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            phone: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <InfoItem label="Employee #" value={employeeId} />
-                    <InfoItem label="Secure ID" value={secureId} />
-                    <div className="space-y-2">
-                      <Label htmlFor="department">Department</Label>
-                      <Input
-                        id="department"
-                        value={formData.department}
-                        onChange={(event) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            department: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <InfoItem label="User ID" value={currentUser.id} />
-                    <div className="space-y-2">
-                      <Label htmlFor="gcash-number">GCash Number</Label>
-                      <Input
-                        id="gcash-number"
-                        value={formData.gcashNumber}
-                        onChange={(event) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            gcashNumber: event.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-                    <InfoItem label="Client Project" value={clientProject} />
-                  </>
-                ) : (
-                  <>
-                    <InfoItem label="First Name" value={firstName} />
-                    <InfoItem label="Last Name" value={lastName} />
-                    <InfoItem label="Role" value={displayRole} />
-                    <InfoItem label="Status" value="Active" />
-                    <InfoItem label="Email Id" value={email} />
-                    <InfoItem label="Phone Number" value={phone} />
-                    <InfoItem label="Employee #" value={employeeId} />
-                    <InfoItem label="Secure ID" value={secureId} />
-                    <InfoItem label="Department" value={department} />
-                    <InfoItem label="User ID" value={currentUser.id} />
-                    <InfoItem label="GCash Number" value={gcashNumber} />
-                    <InfoItem label="Client Project" value={clientProject} />
-                  </>
-                )}
+              {gcashQr && isEditing && (
+                <Button variant="outline" size="sm" onClick={handleRemoveQr}>
+                  Remove
+                </Button>
+              )}
+            </div>
+            {gcashQr ? (
+              <div className="mt-4">
+                <img
+                  src={gcashQr}
+                  alt="GCash QR code"
+                  className="h-40 w-40 rounded-md border border-border bg-white object-contain"
+                />
               </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="attachments">
-            <div className="px-6 py-10 text-sm text-muted-foreground">
-              Attachments will appear here.
-            </div>
-          </TabsContent>
-        </Tabs>
+            ) : (
+              <p className="mt-3 text-xs text-muted-foreground">
+                No QR code uploaded yet.
+              </p>
+            )}
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
