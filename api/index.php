@@ -144,6 +144,10 @@ switch ($method . ' ' . $path) {
     case 'POST /reports/create':
         handle_create_report($pdo);
         break;
+    case 'POST /reports/export':
+    case 'POST reports/export':
+        handle_export_report($pdo);
+        break;
     case 'PUT reports':
     case 'PUT /reports/edit':
         handle_edit_report($pdo);
@@ -344,27 +348,80 @@ function handle_update_user_active(PDO $pdo, string $id): void
     json_response(['user' => $user, 'message' => 'User updated successfully']);
 }
 // --- Handlers ---
+function ensure_reports_shared_with(PDO $pdo): bool
+{
+    try {
+        $stmt = $pdo->query("SHOW COLUMNS FROM reports LIKE 'shared_with'");
+        $column = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($column) {
+            return true;
+        }
+
+        $pdo->exec("ALTER TABLE reports ADD COLUMN shared_with JSON NULL");
+        return true;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
 // reports handlers
 function handle_get_reports($pdo) {
     require_login();
     $role = $_SESSION['role'] ?? 'guest';
     $userId = $_SESSION['user_id'];
 
-    $query = "SELECT id, title, description, type, status, project_id, created_by, created_at, updated_at FROM reports";
-    $params = [];
-
-    if ($role === 'supervisor') {
-        $query .= " WHERE (created_by = :uid OR status = 'published' OR project_id IN (SELECT id FROM projects WHERE supervisor_id = :uid))";
-        $params[':uid'] = $userId;
-    } elseif ($role !== 'admin') {
+    $includeShared = ensure_reports_shared_with($pdo);
+    $query = $includeShared
+        ? "SELECT id, title, description, type, status, project_id, shared_with, created_by, created_at, updated_at FROM reports"
+        : "SELECT id, title, description, type, status, project_id, created_by, created_at, updated_at FROM reports";
+    if ($role !== 'admin' && $role !== 'supervisor') {
         $query .= " WHERE status = 'published'";
     }
-
     $query .= " ORDER BY created_at DESC";
 
-    $stmt = $pdo->prepare($query);
-    $stmt->execute($params);
-    $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    try {
+        $stmt = $pdo->prepare($query);
+        $stmt->execute();
+        $reports = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+
+    $reports = $reports ?? [];
+    foreach ($reports as &$report) {
+        if ($includeShared && array_key_exists('shared_with', $report)) {
+            $decoded = json_decode($report['shared_with'] ?? '[]', true);
+            $report['shared_with'] = is_array($decoded) ? $decoded : [];
+        } else {
+            $report['shared_with'] = [];
+        }
+    }
+    unset($report);
+
+    if ($role === 'supervisor') {
+        $stmt = $pdo->prepare('SELECT id FROM projects WHERE supervisor_id = :uid');
+        $stmt->execute([':uid' => $userId]);
+        $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $projectLookup = array_fill_keys($projectIds ?: [], true);
+
+        $reports = array_values(array_filter($reports, function ($report) use ($userId, $projectLookup) {
+            if (($report['created_by'] ?? null) === $userId) {
+                return true;
+            }
+            if (($report['status'] ?? null) === 'published') {
+                return true;
+            }
+            $projectId = $report['project_id'] ?? null;
+            if ($projectId && isset($projectLookup[$projectId])) {
+                return true;
+            }
+            $sharedWith = $report['shared_with'] ?? [];
+            if (is_array($sharedWith) && in_array($userId, $sharedWith, true)) {
+                return true;
+            }
+            return false;
+        }));
+    }
 
     json_response($reports);
 }
@@ -418,6 +475,74 @@ function handle_create_report($pdo) {
         $report = $stmt->fetch(PDO::FETCH_ASSOC);
 
         json_response($report);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+}
+
+function handle_export_report($pdo) {
+    require_login();
+    if (($_SESSION['role'] ?? '') !== 'admin') {
+        json_response(['error' => 'Unauthorized'], 403);
+    }
+
+    if (!ensure_reports_shared_with($pdo)) {
+        json_response(['error' => 'Unable to enable report sharing. Please check database permissions.'], 500);
+    }
+
+    $body = sanitize_recursive(json_input());
+    $reportId = $body['report_id'] ?? ($body['reportId'] ?? null);
+    $supervisorId = $body['supervisor_id'] ?? ($body['supervisorId'] ?? null);
+
+    if (!$reportId || !$supervisorId) {
+        json_response(['error' => 'Report ID and supervisor ID are required'], 400);
+    }
+
+    try {
+        $stmt = $pdo->prepare('SELECT id, role, is_active FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $supervisorId]);
+        $supervisor = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$supervisor || $supervisor['role'] !== 'supervisor' || (int)$supervisor['is_active'] !== 1) {
+            json_response(['error' => 'Supervisor not found'], 404);
+        }
+
+        $stmt = $pdo->prepare('SELECT shared_with FROM reports WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $reportId]);
+        $report = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$report) {
+            json_response(['error' => 'Report not found'], 404);
+        }
+
+        $sharedWith = json_decode($report['shared_with'] ?? '[]', true);
+        if (!is_array($sharedWith)) {
+            $sharedWith = [];
+        }
+
+        if (!in_array($supervisorId, $sharedWith, true)) {
+            $sharedWith[] = $supervisorId;
+            $stmt = $pdo->prepare('UPDATE reports SET shared_with = :shared_with, updated_at = NOW() WHERE id = :id');
+            $stmt->execute([
+                ':shared_with' => json_encode($sharedWith),
+                ':id' => $reportId,
+            ]);
+        }
+
+        $stmt = $pdo->prepare('SELECT * FROM reports WHERE id = :id');
+        $stmt->execute([':id' => $reportId]);
+        $updated = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$updated) {
+            json_response(['error' => 'Report not found'], 404);
+        }
+
+        if (array_key_exists('shared_with', $updated)) {
+            $decoded = json_decode($updated['shared_with'] ?? '[]', true);
+            $updated['shared_with'] = is_array($decoded) ? $decoded : [];
+        }
+
+        json_response($updated);
     } catch (PDOException $e) {
         json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
     }

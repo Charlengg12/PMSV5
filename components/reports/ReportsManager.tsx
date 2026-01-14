@@ -20,6 +20,7 @@ interface Report {
   type: 'project' | 'task' | 'user' | 'financial' | 'custom';
   status: 'draft' | 'published' | 'archived';
   project_id?: string;
+  shared_with?: string[];
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -195,6 +196,65 @@ export function ReportsManager({
     }
   };
 
+  const handleExport = async (report: Report) => {
+    const supervisors = users.filter(user => user.role === 'supervisor');
+
+    if (supervisors.length === 0) {
+      await Swal.fire({
+        icon: 'info',
+        title: 'No supervisors found',
+        text: 'Please add a supervisor account before exporting.',
+      });
+      return;
+    }
+
+    const inputOptions = supervisors.reduce(
+      (options, supervisor) => {
+        options[supervisor.id] = supervisor.name;
+        return options;
+      },
+      {} as Record<string, string>
+    );
+
+    const result = await Swal.fire({
+      title: 'Export to supervisor',
+      input: 'select',
+      inputOptions,
+      inputPlaceholder: 'Select a supervisor',
+      showCancelButton: true,
+      confirmButtonText: 'Export',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Please select a supervisor';
+        }
+        return null;
+      },
+    });
+
+    if (!result.isConfirmed || !result.value) return;
+
+    try {
+      const response = await apiService.exportReport(report.id, result.value);
+      if (response.error) throw new Error(response.error);
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Exported',
+        text: 'Report is now visible to the selected supervisor.',
+        timer: 1600,
+        showConfirmButton: false,
+      });
+    } catch (err: any) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: err.message || 'Failed to export report.',
+      });
+    }
+  };
+
   const handleEdit = (report: Report) => {
     setSelectedReport(report);
     setFormData({
@@ -253,7 +313,8 @@ export function ReportsManager({
       return reports.filter(r =>
         r.created_by === currentUser.id ||
         r.status === 'published' ||
-        (r.project_id && projects.some(p => p.id === r.project_id && p.supervisor_id === currentUser.id))
+        (r.project_id && projects.some(p => p.id === r.project_id && p.supervisor_id === currentUser.id)) ||
+        (r.shared_with && r.shared_with.includes(currentUser.id))
       );
     }
     return reports.filter(r => r.status === 'published');
@@ -364,7 +425,7 @@ export function ReportsManager({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => alert('Export feature coming soon')}
+                        onClick={() => handleExport(report)}
                       >
                         <Download className="h-4 w-4 mr-2" />
                         Export

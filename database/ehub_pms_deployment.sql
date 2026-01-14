@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS `reports` (
   `type` ENUM('project', 'task', 'user', 'financial', 'custom') DEFAULT 'custom',
   `status` ENUM('draft', 'published', 'archived') DEFAULT 'draft',
   `project_id` VARCHAR(255) DEFAULT NULL,
+  `shared_with` JSON DEFAULT NULL,
   `created_by` VARCHAR(255) NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
