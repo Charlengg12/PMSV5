@@ -2,7 +2,7 @@
   RewriteEngine On
 
   # Ensure the base is the current directory
-  RewriteBase /EHUB_PMS_TEAM/api/
+  RewriteBase /EHUB_PMSV4/api/
 
   # If the requested file or directory exists, serve it directly
   RewriteCond %{REQUEST_FILENAME} -f [OR]
