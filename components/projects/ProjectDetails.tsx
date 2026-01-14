@@ -29,6 +29,7 @@ import { Project, User, ProjectAttachment } from "../../types";
 import { ProjectFileUpload } from "./ProjectFileUpload";
 import { FabricatorRevenueManager } from "./FabricatorRevenueManager";
 import { apiService } from "../../utils/apiService";
+import Swal from "sweetalert2";
 
 interface ProjectDetailsProps {
   project: Project;
@@ -50,6 +51,7 @@ export function ProjectDetails({
   const [newFabricatorId, setNewFabricatorId] = useState<string>("");
   const [showAddFabricator, setShowAddFabricator] = useState(false);
   const [backendClientAssigned, setBackendClientAssigned] = useState(false);
+
   const clientUser = users.find(
     (u) => u.role === "client" && u.clientProjectId === project.id
   );
@@ -57,7 +59,6 @@ export function ProjectDetails({
 
   useEffect(() => {
     let active = true;
-    // Verify against backend if client is assigned to this project
     (async () => {
       try {
         const res = await apiService.getProjects();
@@ -71,7 +72,7 @@ export function ProjectDetails({
         );
         if (active) setBackendClientAssigned(assigned);
       } catch {
-        // ignore; fall back to local state
+        // ignore error
       }
     })();
     return () => {
@@ -116,7 +117,6 @@ export function ProjectDetails({
       case "1_Assigned_to_FAB":
         return "secondary";
       case "2_Ready_for_Supervisor_Review":
-        return "destructive";
       case "3_Ready_for_Admin_Review":
         return "destructive";
       case "4_Ready_for_Client_Signoff":
@@ -126,9 +126,73 @@ export function ProjectDetails({
     }
   };
 
-  const handleSave = () => {
-    onUpdateProject(editedProject);
-    setIsEditing(false);
+  // ────────────────────────────────────────────────
+  //  SweetAlert2 save confirmation + loading
+  // ────────────────────────────────────────────────
+  const handleSave = async () => {
+    const result = await Swal.fire({
+      title: "Save changes?",
+      text: "This will update the project details.",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
+      customClass:{
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      }
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Show loading
+    Swal.fire({
+      title: "Saving...",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      customClass:{
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    // Simulate save delay (replace with real async if needed)
+    setTimeout(() => {
+      onUpdateProject(editedProject);
+      setIsEditing(false);
+
+      Swal.close();
+      Swal.fire({
+        title: "Saved!",
+        text: "Project has been updated successfully.",
+        icon: "success",
+        timer: 1800,
+        showConfirmButton: false,
+        customClass:{
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        }
+      });
+    }, 1400); // ≈1.4 seconds – adjust as needed
   };
 
   const handleCancel = () => {
@@ -249,6 +313,7 @@ export function ProjectDetails({
                 </>
               )}
             </div>
+
             <div className="flex gap-2">
               {canEdit && !isEditing && (
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
@@ -256,22 +321,25 @@ export function ProjectDetails({
                   Edit
                 </Button>
               )}
+
               {canEdit && (localClientAssigned || backendClientAssigned) && (
                 <Button variant="outline" disabled>
                   Client Assigned
                 </Button>
               )}
+
               {isEditing && (
                 <>
-                  <Button variant="outline" onClick={handleSave}>
+                  <Button variant="default" onClick={handleSave}>
                     <Save className="h-4 w-4 mr-2" />
                     Save
                   </Button>
-                  <Button variant="ghost" onClick={handleCancel}>
+                  <Button variant="outline" onClick={handleCancel}>
                     Cancel
                   </Button>
                 </>
               )}
+
               <Button variant="ghost" onClick={onClose}>
                 <X className="h-4 w-4" />
               </Button>
@@ -327,7 +395,7 @@ export function ProjectDetails({
                       />
                     ) : (
                       <p className="text-sm text-muted-foreground mt-1">
-                        {editedProject.description}
+                        {editedProject.description || "No description provided."}
                       </p>
                     )}
                   </div>
@@ -379,7 +447,9 @@ export function ProjectDetails({
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          {new Date(editedProject.startDate).toLocaleDateString()}
+                          {editedProject.startDate
+                            ? new Date(editedProject.startDate).toLocaleDateString()
+                            : "Not set"}
                         </p>
                       )}
                     </div>
@@ -402,7 +472,9 @@ export function ProjectDetails({
                         />
                       ) : (
                         <p className="text-sm text-muted-foreground">
-                          {new Date(editedProject.endDate).toLocaleDateString()}
+                          {editedProject.endDate
+                            ? new Date(editedProject.endDate).toLocaleDateString()
+                            : "Not set"}
                         </p>
                       )}
                     </div>
@@ -428,6 +500,7 @@ export function ProjectDetails({
               </div>
 
               <Separator />
+
               <div className="space-y-4">
                 <h3 className="text-lg">Financial Overview</h3>
                 <div className="grid gap-4 md:grid-cols-3">
@@ -454,7 +527,7 @@ export function ProjectDetails({
                             />
                           ) : (
                             <p className="text-2xl">
-                              ₱{editedProject.budget.toLocaleString()}
+                              ₱{editedProject.budget?.toLocaleString() || "0"}
                             </p>
                           )}
                         </CardContent>
@@ -480,7 +553,7 @@ export function ProjectDetails({
                             />
                           ) : (
                             <p className="text-2xl">
-                              ₱{project.spent.toLocaleString()}
+                              ₱{editedProject.spent?.toLocaleString() || "0"}
                             </p>
                           )}
                         </CardContent>
@@ -512,7 +585,7 @@ export function ProjectDetails({
                         />
                       ) : (
                         <p className="text-2xl">
-                          ₱{project.revenue.toLocaleString()}
+                          ₱{editedProject.revenue?.toLocaleString() || "0"}
                         </p>
                       )}
                     </CardContent>
@@ -547,7 +620,7 @@ export function ProjectDetails({
                       id="fabricator-select"
                       value={newFabricatorId}
                       onChange={(e) => setNewFabricatorId(e.target.value)}
-                      className="border rounded p-2"
+                      className="border rounded p-2 w-full"
                     >
                       <option value="">--Choose a Fabricator--</option>
                       {users
@@ -562,7 +635,7 @@ export function ProjectDetails({
                           </option>
                         ))}
                     </select>
-                    <div className="mt-2 flex gap-2">
+                    <div className="mt-3 flex gap-2">
                       <Button
                         onClick={handleAddFabricator}
                         disabled={!newFabricatorId}
@@ -582,34 +655,31 @@ export function ProjectDetails({
                   </div>
                 )}
 
-                {/* List fabricators */}
                 <CardContent className="space-y-6">
-                  {/* Supervisor info */}
+                  {/* Supervisor */}
                   <div className="pb-4 border-b">
                     <Label className="flex items-center gap-2 text-base mb-2">
                       Supervisor
                     </Label>
                     {isEditing && currentUser.role === "admin" ? (
-                      <div className="space-y-2">
-                        <select
-                          value={editedProject.supervisorId}
-                          onChange={(e) =>
-                            setEditedProject((prev) => ({
-                              ...prev,
-                              supervisorId: e.target.value,
-                            }))
-                          }
-                          className="w-full border rounded p-2"
-                        >
-                          {users
-                            .filter((user) => user.role === "supervisor")
-                            .map((user) => (
-                              <option key={user.id} value={user.id}>
-                                {user.name} - {user.school}
-                              </option>
-                            ))}
-                        </select>
-                      </div>
+                      <select
+                        value={editedProject.supervisorId}
+                        onChange={(e) =>
+                          setEditedProject((prev) => ({
+                            ...prev,
+                            supervisorId: e.target.value,
+                          }))
+                        }
+                        className="w-full border rounded p-2"
+                      >
+                        {users
+                          .filter((user) => user.role === "supervisor")
+                          .map((user) => (
+                            <option key={user.id} value={user.id}>
+                              {user.name} - {user.school || "No school"}
+                            </option>
+                          ))}
+                      </select>
                     ) : (
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
@@ -627,52 +697,58 @@ export function ProjectDetails({
                     )}
                   </div>
 
-                  {/* Fabricators list */}
+                  {/* Fabricators */}
                   <div>
                     <Label className="flex items-center gap-2 text-base mb-3">
                       Fabricators ({editedProject.fabricatorIds.length})
                     </Label>
                     <div className="space-y-3">
-                      {editedProject.fabricatorIds.map((fabId, index) => {
-                        const fabricator = users.find((u) => u.id === fabId);
-                        const fabricatorBudget =
-                          project.fabricatorBudgets?.find(
-                            (fb) => fb.fabricatorId === fabId
-                          );
-                        const hasRevenue =
-                          fabricatorBudget &&
-                          fabricatorBudget.allocatedRevenue > 0;
+                      {editedProject.fabricatorIds.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                          No fabricators assigned yet.
+                        </p>
+                      ) : (
+                        editedProject.fabricatorIds.map((fabId, index) => {
+                          const fabricator = users.find((u) => u.id === fabId);
+                          const fabricatorBudget =
+                            project.fabricatorBudgets?.find(
+                              (fb) => fb.fabricatorId === fabId
+                            );
+                          const hasRevenue =
+                            fabricatorBudget &&
+                            fabricatorBudget.allocatedRevenue > 0;
 
-                        return (
-                          <div
-                            key={fabId}
-                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                          >
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
-                                {index + 1}
+                          return (
+                            <div
+                              key={fabId}
+                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
+                                  {index + 1}
+                                </div>
+                                <div>
+                                  <p className="font-medium">
+                                    {fabricator?.name || "Unknown Fabricator"}
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {fabricator?.secureId || "—"}
+                                  </p>
+                                </div>
                               </div>
-                              <div>
-                                <p className="font-medium">
-                                  {fabricator?.name || "Unknown"}
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {fabricator?.secureId}
-                                </p>
-                              </div>
+                              {hasRevenue &&
+                                (currentUser.role === "admin" ||
+                                  currentUser.role === "supervisor") && (
+                                  <Badge variant="outline" className="gap-1">
+                                    <DollarSign className="h-3 w-3" />₱
+                                    {fabricatorBudget.allocatedRevenue.toLocaleString()}{" "}
+                                    revenue
+                                  </Badge>
+                                )}
                             </div>
-                            {hasRevenue &&
-                              (currentUser.role === "admin" ||
-                                currentUser.role === "supervisor") && (
-                                <Badge variant="outline" className="gap-1">
-                                  <DollarSign className="h-3 w-3" />₱
-                                  {fabricatorBudget.allocatedRevenue.toLocaleString()}{" "}
-                                  revenue
-                                </Badge>
-                              )}
-                          </div>
-                        );
-                      })}
+                          );
+                        })
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -735,19 +811,17 @@ export function ProjectDetails({
                   </CardContent>
                 </Card>
               ) : (
-                !canEdit && (
-                  <Card>
-                    <CardContent className="py-12">
-                      <div className="text-center">
-                        <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                        <h3 className="text-lg mb-2">No files uploaded</h3>
-                        <p className="text-muted-foreground">
-                          No files have been uploaded to this project yet.
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <h3 className="text-lg mb-2">No files uploaded yet</h3>
+                    <p className="text-muted-foreground">
+                      {canUploadFiles
+                        ? "Upload files using the section above."
+                        : "No files have been uploaded to this project."}
+                    </p>
+                  </CardContent>
+                </Card>
               )}
             </TabsContent>
 
@@ -773,46 +847,36 @@ export function ProjectDetails({
                         placeholder="https://drive.google.com/drive/folders/..."
                       />
                     </div>
-                  ) : (
-                    <>
-                      {project.documentationUrl ? (
-                        <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Link className="h-5 w-5 text-primary" />
-                            <div>
-                              <p className="font-medium">
-                                Project Documentation
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Google Drive folder with complete project
-                                documentation
-                              </p>
-                            </div>
-                          </div>
-                          <Button variant="outline" asChild>
-                            <a
-                              href={project.documentationUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              <ExternalLink className="h-4 w-4 mr-2" />
-                              Open
-                            </a>
-                          </Button>
-                        </div>
-                      ) : (
-                        <div className="text-center py-8">
-                          <Link className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                          <h3 className="text-lg mb-2">
-                            No documentation link
-                          </h3>
-                          <p className="text-muted-foreground">
-                            No Google Drive documentation has been added to this
-                            project.
+                  ) : project.documentationUrl ? (
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Link className="h-5 w-5 text-primary" />
+                        <div>
+                          <p className="font-medium">Project Documentation</p>
+                          <p className="text-sm text-muted-foreground">
+                            Google Drive folder with complete project documentation
                           </p>
                         </div>
-                      )}
-                    </>
+                      </div>
+                      <Button variant="outline" asChild>
+                        <a
+                          href={project.documentationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Open
+                        </a>
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Link className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <h3 className="text-lg mb-2">No documentation link</h3>
+                      <p className="text-muted-foreground">
+                        No Google Drive documentation has been added yet.
+                      </p>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -825,13 +889,13 @@ export function ProjectDetails({
                   <p className="text-sm text-muted-foreground">
                     The Google Drive folder should contain:
                   </p>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-4">
-                    <li>• Project specifications and requirements</li>
-                    <li>• Technical drawings and blueprints</li>
-                    <li>• Material lists and supplier information</li>
-                    <li>• Quality control checklists</li>
-                    <li>• Progress reports and photos</li>
-                    <li>• Client communication records</li>
+                  <ul className="text-sm text-muted-foreground space-y-1 ml-6 list-disc">
+                    <li>Project specifications and requirements</li>
+                    <li>Technical drawings and blueprints</li>
+                    <li>Material lists and supplier information</li>
+                    <li>Quality control checklists</li>
+                    <li>Progress reports and photos</li>
+                    <li>Client communication records</li>
                   </ul>
                 </CardContent>
               </Card>

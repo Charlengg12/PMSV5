@@ -51,10 +51,18 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       text: "Are you sure you want to logout?",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Yes",
+      confirmButtonText: "Logout",
       cancelButtonText: "Cancel",
-      reverseButtons: true,
       focusCancel: true,
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
     });
     if (result.isConfirmed) {
       setShowLogoutSpinner(true);

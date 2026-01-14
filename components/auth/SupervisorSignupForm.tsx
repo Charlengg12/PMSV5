@@ -156,6 +156,15 @@ export function SupervisorSignupForm({
       title: "Creating supervisor account...",
       allowOutsideClick: false,
       allowEscapeKey: false,
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
       didOpen: () => {
         Swal.showLoading();
       },
