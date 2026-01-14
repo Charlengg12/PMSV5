@@ -33,13 +33,13 @@
   margin-top: -10px;
 }
 .swal-confirm-button {
-  background-color: #103055;
-  color: white;
-  border-radius: 8px;
-  padding: 10px 28px;
-  font-weight: normal;
-  border: none;
-  box-shadow: none;
+    background-color: #103055;
+    color: white;
+    border-radius: 8px;
+    padding: 10px 28px;
+    font-weight: normal;
+    border: none;
+    box-shadow: none;
 }
 .swal-cancel-button {
   background-color: white;
@@ -54,7 +54,9 @@
     transform: translateY(-5px);
     transition: all 0.3s ease;
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+    background-color: #103055;
     background-color: #e28a33;
+
 }
 .swal-cancel-button:hover {
     transform: translateY(-5px);
@@ -88,7 +90,7 @@
     color: #aaaaaa;
 }
 .swal2-loader{
-    border-color: #c42727 rgba(0, 0, 0, 0) #2778c4 rgba(0, 0, 0, 0) !important;
+    border-color: #103055 rgba(0, 0, 0, 0) #e28a33 rgba(0, 0, 0, 0) !important;
     border-width: 2px !important;
 }
 
@@ -106,6 +108,34 @@
         opacity: 1;
     }
 }
-button{
+button:hover{
     cursor:pointer;
+    transform: translateY(-5px);
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+}
+
+table tr:nth-child(even) {
+    background-color: #e7e7e7e2;
+}
+table thead {
+    background-color: #084080c4;
+}
+table thead th {
+    color: white;
+    padding: 20px;
+}
+table tr:hover {
+    background: fixed;
+}
+.modal{
+    animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
 }

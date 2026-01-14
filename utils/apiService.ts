@@ -204,9 +204,39 @@ class ApiService {
     }
 
     // Users methods
-    async getUsers(): Promise<ApiResponse<any[]>> {
-        return this.request('/users');
+    async getUsers(): Promise<ApiResponse<User[]>> {
+    return this.request("/users", { method: "GET" });
     }
+
+    async getInactiveUsers(): Promise<ApiResponse<User[]>> {
+    return this.request("/users/inactive", { method: "GET" });
+    }
+
+    async updateUser(id: string, data: Partial<User>): Promise<ApiResponse<any>> {
+    return this.request(`/users/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+    });
+    }
+
+    async makeUserInactive(userId: string): Promise<ApiResponse<any>> {
+    return this.request(`/users/inactive/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_active: 0 }),
+    });
+    }
+
+    // ────────────────────────────────────────────────
+    // This is the missing piece you needed for restore
+    // ────────────────────────────────────────────────
+    async makeUserActive(userId: string): Promise<ApiResponse<any>> {
+    return this.request(`/users/active/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_active: 1 }),
+    });
+    }
+
+
 
     // create supervisor
     async createSupervisor(supervisorData: any): Promise<ApiResponse<any>> {
@@ -227,6 +257,34 @@ class ApiService {
     async healthCheck(): Promise<ApiResponse<any>> {
         return this.request('/health');
     }
+
+    // Reports methods
+    async getReports(): Promise<ApiResponse<any[]>> {
+        return this.request('/reports', {
+            method: 'GET',
+            credentials: 'include', 
+        });
+    }
+
+    async createReport(reportData: any): Promise<ApiResponse<any>> {
+        return this.request('/reports/create', {
+            method: 'POST',
+            body: JSON.stringify(reportData),
+        });
+    }
+
+    async editReport(reportId: string, updates: any): Promise<ApiResponse<any>> {
+        return this.request(`/reports/${reportId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+    async deleteReport(reportId: string): Promise<ApiResponse<any>> {
+        return this.request(`/reports/${reportId}`, {
+            method: 'DELETE',
+        });
+    }
+    
 }
 
 export const apiService = new ApiService();
