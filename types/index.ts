@@ -20,34 +20,43 @@ export interface Project {
   name: string;
   description: string;
   status:
-  | '0_Created'
-  | '1_Assigned_to_FAB'
-  | '2_Ready_for_Supervisor_Review'
-  | '3_Ready_for_Admin_Review'
-  | '4_Ready_for_Client_Signoff'
-  | 'planning'
-  | 'in-progress'
-  | 'review'
-  | 'completed'
-  | 'on-hold'
-  | 'pending-assignment';
+    | '0_Created'
+    | '1_Assigned_to_FAB'
+    | '2_Ready_for_Supervisor_Review'
+    | '3_Ready_for_Admin_Review'
+    | '4_Ready_for_Client_Signoff'
+    | 'planning'
+    | 'in-progress'
+    | 'review'
+    | 'completed'
+    | 'on-hold'
+    | 'pending-assignment';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   startDate: string;
   endDate: string;
   progress: number;
   supervisorId: string;
   fabricatorIds: string[];
-  budget: number;
-  spent: number;
-  revenue: number; // Project revenue/value
+  
+  // --- Financials ---
+  budget: number;       // Total Operational Cost (Fab + Mat + Sup)
+  spent: number;        // Actual money spent so far
+  revenue: number;      // Total Client Price (Budget + Company Alloc)
+  
+  // Detailed Allocations (Added)
+  fabricatorAllocation?: number;
+  materialsAllocation?: number;
+  supervisorAllocation?: number;
+  companyAllocation?: number;
+  
   clientName: string;
-  documentationUrl?: string; // Google Drive documentation link
+  documentationUrl?: string; 
   attachments?: ProjectAttachment[];
-  fabricatorBudgets?: FabricatorBudget[]; // Individual budget allocations
-  createdBy: string; // Who created the project
+  fabricatorBudgets?: FabricatorBudget[]; 
+  createdBy: string; 
   createdAt: string;
-  pendingAssignments?: ProjectAssignment[]; // Pending fabricator assignments
-  pendingSupervisors?: string[]; // Pending supervisor assignments (for broadcasting)
+  pendingAssignments?: ProjectAssignment[]; 
+  pendingSupervisors?: string[]; 
 }
 
 export interface ProjectAssignment {

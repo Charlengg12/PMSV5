@@ -16,10 +16,18 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Badge } from "../ui/badge";
-import { X, Plus, CalendarIcon, Building, DollarSign } from "lucide-react";
+import { 
+  X, 
+  Plus, 
+  CalendarIcon, 
+  Building, 
+  DollarSign, 
+  Wallet, 
+  TrendingUp, 
+  Briefcase 
+} from "lucide-react";
 import { format } from "date-fns";
 import { Project, User } from "../../types";
-// Removed embedded client creation dialog; it will be launched separately from the Projects page
 
 interface CreateProjectFormProps {
   currentUser: User;
@@ -50,7 +58,7 @@ export function CreateProjectForm({
     companyAllocation: "",
     totalProjectPrice: "",
     supervisorAssignsFabricators: false,
-    broadcastToSupervisors: false, // New toggle state
+    broadcastToSupervisors: false,
     documentationUrl: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,14 +68,24 @@ export function CreateProjectForm({
   const supervisors = users.filter((u) => u.role === "supervisor");
   const fabricators = users.filter((u) => u.role === "fabricator");
 
-  useEffect(() => {
-    const fabricator = parseFloat(formData.fabricatorAllocation) || 0;
-    const materials = parseFloat(formData.materialsAllocation) || 0;
-    const supervisor = parseFloat(formData.supervisorAllocation) || 0;
-    const company = parseFloat(formData.companyAllocation) || 0;
+  // --- DERIVED FINANCIAL VALUES ---
+  const fabAlloc = parseFloat(formData.fabricatorAllocation) || 0;
+  const matAlloc = parseFloat(formData.materialsAllocation) || 0;
+  const supAlloc = parseFloat(formData.supervisorAllocation) || 0;
+  const compAlloc = parseFloat(formData.companyAllocation) || 0;
 
-    const total = fabricator + materials + supervisor + company;
-    setFormData((prev) => ({ ...prev, totalProjectPrice: total.toFixed(2) }));
+  // 1. Budget (Operational Cost): Sum of expenses only
+  const operationalBudget = fabAlloc + matAlloc + supAlloc;
+  
+  // 2. Revenue (Client Price): Sum of ALL allocations
+  const calculatedRevenue = operationalBudget + compAlloc;
+
+  // 3. Profit: The company allocation
+  const projectedProfit = compAlloc;
+
+  // Keep totalProjectPrice in sync for validation purposes
+  useEffect(() => {
+    setFormData((prev) => ({ ...prev, totalProjectPrice: calculatedRevenue.toFixed(2) }));
   }, [
     formData.fabricatorAllocation,
     formData.materialsAllocation,
@@ -142,138 +160,143 @@ export function CreateProjectForm({
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) {
-    return;
-  }
-
-  const result = await Swal.fire({
-    title: 'Are you sure?',
-    text: "Please confirm if you want to proceed.",
-    icon: 'info',
-    showCancelButton: true,
-    cancelButtonText: 'Cancel',
-    confirmButtonText: 'Confirm',
-    allowOutsideClick: false,
-    customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        confirmButton: 'swal-confirm-button',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon'
+    if (!validateForm()) {
+      return;
     }
-  });
 
-  if (!result.isConfirmed) {
-    return;
-  }
-
-  // ────────────────────────────────────────────────
-  // Show loading state
-  // ────────────────────────────────────────────────
-  Swal.fire({
-    title: 'Processing...',
-    text: "Please wait, your request is being processed.",
-    allowOutsideClick: false,
-    customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon'
-    },
-    didOpen: () => {
-        Swal.showLoading();
-    }
-  });
-
-  try {
-    const totalProjectPrice = parseFloat(formData.totalProjectPrice);
-
-    const shouldSupervisorAssign = formData.supervisorAssignsFabricators;
-    const initialStatus: Project["status"] = shouldSupervisorAssign
-      ? "0_Created"
-      : "1_Assigned_to_FAB";
-
-    const newProject: Omit<Project, "id"> = {
-      name: formData.name,
-      description: formData.description,
-      clientName: "",
-      status: initialStatus,
-      priority: formData.priority,
-      startDate: formData.startDate.toISOString().split("T")[0],
-      endDate: formData.endDate.toISOString().split("T")[0],
-      progress: 0,
-      supervisorId: formData.supervisorId,
-      fabricatorIds: formData.supervisorAssignsFabricators
-        ? []
-        : formData.fabricatorIds,
-      budget: totalProjectPrice,
-      spent: 0,
-      revenue: 0,
-      documentationUrl: formData.documentationUrl || undefined,
-      createdBy: currentUser.id,
-      createdAt: new Date().toISOString(),
-      fabricatorBudgets: [],
-      // @ts-ignore
-      broadcastToSupervisors: formData.broadcastToSupervisors,
-    };
-
-    await onCreateProject(newProject);
-
-    // Fake minimum 3-second loading feel (remove if backend is fast)
-    await new Promise((resolve) => setTimeout(resolve, 3000));
-
-    // Success with custom class
-    await Swal.fire({
-      title: "Project Created!",
-      text: "The project was successfully created.",
-      icon: "success",
-      timer: 2200,
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "Please confirm if you want to proceed.",
+      icon: 'info',
+      showCancelButton: true,
+      cancelButtonText: 'Cancel',
+      confirmButtonText: 'Confirm',
+      allowOutsideClick: false,
       customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon'
-    },
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          confirmButton: 'swal-confirm-button',
+          cancelButton: 'swal-cancel-button',
+          icon: 'swal-icon'
+      }
     });
 
-    onClose();
+    if (!result.isConfirmed) {
+      return;
+    }
 
-    // Option A: hash-based navigation (your original approach)
-    window.location.hash = "projects";
-
-    // Option B: full page reload (most reliable after create)
-    // window.location.reload();
-
-    // Option C: if using react-router → navigate("/projects")
-    // navigate("/projects");
-
-  } catch (err) {
-    console.error("Project creation failed:", err);
-
+    // Show loading state
     Swal.fire({
-      title: "Error",
-      text: "Failed to create the project. Please try again.",
-      icon: "error",
-      confirmButtonText: "OK",
+      title: 'Processing...',
+      text: "Please wait, your request is being processed.",
+      allowOutsideClick: false,
       customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon'
-    },
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          cancelButton: 'swal-cancel-button',
+          icon: 'swal-icon'
+      },
+      didOpen: () => {
+          Swal.showLoading();
+      }
     });
-  }
-};
+
+    try {
+      // Logic Update: 
+      // Budget = Operational Costs (Fab + Mat + Sup)
+      // Revenue = Total Client Price (Budget + Company Alloc)
+      
+      const shouldSupervisorAssign = formData.supervisorAssignsFabricators;
+      const initialStatus: Project["status"] = shouldSupervisorAssign
+        ? "0_Created"
+        : "1_Assigned_to_FAB";
+
+      const newProject: Omit<Project, "id"> = {
+        name: formData.name,
+        description: formData.description,
+        clientName: "",
+        status: initialStatus,
+        priority: formData.priority,
+        startDate: formData.startDate.toISOString().split("T")[0],
+        endDate: formData.endDate.toISOString().split("T")[0],
+        progress: 0,
+        supervisorId: formData.supervisorId,
+        fabricatorIds: formData.supervisorAssignsFabricators
+          ? []
+          : formData.fabricatorIds,
+        
+        // --- UPDATED FINANCIAL MAPPING ---
+        budget: operationalBudget, // Operational Cost
+        revenue: calculatedRevenue, // Total Revenue
+        spent: 0,
+        // -------------------------------
+        
+        documentationUrl: formData.documentationUrl || undefined,
+        createdBy: currentUser.id,
+        createdAt: new Date().toISOString(),
+        fabricatorBudgets: [],
+        // @ts-ignore
+        broadcastToSupervisors: formData.broadcastToSupervisors,
+        
+        // Save specific allocations if your backend supports these fields
+        // @ts-ignore
+        fabricatorAllocation: fabAlloc,
+        // @ts-ignore
+        materialsAllocation: matAlloc,
+        // @ts-ignore
+        supervisorAllocation: supAlloc,
+        // @ts-ignore
+        companyAllocation: compAlloc
+      };
+
+      await onCreateProject(newProject);
+
+      // Fake minimum 3-second loading feel
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      await Swal.fire({
+        title: "Project Created!",
+        text: "The project was successfully created.",
+        icon: "success",
+        timer: 2200,
+        customClass: {
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          cancelButton: 'swal-cancel-button',
+          icon: 'swal-icon'
+      },
+      });
+
+      onClose();
+      window.location.hash = "projects";
+
+    } catch (err) {
+      console.error("Project creation failed:", err);
+
+      Swal.fire({
+        title: "Error",
+        text: "Failed to create the project. Please try again.",
+        icon: "error",
+        confirmButtonText: "OK",
+        customClass: {
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          cancelButton: 'swal-cancel-button',
+          icon: 'swal-icon'
+      },
+      });
+    }
+  };
 
   const getFabricatorName = (id: string) => {
     return users.find((u) => u.id === id)?.name || "Unknown";
@@ -470,8 +493,6 @@ export function CreateProjectForm({
                       "broadcastToSupervisors",
                       e.target.checked
                     );
-                    // If broadcasting, we might clear specific supervisor or keep it as preferred?
-                    // Let's keep it simply separate.
                     if (e.target.checked) {
                       handleInputChange("supervisorId", "");
                     }
@@ -524,7 +545,6 @@ export function CreateProjectForm({
                 </Alert>
               )}
 
-              {/* Fabricators selection disabled if supervisor assigns manually or broadcasting */}
               {!formData.supervisorAssignsFabricators &&
                 !formData.broadcastToSupervisors && (
                   <div className="space-y-2">
@@ -579,45 +599,43 @@ export function CreateProjectForm({
             <div className="space-y-4">
               <div className="flex items-end justify-between">
                 <h3 className="text-lg font-medium">Financial Allocation</h3>
-                <div className="text-sm text-muted-foreground">
-                  Total Project Price
-                </div>
               </div>
 
-              {/* Financial Overview Preview */}
+              {/* --- UPDATED FINANCIAL OVERVIEW PREVIEW (CARDS) --- */}
               <div className="grid gap-4 md:grid-cols-3">
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Budget</span>
+                <Card className="bg-blue-50 dark:bg-blue-900/10 border-blue-200">
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-medium mb-1">
+                      <Briefcase className="h-4 w-4" /> Revenue
                     </div>
-                    <p className="text-2xl">
-                      ₱
-                      {(
-                        parseFloat(formData.totalProjectPrice) || 0
-                      ).toLocaleString()}
+                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
+                      ₱{calculatedRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </p>
+                    <span className="text-xs text-muted-foreground">Total Client Price</span>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Spent</span>
+                <Card className="bg-orange-50 dark:bg-orange-900/10 border-orange-200">
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300 font-medium mb-1">
+                      <Wallet className="h-4 w-4" /> Budget
                     </div>
-                    <p className="text-2xl">₱0</p>
+                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
+                      ₱{operationalBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <span className="text-xs text-muted-foreground">Operational Expenses</span>
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="pt-6">
-                    <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">Revenue</span>
+                <Card className="bg-green-50 dark:bg-green-900/10 border-green-200">
+                  <CardContent className="p-4 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium mb-1">
+                      <TrendingUp className="h-4 w-4" /> Profit
                     </div>
-                    <p className="text-2xl">₱0</p>
+                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">
+                      ₱{projectedProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </p>
+                    <span className="text-xs text-muted-foreground">Net Income</span>
                   </CardContent>
                 </Card>
               </div>
@@ -708,9 +726,12 @@ export function CreateProjectForm({
                   </Label>
                   <Input
                     readOnly
-                    value={formData.totalProjectPrice}
+                    value={calculatedRevenue.toFixed(2)}
                     placeholder="0.00"
                   />
+                  {errors.totalProjectPrice && (
+                    <p className="text-sm text-destructive">{errors.totalProjectPrice}</p>
+                  )}
                 </div>
               </div>
             </div>

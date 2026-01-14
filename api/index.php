@@ -486,15 +486,25 @@ function handle_create_project(PDO $pdo): void
 
     $pendingSupervisors = [];
     if (!empty($body['broadcastToSupervisors'])) {
-        // Fetch all active supervisors
         $stmt = $pdo->query("SELECT id FROM users WHERE role = 'supervisor' AND is_active = 1");
         $supervisors = $stmt->fetchAll(PDO::FETCH_COLUMN);
         $pendingSupervisors = $supervisors;
     }
 
+    // UPDATED: Added allocation columns to INSERT statement
     $stmt = $pdo->prepare(
-        'INSERT INTO projects (id, title, description, status, priority, progress, start_date, due_date, budget, spent, revenue, fabricator_budgets, client_id, supervisor_id, fabricator_ids, created_by, pending_supervisors)
-         VALUES (:id, :title, :description, :status, :priority, :progress, :start_date, :due_date, :budget, :spent, :revenue, :fabricator_budgets, :client_id, :supervisor_id, :fabricator_ids, :created_by, :pending_supervisors)'
+        'INSERT INTO projects (
+            id, title, description, status, priority, progress, 
+            start_date, due_date, budget, revenue, spent, fabricator_budgets,
+            fabricator_allocation, materials_allocation, supervisor_allocation, company_allocation,
+            client_id, supervisor_id, fabricator_ids, pending_supervisors
+        )
+         VALUES (
+            :id, :title, :description, :status, :priority, :progress, 
+            :start_date, :due_date, :budget, :revenue, :spent, :fabricator_budgets
+            :fabricator_allocation, :materials_allocation, :supervisor_allocation, :company_allocation,
+            :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors
+        )'
     );
 
     $stmt->execute([
@@ -506,9 +516,15 @@ function handle_create_project(PDO $pdo): void
         ':progress' => $body['progress'] ?? 0,
         ':start_date' => $body['startDate'] ?? null,
         ':due_date' => $body['endDate'] ?? ($body['dueDate'] ?? null),
-        ':budget' => $body['budget'] ?? null,
-        ':spent' => $body['spent'] ?? null,
-        ':revenue' => $body['revenue'] ?? null,
+        
+        // Financial mappings
+        ':budget' => $body['budget'] ?? 0.00, // This is Total Allocated
+        ':revenue' => $body['revenue'] ?? 0.00, // This is Client Price
+        ':spent' => 0.00,
+        ':fabricator_allocation' => $body['fabricator_allocation'] ?? 0.00,
+        ':materials_allocation' => $body['materials_allocation'] ?? 0.00,
+        ':supervisor_allocation' => $body['supervisor_allocation'] ?? 0.00,
+        ':company_allocation' => $body['company_allocation'] ?? 0.00,
         ':fabricator_budgets' => isset($body['fabricatorBudgets']) ? json_encode($body['fabricatorBudgets']) : json_encode([]),
         ':client_id' => $body['clientId'] ?? null,
         ':supervisor_id' => $body['supervisorId'] ?? null,
@@ -546,6 +562,8 @@ function handle_update_project(PDO $pdo, string $id): void
         'spent',
         'revenue',
         'client_id',
+        'spent', 
+        'revenue',
         'supervisor_id'
     ];
 
@@ -996,35 +1014,93 @@ function handle_get_worklogs(PDO $pdo): void
 function handle_create_worklog(PDO $pdo): void
 {
     require_login();
-    $body = sanitize_recursive(json_input());
-    $workLogId = 'wl-' . time();
 
-    if (empty($body['projectId']) || empty($body['userId']) || empty($body['date']) || !isset($body['hoursWorked'])) {
-        json_response(['error' => 'projectId, userId, date, and hoursWorked are required'], 400);
+    // 1. Direct Input Reading (Bypasses potential helper function issues)
+    $rawInput = file_get_contents('php://input');
+    $body = json_decode($rawInput, true);
+
+    // 2. DEBUG LOGGING: Writes exactly what the server sees to a file
+    $debugMsg = "--- Worklog Attempt " . date('Y-m-d H:i:s') . " ---\n";
+    $debugMsg .= "Raw Input: " . $rawInput . "\n";
+    $debugMsg .= "Decoded Body: " . print_r($body, true) . "\n";
+    file_put_contents('debug_worklog_error.txt', $debugMsg, FILE_APPEND);
+
+    // 3. Flexible Extraction (Checks camelCase, snake_case, and lowercase)
+    $projectId = $body['projectId'] ?? $body['project_id'] ?? $body['projectid'] ?? null;
+    
+    // Check all variations for user ID
+    $userId = $body['fabricatorId'] ?? $body['fabricator_id'] ?? $body['userId'] ?? $body['user_id'] ?? $body['userid'] ?? null;
+    
+    $date = $body['date'] ?? null;
+    
+    // Check all variations for hours
+    $hoursInput = $body['hoursWorked'] ?? $body['hours_worked'] ?? $body['hoursworked'] ?? null;
+
+    // 4. Strict Validation with Specific Error Message
+    // We check !== '' to ensure we don't block 0 hours, but block empty strings
+    $hasHours = isset($hoursInput) && $hoursInput !== '';
+
+    if (!$projectId || !$userId || !$date || !$hasHours) {
+        // Construct a detailed error message for the frontend
+        $missing = [];
+        if (!$projectId) $missing[] = "projectId (Received: " . print_r($body['projectId'] ?? 'null', true) . ")";
+        if (!$userId) $missing[] = "userId/fabricatorId (Received keys: " . implode(', ', array_keys($body ?: [])) . ")";
+        if (!$date) $missing[] = "date";
+        if (!$hasHours) $missing[] = "hoursWorked";
+
+        // Return 400 with the specific details
+        json_response([
+            'error' => "Server Validation Failed. Missing fields: " . implode('; ', $missing),
+            'received_data' => $body
+        ], 400);
     }
 
-    $stmt = $pdo->prepare(
-        'INSERT INTO work_logs (id, project_id, user_id, date, hours_worked, description, progress_percentage)
-         VALUES (:id, :project_id, :user_id, :date, :hours_worked, :description, :progress_percentage)'
-    );
+    // 5. Insert Logic
+    $hours = floatval($hoursInput);
+    $description = $body['description'] ?? null;
+    $progressPercentage = $body['progressPercentage'] ?? $body['progress_percentage'] ?? 0;
 
-    $stmt->execute([
-        ':id' => $workLogId,
-        ':project_id' => $body['projectId'],
-        ':user_id' => $body['userId'],
-        ':date' => $body['date'],
-        ':hours_worked' => $body['hoursWorked'],
-        ':description' => $body['description'] ?? null,
-        ':progress_percentage' => $body['progressPercentage'] ?? 0,
-    ]);
+    $materialsUsed = null;
+    if (!empty($body['materials']) && is_array($body['materials'])) {
+        $materialsUsed = json_encode($body['materials']);
+    } elseif (!empty($body['materialsUsed']) && is_array($body['materialsUsed'])) {
+        $materialsUsed = json_encode($body['materialsUsed']);
+    }
 
-    $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $workLogId]);
-    $log = $stmt->fetch();
+    $workLogId = 'wl-' . time() . '-' . substr(md5(microtime()), 0, 6);
 
-    json_response($log);
+    try {
+        $stmt = $pdo->prepare("
+            INSERT INTO work_logs 
+            (id, project_id, user_id, date, hours_worked, description, progress_percentage, materials_used)
+            VALUES (:id, :project_id, :user_id, :date, :hours_worked, :description, :progress_percentage, :materials_used)
+        ");
+
+        $stmt->execute([
+            ':id'                => $workLogId,
+            ':project_id'        => $projectId,
+            ':user_id'           => $userId,
+            ':date'              => $date,
+            ':hours_worked'      => $hours,
+            ':description'       => $description,
+            ':progress_percentage' => $progressPercentage,
+            ':materials_used'    => $materialsUsed,
+        ]);
+
+        // Fetch and return the result
+        $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id');
+        $stmt->execute([':id' => $workLogId]);
+        $log = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+
+        $log['fabricatorId'] = $log['user_id'];
+        $log['materials'] = json_decode($log['materials_used'] ?? '[]', true);
+
+        json_response($log);
+
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database SQL Error: ' . $e->getMessage()], 500);
+    }
 }
-
 function handle_get_materials(PDO $pdo): void
 {
     require_login();

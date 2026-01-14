@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { FolderOpen, CheckSquare, Users, DollarSign, X } from 'lucide-react';
 import { Project, Task, User as UserType } from '../../types';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 interface DashboardStatsProps {
   projects: Project[];
@@ -10,12 +11,14 @@ interface DashboardStatsProps {
   currentUser: UserType;
 }
 
+// Color palette for the pie chart slices
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+
 const navigateToView = (view: string) => {
   window.location.hash = view;
 };
 
 export function DashboardStats({ projects, tasks, users, currentUser }: DashboardStatsProps) {
-  // 1. Add state for the modal
   const [showRevenueDetails, setShowRevenueDetails] = useState(false);
 
   const getFilteredData = () => {
@@ -49,10 +52,16 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
 
   const { projects: filteredProjects, tasks: filteredTasks, users: filteredUsers } = getFilteredData();
 
+  // Create a safe version of data for the chart to ensure numbers are valid
+  const chartData = filteredProjects.map(p => ({
+    name: p.name,
+    value: Number(p.revenue), // Force conversion to Number
+    status: p.status
+  })).filter(item => item.value > 0); // Optional: Hide projects with 0 revenue from chart
+
   const activeProjects = filteredProjects.filter(p => p.status === 'in-progress').length;
   const completedTasks = filteredTasks.filter(t => t.status === 'completed').length;
 
-  // Role-based revenue calculations
   const getRevenueData = () => {
     if (currentUser.role === 'admin') {
       const totalBudget = filteredProjects.reduce((sum, p) => sum + p.budget, 0);
@@ -76,7 +85,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       };
     }
 
-    // fabricator - only assigned project values
+    // fabricator
     const totalProjectValue = filteredProjects.reduce((sum, p) => sum + p.revenue, 0);
     return {
       title: 'Assigned Value',
@@ -115,7 +124,6 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       value: revenueData.value,
       icon: DollarSign,
       description: revenueData.description,
-      // 2. Update Click handler to open modal for fabricators
       onClick: () => {
         if (currentUser.role === 'fabricator') {
           setShowRevenueDetails(true);
@@ -138,9 +146,9 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-br from-primary/5 to-transparent px-4 md:px-6">
               <CardTitle className="text-xs md:text-sm font-medium">{stat.title}</CardTitle>
               <div className={`p-1.5 md:p-2 rounded-lg ${index === 0 ? 'bg-primary/10 text-primary' :
-                  index === 1 ? 'bg-accent/10 text-accent' :
-                    index === 2 ? 'bg-secondary/10 text-secondary' :
-                      'bg-accent/10 text-accent'
+                index === 1 ? 'bg-accent/10 text-accent' :
+                  index === 2 ? 'bg-secondary/10 text-secondary' :
+                    'bg-accent/10 text-accent'
                 }`}>
                 <stat.icon className="h-4 w-4 md:h-5 md:w-5" />
               </div>
@@ -157,48 +165,86 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
         ))}
       </div>
 
-      {/* 3. The Modal Implementation */}
       {showRevenueDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-lg bg-white rounded-xl shadow-xl overflow-hidden border animate-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between p-4 border-b bg-muted/30">
+          <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden border animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            
+            <div className="flex items-center justify-between p-4 border-b bg-muted/30 shrink-0">
               <h3 className="font-semibold text-lg flex items-center gap-2">
                 <DollarSign className="w-5 h-5 text-green-600" />
-                Assigned Projects Value
+                Assigned Projects Distribution
               </h3>
-              <button 
+              <button
                 onClick={() => setShowRevenueDetails(false)}
                 className="p-1 hover:bg-slate-100 rounded-full transition-colors"
               >
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-            
-            <div className="max-h-[60vh] overflow-y-auto p-4 space-y-3">
+
+            <div className="overflow-y-auto p-4 space-y-6">
               {filteredProjects.length === 0 ? (
                 <p className="text-center text-gray-500 py-4">No assigned projects found.</p>
               ) : (
-                filteredProjects.map((project) => (
-                  <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
-                    <div className="space-y-1">
-                      <p className="font-medium text-sm text-slate-900">{project.name}</p>
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
-                        project.status === 'completed' ? 'bg-green-100 text-green-700' :
-                        project.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
-                        'bg-gray-100 text-gray-700'
-                      }`}>
-                        {project.status.replace('-', ' ')}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-700">₱{project.revenue.toLocaleString()}</p>
-                    </div>
+                <>
+                  {/* CHART SECTION */}
+                  <div className="w-full h-[300px] flex justify-center items-center">
+                    <ResponsiveContainer width="99%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={chartData}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={60}
+                          outerRadius={85}
+                          paddingAngle={5}
+                          dataKey="value"
+                          nameKey="name"
+                        >
+                          {chartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          formatter={(value: number) => `₱${value.toLocaleString()}`}
+                          contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                        />
+                        <Legend verticalAlign="bottom" height={36}/>
+                      </PieChart>
+                    </ResponsiveContainer>
                   </div>
-                ))
+
+                  {/* LIST SECTION */}
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Project Breakdown</h4>
+                    {filteredProjects.map((project, index) => (
+                      <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center gap-3">
+                            {/* Color Legend Dot */}
+                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                            
+                            <div className="space-y-1">
+                                <p className="font-medium text-sm text-slate-900">{project.name}</p>
+                                <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
+                                    project.status === 'completed' ? 'bg-green-100 text-green-700' :
+                                    project.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
+                                    'bg-gray-100 text-gray-700'
+                                }`}>
+                                    {project.status.replace('-', ' ')}
+                                </span>
+                            </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-slate-700">₱{project.revenue.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </div>
 
-            <div className="p-4 border-t bg-slate-50 flex justify-between items-center">
+            <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
               <span className="text-sm font-medium text-gray-500">Total Value</span>
               <span className="text-lg font-bold text-green-600">
                 {revenueData.value}
