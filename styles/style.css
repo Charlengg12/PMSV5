@@ -114,6 +114,11 @@ button:hover{
     transition: all 0.3s ease;
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
 }
+button[data-slot="checkbox"]:hover{
+    transform: none;
+    box-shadow: none;
+    transition: none;
+}
 
 table tr:nth-child(even) {
     background-color: #e7e7e7e2;
