@@ -111,6 +111,11 @@
 button:hover{
     cursor:pointer;
 }
+button[data-slot="checkbox"]:hover{
+    transform: none;
+    box-shadow: none;
+    transition: none;
+}
 
 table tr:nth-child(even) {
     background-color: #e7e7e7e2;
