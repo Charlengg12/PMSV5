@@ -21,7 +21,7 @@ import {
 } from "../ui/select";
 import { Badge } from "../ui/badge";
 import { Alert, AlertDescription } from "../ui/alert";
-import { X, UserPlus, Shield } from "lucide-react";
+import { X, UserPlus, Shield, Eye, EyeOff } from "lucide-react";
 import { User } from "../../types";
 // import { generateSecureId, generateEmployeeNumber } from "../../utils/secureId";
 // import { apiService } from "../../utils/apiService";
@@ -42,6 +42,7 @@ export function SupervisorSignupForm({
     phone: "",
     department: "",
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
@@ -58,7 +59,7 @@ export function SupervisorSignupForm({
   // Validation regex patterns
   const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/; // Only gmail.com allowed
   const passwordRegex =
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-])[A-Za-z\d@$!%*?&_\-]{8,}$/;
   const phoneRegex = /^(\+639|09)\d{9}$/; // Format: +639123456789 or 09123456789
 
   const validateForm = () => {
@@ -79,7 +80,7 @@ export function SupervisorSignupForm({
       newErrors.password = "Password is required";
     } else if (!passwordRegex.test(formData.password)) {
       newErrors.password =
-        "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&)";
+        "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&_-)";
     }
 
     if (!formData.phone.trim()) {
@@ -283,14 +284,31 @@ export function SupervisorSignupForm({
 
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter password"
-                value={formData.password}
-                onChange={(e) => handleInputChange("password", e.target.value)}
-                className={errors.password ? "border-destructive" : ""}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    handleInputChange("password", e.target.value)
+                  }
+                  className={errors.password ? "border-destructive" : ""}
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </Button>
+              </div>
               {errors.password && (
                 <p className="text-sm text-destructive">{errors.password}</p>
               )}
