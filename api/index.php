@@ -735,7 +735,8 @@ function handle_update_project(PDO $pdo, string $id): void
         'client_id',
         'spent', 
         'revenue',
-        'supervisor_id'
+        'supervisor_id',
+        'documentationUrl'
     ];
 
     foreach ($allowed as $field) {
@@ -787,7 +788,6 @@ function handle_update_project(PDO $pdo, string $id): void
     $stmt->execute($params);
 
     $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
-
     // the foreach is to handle values meant for ENUM columns (i.e. status)
     foreach ($params as $key => $val) {
         $stmt->bindValue($key, $val, PDO::PARAM_STR);
