@@ -7,6 +7,8 @@ interface ApiResponse<T> {
     error?: string;
     user?: any;
     token?: string;
+    success?: boolean;
+    message?: string;
 }
 
 class ApiService {
@@ -41,7 +43,7 @@ class ApiService {
             });
 
             if (response.status === 429) {
-                // Too Many Requests: honor Retry-After when available
+                // Too Many Requests logic...
                 const retryAfterHeader = response.headers.get('Retry-After');
                 const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : NaN;
                 const retryAfterMs = Number.isFinite(retryAfterSeconds)
@@ -52,28 +54,34 @@ class ApiService {
                     await new Promise((r) => setTimeout(r, retryAfterMs));
                     return this.request<T>(endpoint, options, retryCount + 1);
                 }
-                return { error: 'Too many requests. Please try again shortly.' };
+                // If we run out of retries, we throw so the UI handles it
+                throw new Error('Too many requests. Please try again shortly.');
             }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.error || `HTTP ${response.status}`);
+                // This creates the error, which jumps to the catch block below
+                throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`);
             }
 
             const data = await response.json();
             return { data };
+
         } catch (error) {
-            // Network-level retry (e.g., brief disconnect) with capped backoff
+            // Network-level retry
             if (retryCount < 2) {
                 const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 4000);
                 await new Promise((r) => setTimeout(r, backoffMs));
                 return this.request<T>(endpoint, options, retryCount + 1);
             }
+            
             console.error(`API request failed for ${endpoint}:`, error);
-            return { error: error instanceof Error ? error.message : 'Unknown error' };
+            
+            // [FIX 2] CRITICAL: Re-throw the error!
+            // Do not return { error: ... }. This forces the UI to catch the failure.
+            throw error; 
         }
     }
-
     // Authentication methods
     async login(identifier: string, password: string): Promise<ApiResponse<any>> {
         const response = await this.request('/auth/login', {
@@ -88,13 +96,21 @@ class ApiService {
 
         return response;
     }
-    async verifyPassword(password: string): Promise<ApiResponse<any>> {
-        return this.request('/auth/verify-password', {
-            method: 'POST',
-            body: JSON.stringify({ password }),
-        });
+   async verifyPassword(password: string): Promise<ApiResponse<any>> {
+    const response = await this.request('/auth/verify-password', {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+    });
+
+    // --- ADD THIS CHECK ---
+    // If the server returns 200 OK but the body says { success: false },
+    // we must manually throw an error to stop the UI from showing the IDs.
+    if (response && response.success === false) {
+        throw new Error(response.message || 'Incorrect password');
     }
 
+    return response;
+}
     async signup(userData: {
         email: string;
         password: string;
