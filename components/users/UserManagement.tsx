@@ -35,7 +35,7 @@ import {
   Shield,
   Eye,
   EyeOff,
-  /* Edit, Trash2, */ Save,
+  Save,
   X,
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
@@ -60,6 +60,72 @@ export function UserManagement({
   const [editEmailError, setEditEmailError] = useState<string>("");
   const [editPhoneError, setEditPhoneError] = useState<string>("");
   const [editGcashError, setEditGcashError] = useState<string>("");
+
+  const handleToggleSecureIds = async () => {
+    // If currently showing, just hide it. No password needed to hide.
+    if (showSecureIds) {
+      setShowSecureIds(false);
+      return;
+    }
+
+    // If currently hidden, prompt for password
+    try {
+      const result = await Swal.fire({
+        title: "Security Verification",
+        text: "Please enter your Admin password to reveal Secure IDs.",
+        input: "password",
+        inputPlaceholder: "Enter your password",
+        inputAttributes: {
+          autocapitalize: "off",
+          autocorrect: "off",
+        },
+        showCancelButton: true,
+        confirmButtonText: "Verify & Show",
+        showLoaderOnConfirm: true,
+        customClass: {
+          container: 'swal-container',
+          popup: 'swal-popup',
+          title: 'swal-title',
+          htmlContainer: 'swal-content',
+          confirmButton: 'swal-confirm-button',
+          cancelButton: 'swal-cancel-button',
+          input: 'swal-input',
+        },
+        preConfirm: async (password) => {
+          try {
+            // This calls the backend to check the password hash
+            // Ensure apiService.verifyPassword(password) is implemented in your utils
+            await apiService.verifyPassword(password);
+            return true;
+          } catch (error) {
+            Swal.showValidationMessage(`Invalid password. Please try again.`);
+            return false;
+          }
+        },
+        allowOutsideClick: () => !Swal.isLoading(),
+      });
+
+      if (result.isConfirmed) {
+        setShowSecureIds(true);
+        Swal.fire({
+          icon: "success",
+          title: "Identity Verified",
+          text: "Secure IDs are now visible.",
+          timer: 1500,
+          showConfirmButton: false,
+          customClass: {
+             container: 'swal-container',
+             popup: 'swal-popup',
+             title: 'swal-title',
+             htmlContainer: 'swal-content',
+             icon: 'swal-icon'
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Verification failed", error);
+    }
+  };
 
   const handleCreateSupervisor = async (newSupervisor: User) => {
     // After adding, fetch the latest users from backend for true refresh
@@ -310,12 +376,12 @@ export function UserManagement({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setShowSecureIds(!showSecureIds)}
+              onClick={handleToggleSecureIds}
             >
               {showSecureIds ? (
-                <EyeOff className="h-4 w-4" />
+                <EyeOff className="h-4 w-4 mr-2" />
               ) : (
-                <Eye className="h-4 w-4" />
+                <Eye className="h-4 w-4 mr-2" />
               )}
               {showSecureIds ? "Hide" : "Show"} Secure IDs
             </Button>
