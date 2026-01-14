@@ -353,7 +353,6 @@ export function ReportsManager({
       showCancelButton: true,
       confirmButtonText: 'Continue',
       cancelButtonText: 'Cancel',
-      reverseButtons: true,
       customClass: swalCustomClasses,
     });
 
@@ -368,7 +367,6 @@ export function ReportsManager({
       showCancelButton: true,
       confirmButtonText: 'Export',
       cancelButtonText: 'Cancel',
-      reverseButtons: true,
       inputValidator: (value) => {
         if (!value) {
           return 'Please select a supervisor';
