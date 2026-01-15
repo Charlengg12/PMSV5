@@ -16,6 +16,20 @@ interface DashboardStatsProps {
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 const peso = "\u20B1";
 
+const formatCompactAmount = (value: number) => {
+  if (!Number.isFinite(value)) return "0";
+  const absValue = Math.abs(value);
+  const formatScaled = (denominator: number, suffix: string) => {
+    const scaled = Math.trunc((value / denominator) * 10) / 10;
+    const formatted = scaled.toFixed(1).replace(/\.0$/, "");
+    return `${formatted} ${suffix}`;
+  };
+  if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
+  if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
+  if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
+  return Math.trunc(value).toLocaleString();
+};
+
 const navigateToView = (view: string) => {
   window.location.hash = view;
 };
@@ -70,8 +84,8 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       const totalRevenue = filteredProjects.reduce((sum, p) => sum + p.revenue, 0);
       return {
         title: 'Total Revenue',
-        value: `${peso}${totalRevenue.toLocaleString()}`,
-        description: `${peso}${totalBudget.toLocaleString()} budgeted`,
+        value: `${peso}${formatCompactAmount(totalRevenue)}`,
+        description: `${peso}${formatCompactAmount(totalBudget)} budgeted`,
         canView: true
       };
     }
@@ -81,8 +95,8 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       const totalSpent = filteredProjects.reduce((sum, p) => sum + p.spent, 0);
       return {
         title: 'Project Budget',
-        value: `${peso}${totalBudget.toLocaleString()}`,
-        description: `${peso}${totalSpent.toLocaleString()} spent`,
+        value: `${peso}${formatCompactAmount(totalBudget)}`,
+        description: `${peso}${formatCompactAmount(totalSpent)} spent`,
         canView: true
       };
     }
@@ -91,7 +105,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
     const totalProjectValue = filteredProjects.reduce((sum, p) => sum + p.revenue, 0);
     return {
       title: 'Assigned Value',
-      value: `${peso}${totalProjectValue.toLocaleString()}`,
+      value: `${peso}${formatCompactAmount(totalProjectValue)}`,
       description: `${filteredProjects.length} assigned projects`,
       canView: true
     };
