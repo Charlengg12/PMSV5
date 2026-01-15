@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { FolderOpen, CheckSquare, Users, DollarSign, X } from 'lucide-react';
 import { Project, Task, User as UserType } from '../../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { AnnouncementBoard } from './AnnouncementBoard';
 
 interface DashboardStatsProps {
   projects: Project[];
@@ -135,7 +136,9 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
   ];
 
   return (
+    
     <>
+  
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat, index) => (
           <Card
@@ -249,10 +252,15 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
               <span className="text-lg font-bold text-green-600">
                 {revenueData.value}
               </span>
+              
             </div>
+            
           </div>
+          
         </div>
+        
       )}
+        <AnnouncementBoard currentUser={currentUser} />
     </>
   );
 }
