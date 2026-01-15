@@ -37,6 +37,7 @@ import {
   mockMaterials,
 } from "./data/mockData";
 import { mapProjectsFromBackend } from "./utils/projectDataMapper";
+import { mapTasksFromBackend } from "./utils/taskDataMapper";
 import { mapUserDataFromBackend } from "./utils/userDataMapper";
 import { emailService } from "./utils/emailService";
 import { apiService } from "./utils/apiService";
@@ -196,7 +197,7 @@ export default function App() {
       }
 
       if (tasksRes.data) {
-        setTasks(tasksRes.data);
+        setTasks(mapTasksFromBackend(tasksRes.data));
       }
 
       if (workLogsRes.data) {
