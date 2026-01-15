@@ -118,6 +118,10 @@ CREATE TABLE IF NOT EXISTS `materials` (
   `unit` VARCHAR(50) DEFAULT NULL,
   `cost_per_unit` DECIMAL(10,2) DEFAULT NULL,
   `total_cost` DECIMAL(15,2) DEFAULT NULL,
+  `added_by` VARCHAR(255) DEFAULT NULL,
+  `status` ENUM('ordered','delivered','in-use','depleted') DEFAULT 'ordered',
+  `supplier` VARCHAR(255) DEFAULT NULL,
+  `category` VARCHAR(255) DEFAULT NULL,
   `added_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_project_id` (`project_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -240,33 +244,6 @@ INSERT IGNORE INTO `tasks` (
   'supervisor-1',
   '2024-02-15',
   4.00
-);
-
--- Insert sample materials
-INSERT IGNORE INTO `materials` (
-  `id`, `project_id`, `name`, `description`, `quantity`, `unit`, `cost_per_unit`, `total_cost`
-) VALUES (
-  'material-1',
-  'project-1',
-  'Steel Beams',
-  'Structural steel beams for foundation',
-  10.00,
-  'pieces',
-  500.00,
-  5000.00
-);
-
-INSERT IGNORE INTO `materials` (
-  `id`, `project_id`, `name`, `description`, `quantity`, `unit`, `cost_per_unit`, `total_cost`
-) VALUES (
-  'material-2',
-  'project-1',
-  'Concrete',
-  'Ready-mix concrete for foundation',
-  50.00,
-  'cubic meters',
-  200.00,
-  10000.00
 );
 
 -- Create indexes for better performance
