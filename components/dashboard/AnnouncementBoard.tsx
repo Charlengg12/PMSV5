@@ -8,7 +8,6 @@ import { Badge } from "../ui/badge";
 import {
   Megaphone,
   Trash2,
-  Send,
   Plus,
   X,
   ChevronLeft,
@@ -16,6 +15,7 @@ import {
   Edit2,
   Users,
   Save,
+  Send,
 } from "lucide-react";
 import { format } from "date-fns";
 import { User } from "../../types";
@@ -39,8 +39,8 @@ const AVAILABLE_ROLES = ["admin", "supervisor", "fabricator", "client"];
 
 export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [currentIndex, setCurrentIndex] = useState(0); // Track active slide
-  const [showForm, setShowForm] = useState(false);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [showModal, setShowModal] = useState(false); // Changed to Modal state
   const [loading, setLoading] = useState(true);
 
   // Form State
@@ -61,7 +61,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       const res = await apiService.getAnnouncements();
       if (res.data) {
         setAnnouncements(res.data);
-        setCurrentIndex(0); // Reset to first slide on reload
+        setCurrentIndex(0);
       }
     } catch (error) {
       console.error("Failed to load announcements", error);
@@ -79,23 +79,38 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     setCurrentIndex((prev) => (prev === announcements.length - 1 ? 0 : prev + 1));
   };
 
-  // --- Form Logic ---
+  // --- Role Logic ---
   const toggleRole = (role: string) => {
     if (role === "all") {
       setSelectedRoles(["all"]);
       return;
     }
+    
+    // If selecting a specific role, remove 'all'
     let newRoles = selectedRoles.filter((r) => r !== "all");
+    
     if (newRoles.includes(role)) {
       newRoles = newRoles.filter((r) => r !== role);
     } else {
       newRoles.push(role);
     }
+
+    // If nothing selected, revert to 'all'
     if (newRoles.length === 0) newRoles = ["all"];
+    
     setSelectedRoles(newRoles);
   };
 
-  const handleEditClick = (ann: Announcement) => {
+  // --- Form Handlers ---
+  const openCreateModal = () => {
+    setEditingId(null);
+    setTitle("");
+    setContent("");
+    setSelectedRoles(["all"]);
+    setShowModal(true);
+  };
+
+  const openEditModal = (ann: Announcement) => {
     setEditingId(ann.id);
     setTitle(ann.title);
     setContent(ann.content);
@@ -105,15 +120,12 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     } catch {
       setSelectedRoles(["all"]);
     }
-    setShowForm(true);
+    setShowModal(true);
   };
 
-  const handleCancelForm = () => {
-    setShowForm(false);
+  const closeModal = () => {
+    setShowModal(false);
     setEditingId(null);
-    setTitle("");
-    setContent("");
-    setSelectedRoles(["all"]);
   };
 
   const handleSubmit = async () => {
@@ -135,7 +147,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         });
         Swal.fire({ icon: "success", title: "Posted!", timer: 1000, showConfirmButton: false });
       }
-      handleCancelForm();
+      closeModal();
       fetchAnnouncements();
     } catch (error) {
       Swal.fire({ icon: "error", title: "Error", text: "Operation failed." });
@@ -155,7 +167,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     if (result.isConfirmed) {
       try {
         await apiService.deleteAnnouncement(id);
-        // Remove locally and adjust index if needed
         const newAnnouncements = announcements.filter((a) => a.id !== id);
         setAnnouncements(newAnnouncements);
         if (currentIndex >= newAnnouncements.length) {
@@ -189,160 +200,187 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
   const currentAnnouncement = announcements[currentIndex];
 
   return (
-    <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 sm:px-6">
-        <div className="flex items-center gap-2">
-          <Megaphone className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">Announcements</CardTitle>
-          {/* Slide Counter */}
-          {!loading && announcements.length > 0 && (
-             <span className="text-xs text-muted-foreground ml-2 bg-muted px-2 py-0.5 rounded-full">
-                {currentIndex + 1} / {announcements.length}
-             </span>
-          )}
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {/* Navigation Arrows (Only if multiple items) */}
-          {announcements.length > 1 && (
-            <div className="flex items-center border rounded-md mr-2 bg-background shadow-sm">
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePrev}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <div className="w-[1px] h-4 bg-border"></div>
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNext}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+    <>
+      <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 sm:px-6">
+          <div className="flex items-center gap-2">
+            <Megaphone className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Announcements</CardTitle>
+            {!loading && announcements.length > 0 && (
+              <span className="text-xs text-muted-foreground ml-2 bg-muted px-2 py-0.5 rounded-full">
+                  {currentIndex + 1} / {announcements.length}
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {announcements.length > 1 && (
+              <div className="flex items-center border rounded-md mr-2 bg-background shadow-sm">
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePrev}>
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="w-[1px] h-4 bg-border"></div>
+                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNext}>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
 
-          {canPost && (
-            <Button
-              variant={showForm ? "secondary" : "outline"}
-              size="sm"
-              onClick={showForm ? handleCancelForm : () => setShowForm(true)}
+            {canPost && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openCreateModal}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                New
+              </Button>
+            )}
+          </div>
+        </CardHeader>
+
+        <CardContent className="relative flex-1 min-h-0 flex flex-col min-w-0 w-full">
+          {loading ? (
+              <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+                  Loading...
+              </div>
+          ) : announcements.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
+                  <Megaphone className="h-8 w-8 mb-2 opacity-20" />
+                  <p>No announcements yet.</p>
+              </div>
+          ) : (
+              // --- SINGLE CARD CAROUSEL VIEW ---
+              <div className="h-full w-full bg-card border rounded-xl p-5 flex flex-col shadow-sm relative group animate-in fade-in duration-300">
+                  <div className="flex justify-between items-start mb-2">
+                      <div>
+                          <h4 className="font-semibold text-lg leading-tight">
+                              {currentAnnouncement.title}
+                          </h4>
+                          <div className="text-xs text-muted-foreground mt-1">
+                              {currentAnnouncement.author_name} • {format(new Date(currentAnnouncement.created_at), "MMM d, yyyy")}
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto mb-2 pr-1 custom-scrollbar">
+                      <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                          {currentAnnouncement.content}
+                      </p>
+                  </div>
+
+                  <div className="mt-auto pt-2 border-t flex justify-between items-center">
+                      <div className="flex-1">
+                          {renderTargetBadges(currentAnnouncement.target_role)}
+                      </div>
+                      
+                      {(isAdmin || currentUser.id === currentAnnouncement.created_by) && (
+                          <div className="flex gap-2">
+                              <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                                  onClick={() => openEditModal(currentAnnouncement)}
+                                  title="Edit"
+                              >
+                                  <Edit2 className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDelete(currentAnnouncement.id)}
+                                  title="Delete"
+                              >
+                                  <Trash2 className="h-4 w-4" />
+                              </Button>
+                          </div>
+                      )}
+                  </div>
+              </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* --- MODAL (POPUP) --- */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-background border rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+              onClick={closeModal}
             >
-              {showForm ? <X className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
-              {showForm ? "Close" : "New"}
+              <X className="h-4 w-4" />
             </Button>
-          )}
-        </div>
-      </CardHeader>
 
-      <CardContent className="relative flex-1 min-h-0 flex flex-col min-w-0 w-full">
-        
-        {/* --- FORM OVERLAY --- */}
-        {showForm && (
-          <div className="absolute inset-0 z-20 bg-background/95 p-4 sm:p-6 animate-in fade-in zoom-in-95 flex flex-col gap-4">
-            <div className="flex justify-between items-center">
-                <h3 className="font-semibold text-lg">{editingId ? "Edit Announcement" : "New Announcement"}</h3>
+            <div className="mb-5">
+              <h2 className="text-xl font-semibold">
+                {editingId ? "Edit Announcement" : "New Announcement"}
+              </h2>
+              <p className="text-sm text-muted-foreground">Share updates with your team.</p>
             </div>
-            
-            <Input
-              placeholder="Title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="font-medium text-lg"
-            />
-            <Textarea
-              placeholder="What's happening?"
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="flex-1 resize-none"
-            />
-            
-            <div className="space-y-2">
-                <div className="flex flex-wrap gap-2">
-                    <Badge 
-                        variant={selectedRoles.includes("all") ? "default" : "outline"}
-                        className="cursor-pointer hover:bg-primary/80"
-                        onClick={() => toggleRole("all")}
-                    >
-                        Everyone
-                    </Badge>
-                    {AVAILABLE_ROLES.map(role => (
-                        <Badge
-                            key={role}
-                            variant={selectedRoles.includes(role) ? "default" : "outline"}
-                            className="cursor-pointer hover:bg-primary/80 capitalize"
-                            onClick={() => toggleRole(role)}
-                        >
-                            {role}
-                        </Badge>
-                    ))}
+
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Title</label>
+                <Input
+                  placeholder="e.g. Holiday Schedule"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Content</label>
+                <Textarea
+                  placeholder="Write your message here..."
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="min-h-[120px]"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium flex items-center gap-2">
+                  <Users className="h-4 w-4" /> Visible To
+                </label>
+                <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
+                  <Badge 
+                      variant={selectedRoles.includes("all") ? "default" : "outline"}
+                      className="cursor-pointer hover:bg-primary/80 transition-colors px-3 py-1"
+                      onClick={() => toggleRole("all")}
+                  >
+                      Everyone
+                  </Badge>
+                  {AVAILABLE_ROLES.map(role => (
+                      <Badge
+                          key={role}
+                          variant={selectedRoles.includes(role) ? "default" : "outline"}
+                          className="cursor-pointer hover:bg-primary/80 transition-colors capitalize px-3 py-1"
+                          onClick={() => toggleRole(role)}
+                      >
+                          {role}
+                      </Badge>
+                  ))}
                 </div>
-            </div>
+                <p className="text-[10px] text-muted-foreground">
+                  Select "Everyone" or pick specific roles.
+                </p>
+              </div>
 
-            <div className="flex justify-end pt-2">
-              <Button onClick={handleSubmit}>
-                {editingId ? <Save className="h-4 w-4 mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                {editingId ? "Update" : "Post"}
-              </Button>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={closeModal}>Cancel</Button>
+                <Button onClick={handleSubmit}>
+                  {editingId ? <Save className="h-4 w-4 mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                  {editingId ? "Update" : "Post Announcement"}
+                </Button>
+              </div>
             </div>
           </div>
-        )}
-
-        {/* --- CAROUSEL CONTENT --- */}
-        {loading ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
-                Loading...
-            </div>
-        ) : announcements.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-                <Megaphone className="h-8 w-8 mb-2 opacity-20" />
-                <p>No announcements yet.</p>
-            </div>
-        ) : (
-            // SINGLE CARD VIEW
-            <div className="h-full w-full bg-card border rounded-xl p-5 flex flex-col shadow-sm relative group animate-in fade-in duration-300">
-                <div className="flex justify-between items-start mb-2">
-                    <div>
-                        <h4 className="font-semibold text-lg leading-tight">
-                            {currentAnnouncement.title}
-                        </h4>
-                        <div className="text-xs text-muted-foreground mt-1">
-                            {currentAnnouncement.author_name} • {format(new Date(currentAnnouncement.created_at), "MMM d, yyyy")}
-                        </div>
-                    </div>
-                </div>
-
-                <div className="flex-1 overflow-y-auto mb-2 pr-1 custom-scrollbar">
-                    <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
-                        {currentAnnouncement.content}
-                    </p>
-                </div>
-
-                <div className="mt-auto pt-2 border-t flex justify-between items-center">
-                    <div className="flex-1">
-                        {renderTargetBadges(currentAnnouncement.target_role)}
-                    </div>
-                    
-                    {(isAdmin || currentUser.id === currentAnnouncement.created_by) && (
-                        <div className="flex gap-2">
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
-                                onClick={() => handleEditClick(currentAnnouncement)}
-                                title="Edit"
-                            >
-                                <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                                onClick={() => handleDelete(currentAnnouncement.id)}
-                                title="Delete"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    )}
-                </div>
-            </div>
-        )}
-      </CardContent>
-    </Card>
+        </div>
+      )}
+    </>
   );
 }
