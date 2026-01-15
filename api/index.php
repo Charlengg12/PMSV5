@@ -926,7 +926,6 @@ function handle_update_project(PDO $pdo, string $id): void
 {
     require_login();
     $body = sanitize_recursive(json_input());
-
     $columns = ensure_projects_schema($pdo);
     $updates = [];
 
@@ -1016,6 +1015,13 @@ function handle_update_project(PDO $pdo, string $id): void
         }
         $updates['documentation_url'] = $documentationUrl;
     }
+    if (array_key_exists('attachments', $body)) {
+    $attachments = $body['attachments'];
+    if (!is_array($attachments)) {
+        $attachments = [];
+    }
+    $updates['attachments'] = json_encode($attachments);
+}
 
     if (!empty($body['broadcastToSupervisors'])) {
         $stmt = $pdo->query("SELECT id FROM users WHERE role = 'supervisor' AND is_active = 1");
