@@ -311,7 +311,7 @@ export function RevenueOverview({
     <div className="space-y-6">
       <div className="text-left">
         <h2 className="text-xl sm:text-2xl font-bold">
-          <DollarSign className="inline-block mr-2 mb-1 text-blue-700" />
+          <PhilippinePeso className="inline-block mr-2 mb-1 text-blue-700" />
           Revenue
           </h2>
         <p className="text-sm text-muted-foreground">
