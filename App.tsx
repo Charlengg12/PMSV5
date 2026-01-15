@@ -17,6 +17,7 @@ import { ReportsManager } from "./components/reports/ReportsManager";
 import { ProjectArchives } from "./components/archives/ProjectArchives";
 import { ClientDashboard } from "./components/client/ClientDashboard";
 import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
+import { ActivityLogs } from "./components/logs/ActivityLogs";
 // import { AdminProjectsManager } from './components/admin/AdminProjectsManager';
 // import { AdminTasksManager } from './components/admin/AdminTasksManager';
 import {
@@ -57,7 +58,8 @@ type ViewType =
   | "project-status"
   | "documentation"
   | "admin-projects"
-  | "admin-tasks";
+  | "admin-tasks"
+  |"activity-logs";
 type AuthView = "main" | "fabricator-signup" | "forgot-password";
 
 export default function App() {
@@ -148,6 +150,7 @@ export default function App() {
         "revenue",
         "assignments",
         "archives",
+        "activity-logs"
       ],
       supervisor: [
         "dashboard",
@@ -743,6 +746,7 @@ export default function App() {
       "documentation",
       "admin-projects",
       "admin-tasks",
+      "activity-logs"
     ] as const;
 
     const handleHashChange = () => {
@@ -988,6 +992,22 @@ export default function App() {
             }
           />
         );
+
+case "activity-logs":
+    // Only allow admins to see this component
+    if (currentUser.role === "admin") {
+      return <ActivityLogs />;
+    }
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <h3 className="text-lg mb-2">Access Restricted</h3>
+          <p className="text-muted-foreground">
+            Activity logs are only available for administrators.
+          </p>
+        </div>
+      </div>
+    );
 
       case "assignments":
         // Redirect fabricators to projects (assignments merged into projects)

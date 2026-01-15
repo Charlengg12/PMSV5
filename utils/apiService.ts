@@ -307,6 +307,10 @@ class ApiService {
             method: 'DELETE',
         });
     }
+    // inside Class ApiService
+    async getLogs(): Promise<ApiResponse<any[]>> {
+        return this.request('/activity-logs');
+    }
 
     async exportReport(reportId: string, supervisorId: string): Promise<ApiResponse<any>> {
         return this.request('/reports/export', {
