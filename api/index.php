@@ -1843,13 +1843,11 @@ function send_client_credentials_email($recipientEmail, $recipientName, $plainPa
         $mail->SMTPAuth   = true;                                   
         
         // --- YOUR CREDENTIALS ---
-        // USE ENV VARIABLES HERE
-        $mail->Host       = $_ENV['SMTP_HOST'] ?? 'smtp.gmail.com';
-        $mail->SMTPAuth   = true;
-        $mail->Username   = $_ENV['SMTP_EMAIL'];
-        $mail->Password   = $_ENV['SMTP_PASSWORD'];
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = $_ENV['SMTP_PORT'] ?? 587;                               
+        $mail->Username   = 'arkquestdev@gmail.com';   // Your Gmail address
+        $mail->Password   = 'hhjgxeprnxljiqdm';         // Your 16-digit App Password
+        
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
+        $mail->Port       = 587;                                    
 
         // --- RECIPIENTS ---
         $mail->setFrom($mail->Username, 'Electronik Hub');
