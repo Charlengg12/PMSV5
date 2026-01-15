@@ -65,13 +65,13 @@ export function Header({
             buttonClassName="h-12 w-12"
           />
 
-          <div className="flex h-12 items-center gap-3 px-3 md:px-4 bg-background border border-input rounded-lg max-w-[220px] md:max-w-none">
+          <div className="flex h-12 items-center gap-3 px-3 md:px-4 bg-background border border-input rounded-lg max-w-[220px md:max-w-none">
             <div className="flex size-8 items-center justify-center rounded-md bg-muted text-primary">
               {getRoleIcon()}
             </div>
             <div className="flex min-w-0 flex-col leading-tight">
               <div className="flex items-center gap-2">
-                <p className="text-xs md:text-sm font-medium truncate">
+                <p className="text-xs md:text-sm font-medium truncate max-w-[100px]">
                   {currentUser.name}
                 </p>
                 <div className="scale-75 md:scale-100">{getRoleBadge()}</div>
