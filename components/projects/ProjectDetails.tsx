@@ -775,17 +775,17 @@ export function ProjectDetails({
                 />
               )}
 
-              {project.attachments && project.attachments.length > 0 ? (
+              {editedProject.attachments && editedProject.attachments.length > 0 ? (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="h-5 w-5" />
-                      Project Files ({project.attachments.length})
+                      Project Files ({editedProject.attachments.length})
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-2">
-                      {project.attachments.map((attachment) => (
+                      {editedProject.attachments.map((attachment) => (
                         <div
                           key={attachment.id}
                           className="flex items-center justify-between p-3 bg-muted rounded"
