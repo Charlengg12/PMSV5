@@ -73,6 +73,17 @@ export function TaskManager({
     });
   };
 
+  const openCreateModal = () => {
+    resetForm();
+    setSelectedTask(null);
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    resetForm();
+    setShowCreateModal(false);
+  };
+
   // Helper to enforce minimum loading time
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -450,7 +461,7 @@ export function TaskManager({
           </p>
         </div>
         {canCreateTask && (
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={openCreateModal}>
             <Plus className="h-4 w-4 mr-2" />
             Create Task
           </Button>
@@ -561,7 +572,7 @@ export function TaskManager({
               {canCreateTask ? "Create your first task to get started." : "No tasks assigned to you yet."}
             </p>
             {canCreateTask && (
-              <Button onClick={() => setShowCreateModal(true)}>
+              <Button onClick={openCreateModal}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Task
               </Button>
@@ -580,7 +591,7 @@ export function TaskManager({
                   <h3 className="text-xl font-semibold">Create New Task</h3>
                   <p className="text-sm text-muted-foreground mt-1">Fill in the task details below</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setShowCreateModal(false)}>
+                <Button variant="ghost" size="icon" onClick={closeCreateModal}>
                   ✕
                 </Button>
               </div>
@@ -679,7 +690,7 @@ export function TaskManager({
               </div>
 
               <div className="flex gap-3 justify-end pt-3 border-t">
-                <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                <Button variant="outline" onClick={closeCreateModal}>
                   Cancel
                 </Button>
                 <Button onClick={handleCreate} disabled={!formData.title.trim() || !formData.projectId}>
@@ -807,3 +818,4 @@ export function TaskManager({
     </div>
   );
 }
+
