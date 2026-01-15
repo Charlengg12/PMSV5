@@ -73,6 +73,23 @@ export function TaskManager({
     });
   };
 
+  const openCreateModal = () => {
+    resetForm();
+    setSelectedTask(null);
+    setShowCreateModal(true);
+  };
+
+  const closeCreateModal = () => {
+    setShowCreateModal(false);
+    resetForm();
+  };
+
+  const closeEditModal = () => {
+    setShowEditModal(false);
+    setSelectedTask(null);
+    resetForm();
+  };
+
   // Helper to enforce minimum loading time
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -223,8 +240,7 @@ export function TaskManager({
           showConfirmButton: false,
           customClass: swalCustomClasses,
         });
-        resetForm();
-        setShowCreateModal(false);
+        closeCreateModal();
       } else {
         Swal.fire({
           icon: "error",
@@ -324,9 +340,7 @@ export function TaskManager({
           showConfirmButton: false,
           customClass: swalCustomClasses,
         });
-        resetForm();
-        setSelectedTask(null);
-        setShowEditModal(false);
+        closeEditModal();
       } else {
         Swal.fire({
           icon: "error",
@@ -539,7 +553,7 @@ export function TaskManager({
           </p>
         </div>
         {canCreateTask && (
-          <Button onClick={() => setShowCreateModal(true)}>
+          <Button onClick={openCreateModal}>
             <Plus className="h-4 w-4 mr-2" />
             Create Task
           </Button>
@@ -650,7 +664,7 @@ export function TaskManager({
               {canCreateTask ? "Create your first task to get started." : "No tasks assigned to you yet."}
             </p>
             {canCreateTask && (
-              <Button onClick={() => setShowCreateModal(true)}>
+              <Button onClick={openCreateModal}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Task
               </Button>
@@ -669,7 +683,7 @@ export function TaskManager({
                   <h3 className="text-xl font-semibold">Create New Task</h3>
                   <p className="text-sm text-muted-foreground mt-1">Fill in the task details below</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setShowCreateModal(false)}>
+                <Button variant="ghost" size="icon" onClick={closeCreateModal}>
                   ✕
                 </Button>
               </div>
@@ -771,7 +785,7 @@ export function TaskManager({
               </div>
 
               <div className="flex gap-3 justify-end pt-3 border-t">
-                <Button variant="outline" onClick={() => setShowCreateModal(false)}>
+                <Button variant="outline" onClick={closeCreateModal}>
                   Cancel
                 </Button>
                 <Button onClick={handleCreate}>
@@ -793,7 +807,7 @@ export function TaskManager({
                   <h3 className="text-xl font-semibold">Edit Task</h3>
                   <p className="text-sm text-muted-foreground mt-1">Update task information</p>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => setShowEditModal(false)}>
+                <Button variant="ghost" size="icon" onClick={closeEditModal}>
                   ✕
                 </Button>
               </div>
@@ -917,7 +931,7 @@ export function TaskManager({
               </div>
 
               <div className="flex gap-3 justify-end pt-3 border-t">
-                <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                <Button variant="outline" onClick={closeEditModal}>
                   Cancel
                 </Button>
                 <Button onClick={handleUpdate} disabled={!isEditComplete}>
