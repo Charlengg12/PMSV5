@@ -34,7 +34,9 @@ import {
   Clock,
   XCircle,
   MessageSquare,
-  Eye, TrendingUp, AlertCircle,
+  Eye,
+  TrendingUp,
+  AlertCircle,
 } from "lucide-react";
 import { Project, User } from "../../types";
 import { CreateProjectForm } from "./CreateProjectForm";
@@ -422,9 +424,9 @@ export function ProjectsGrid({
                 </div>
 
                 {/* --- Role-based financial information (MODIFIED) --- */}
-                
+
                 {/* 1. Fabricator View: Shows personal budget or total team allocation */}
-                {currentUser.role === 'fabricator' && (
+                {currentUser.role === "fabricator" && (
                   <div className="bg-secondary/20 p-2 rounded mt-2">
                     {(() => {
                       const fabricatorBudget = getFabricatorBudget(
@@ -435,12 +437,21 @@ export function ProjectsGrid({
                         return (
                           <div className="space-y-1">
                             <div className="flex justify-between items-center text-xs">
-                                <span className="text-muted-foreground">My Budget:</span>
-                                <span className="font-medium">₱{fabricatorBudget.allocatedAmount.toLocaleString()}</span>
+                              <span className="text-muted-foreground">
+                                My Budget:
+                              </span>
+                              <span className="font-medium">
+                                ₱
+                                {fabricatorBudget.allocatedAmount.toLocaleString()}
+                              </span>
                             </div>
                             <div className="flex justify-between items-center text-xs">
-                                <span className="text-muted-foreground">Spent:</span>
-                                <span>₱{fabricatorBudget.spentAmount.toLocaleString()}</span>
+                              <span className="text-muted-foreground">
+                                Spent:
+                              </span>
+                              <span>
+                                ₱{fabricatorBudget.spentAmount.toLocaleString()}
+                              </span>
                             </div>
                           </div>
                         );
@@ -448,7 +459,12 @@ export function ProjectsGrid({
                         return (
                           <div className="flex items-center gap-2 text-xs">
                             <DollarSign className="h-3 w-3" />
-                            <span>Labor Pool: ₱{Number(project.fabricatorAllocation || 0).toLocaleString()}</span>
+                            <span>
+                              Labor Pool: ₱
+                              {Number(
+                                project.fabricatorAllocation || 0
+                              ).toLocaleString()}
+                            </span>
                           </div>
                         );
                       }
@@ -457,33 +473,47 @@ export function ProjectsGrid({
                 )}
 
                 {/* 2. Supervisor View: Shows Detailed Cost Breakdown */}
-                {currentUser.role === 'supervisor' && (
+                {currentUser.role === "supervisor" && (
                   <div className="bg-muted/30 p-2 rounded text-xs space-y-1 mt-2 border border-border">
                     <div className="flex justify-between font-semibold border-b pb-1 mb-1">
-                       <span>Total Budget:</span>
-                       <span>₱{Number(project.budget).toLocaleString()}</span>
+                      <span>Total Budget:</span>
+                      <span>₱{Number(project.budget).toLocaleString()}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Materials:</span>
-                      <span>₱{Number(project.materialsAllocation || 0).toLocaleString()}</span>
+                      <span>
+                        ₱
+                        {Number(
+                          project.materialsAllocation || 0
+                        ).toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Labor:</span>
-                      <span>₱{Number(project.fabricatorAllocation || 0).toLocaleString()}</span>
+                      <span>
+                        ₱
+                        {Number(
+                          project.fabricatorAllocation || 0
+                        ).toLocaleString()}
+                      </span>
                     </div>
                     <div className="flex justify-between pt-1 border-t mt-1">
-                      <span className="text-muted-foreground">Total Spent:</span>
-                      <span className="text-orange-600">₱{Number(project.spent).toLocaleString()}</span>
+                      <span className="text-muted-foreground">
+                        Total Spent:
+                      </span>
+                      <span className="text-orange-600">
+                        ₱{Number(project.spent).toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 )}
 
                 {/* 3. Admin View: Shows Profit & Loss Statement */}
-                {currentUser.role === 'admin' && (
+                {currentUser.role === "admin" && (
                   <div className="bg-muted/30 p-2 rounded text-xs space-y-1 mt-2">
                     <div className="flex justify-between items-center">
                       <span className="text-muted-foreground flex items-center gap-1">
-                         <TrendingUp className="h-3 w-3" /> Revenue:
+                        <TrendingUp className="h-3 w-3" /> Revenue:
                       </span>
                       <span className="font-medium text-green-700 dark:text-green-400">
                         ₱{Number(project.revenue).toLocaleString()}
@@ -495,17 +525,26 @@ export function ProjectsGrid({
                     </div>
                     <div className="border-t border-dashed my-1"></div>
                     <div className="flex justify-between items-center font-semibold">
-                       <span>Est. Profit:</span>
-                       <span className={(Number(project.revenue) - Number(project.budget)) >= 0 ? "text-green-600" : "text-destructive"}>
-                         ₱{(Number(project.revenue) - Number(project.budget)).toLocaleString()}
-                       </span>
+                      <span>Est. Profit:</span>
+                      <span
+                        className={
+                          Number(project.revenue) - Number(project.budget) >= 0
+                            ? "text-green-600"
+                            : "text-destructive"
+                        }
+                      >
+                        ₱
+                        {(
+                          Number(project.revenue) - Number(project.budget)
+                        ).toLocaleString()}
+                      </span>
                     </div>
                     {/* Small warning if spent exceeds budget */}
                     {Number(project.spent) > Number(project.budget) && (
-                         <div className="flex items-center gap-1 text-destructive mt-1 justify-end">
-                            <AlertCircle className="h-3 w-3" />
-                            <span>Over Budget</span>
-                         </div>
+                      <div className="flex items-center gap-1 text-destructive mt-1 justify-end">
+                        <AlertCircle className="h-3 w-3" />
+                        <span>Over Budget</span>
+                      </div>
                     )}
                   </div>
                 )}

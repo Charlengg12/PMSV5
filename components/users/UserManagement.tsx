@@ -630,7 +630,11 @@ export function UserManagement({
                   setCurrentPage(1);
                 }}
               />
-              <span className="text-xs text-muted-foreground italic font-regular"><span className="text-red-500 font-semibold">Note:</span> You can search by name, email, role, school, employee number, secure ID, phone number, or GCash number.</span>
+              <span className="text-xs text-muted-foreground italic font-regular">
+                <span className="text-red-500 font-semibold">Note:</span> You
+                can search by name, email, role, school, employee number, secure
+                ID, phone number, or GCash number.
+              </span>
             </div>
             <div className="flex items-center gap-3">
               <span className="text-sm text-muted-foreground">Rows</span>
@@ -745,9 +749,9 @@ export function UserManagement({
                         </TableCell>
                       )}
                       <TableCell className="font-medium">
-                        <div>{user.name}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                          <Mail className="h-3.5 w-3.5 shrink-0" />
+                        <div className="capitalize">{user.name}</div>
+                        <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1 italic">
+                          <Mail className="h-3.5 w-3.5 shrink-0 text-blue-700" />
                           <span className="break-all">{user.email}</span>
                         </div>
                       </TableCell>
