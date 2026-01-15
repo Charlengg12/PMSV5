@@ -183,25 +183,25 @@ export function ProjectArchives({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="flex items-center gap-2">
-            <Archive className="h-6 w-6" />
+          <h2 className="flex items-center gap-2 text-xl sm:text-2xl">
+            <Archive className="h-5 w-5 sm:h-6 sm:w-6" />
             Project Archives
           </h2>
           <p className="text-sm text-muted-foreground">
             Completed projects with documentation and cost analysis
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="h-9 px-3 text-sm">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <Badge variant="secondary" className="h-9 px-3 text-sm w-full sm:w-auto text-center">
             {filteredProjects.length} Archived Projects
           </Badge>
           {(currentUser.role === "admin" ||
             currentUser.role === "supervisor") && (
             <Button
               size="sm"
-              className="h-9 px-3"
+              className="h-9 px-3 w-full sm:w-auto"
               onClick={() => setShowCreateDialog(true)}
             >
               <Archive className="h-4 w-4 mr-2" />
