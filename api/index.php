@@ -18,8 +18,11 @@ $path = '/' . trim($path, '/');
 
 // Basic routing
 switch ($method . ' ' . $path) {
+    case 'GET /activity-logs':
+        handle_get_activity_logs($pdo);
+        break;
 
-case 'POST /auth/verify-password':
+    case 'POST /auth/verify-password':
         handle_verify_password($pdo);
         break;
 
@@ -91,7 +94,7 @@ case 'POST /auth/verify-password':
         break;
 
     case 'POST /auth/logout':
-        handle_logout();
+        handle_logout($pdo); // Passed PDO for logging
         break;
 
     case 'GET /auth/me':
@@ -119,12 +122,6 @@ case 'POST /auth/verify-password':
         break;
 
     case 'PUT /projects/:id':
-        // Handle path parameter parsing manually since switch doesn't support regex directly
-        // But for this simple router, we can assume ID is passed in URL logic if we used regex router.
-        // Since we don't have regex router, we might need a different approach or just fallback.
-        // Actually, let's stick to the current pattern.
-        // For simple REST without regex router, we can't easily match /projects/123.
-        // We'll use a hack or expected query param if possible, OR just check prefix.
         handle_update_project($pdo, $path);
         break;
 
@@ -196,6 +193,29 @@ case 'POST /auth/verify-password':
     break;
     }
 
+// ----------------------------------------------------------------------
+// HELPER: Activity Logger
+// ----------------------------------------------------------------------
+function log_activity(PDO $pdo, string $userId, string $action, ?string $description = null): void
+{
+    try {
+        $ip = $_SERVER['REMOTE_ADDR'] ?? 'UNKNOWN';
+        $stmt = $pdo->prepare("INSERT INTO activity_logs (user_id, action, description, ip_address) VALUES (:uid, :act, :desc, :ip)");
+        $stmt->execute([
+            ':uid' => $userId,
+            ':act' => $action,
+            ':desc' => $description,
+            ':ip' => $ip
+        ]);
+    } catch (Exception $e) {
+        // Silently fail if logging fails to not break the app
+        error_log("Logging failed: " . $e->getMessage());
+    }
+}
+
+// ----------------------------------------------------------------------
+// HANDLERS
+// ----------------------------------------------------------------------
 
 function handle_update_task(PDO $pdo, string $id): void
 {
@@ -205,9 +225,8 @@ function handle_update_task(PDO $pdo, string $id): void
     $fields = [];
     $params = [':id' => $id];
 
-    // --- FIX 1: ADD MISSING COLUMNS TO ALLOWED LIST ---
     $allowed = [
-        'project_id',      // Added this so you can move tasks between projects
+        'project_id',
         'title',
         'description',
         'status',
@@ -216,33 +235,25 @@ function handle_update_task(PDO $pdo, string $id): void
         'due_date',
         'estimated_hours',
         'actual_hours',
-        'updated_at'       // Added this so "Mark as Done" updates the time
+        'updated_at'
     ];
 
     foreach ($allowed as $field) {
         $val = null;
-        
-        // Check for direct match
         if (isset($body[$field])) {
             $val = $body[$field];
         }
-
-        // --- FIX 2: MAP FRONTEND NAMES TO DATABASE NAMES ---
         if ($field === 'project_id' && isset($body['projectId'])) $val = $body['projectId'];
         if ($field === 'assigned_to' && isset($body['assignedTo'])) $val = $body['assignedTo'];
         if ($field === 'due_date' && isset($body['dueDate'])) $val = $body['dueDate'];
         if ($field === 'estimated_hours' && isset($body['estimatedHours'])) $val = $body['estimatedHours'];
         if ($field === 'actual_hours' && isset($body['actualHours'])) $val = $body['actualHours'];
-        
-        // Handle updatedAt from React -> updated_at in DB
         if ($field === 'updated_at' && isset($body['updatedAt'])) $val = $body['updatedAt'];
 
         if ($val !== null) {
-            // Handle "unassigned" logic
             if (($field === 'assigned_to' || $field === 'due_date') && $val === "") {
                 $val = null; 
             }
-            
             $fields[] = "$field = :$field";
             $params[":$field"] = $val;
         }
@@ -266,6 +277,9 @@ function handle_update_task(PDO $pdo, string $id): void
              json_response(['error' => 'Task not found or update failed'], 404);
         }
 
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'UPDATE_TASK', "Updated task: " . ($task['title'] ?? $id));
+
         json_response($task);
 
     } catch (PDOException $e) {
@@ -273,28 +287,35 @@ function handle_update_task(PDO $pdo, string $id): void
     }
 }
 
+function handle_delete_task(PDO $pdo, string $id): void
+{
+    require_login();
+    
+    // Fetch title for logging before delete
+    $stmt = $pdo->prepare('SELECT title FROM tasks WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $task = $stmt->fetch();
+    $title = $task['title'] ?? 'Unknown';
 
-// --- User Update Handler ---
+    $stmt = $pdo->prepare('DELETE FROM tasks WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_TASK', "Deleted task: $title");
+
+    json_response(['message' => 'Task deleted']);
+}
+
 function handle_update_user(PDO $pdo, string $id): void
 {
     require_login();
     $body = sanitize_recursive(json_input());
 
-    // Allowed fields to update
-    $allowed = [
-        'name',
-        'email',
-        'role',
-        'school',
-        'phone',
-        'gcash_number',
-        'is_active'
-    ];
+    $allowed = ['name','email','role','school','phone','gcash_number','is_active'];
     $fields = [];
     $params = [':id' => $id];
 
     foreach ($allowed as $field) {
-        // Support camelCase from frontend
         $val = $body[$field] ?? null;
         if ($field === 'gcash_number' && isset($body['gcashNumber'])) $val = $body['gcashNumber'];
         if ($val !== null) {
@@ -317,14 +338,17 @@ function handle_update_user(PDO $pdo, string $id): void
     if (!$user) {
         json_response(['error' => 'User not found after update'], 404);
     }
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'UPDATE_USER', "Updated user details for: " . $user['name']);
+
     json_response(['user' => $user, 'message' => 'User updated successfully']);
 }
-// --- Handler to make user inactive set the is_active = 0 ---
+
 function handle_update_user_inactive(PDO $pdo, string $id): void
 {
     require_login();
-    $body = sanitize_recursive(json_input());
-
+    
     $stmt = $pdo->prepare("UPDATE users SET is_active = 0 WHERE id = :id");
     $stmt->execute([':id' => $id]);
 
@@ -334,14 +358,17 @@ function handle_update_user_inactive(PDO $pdo, string $id): void
     if (!$user) {
         json_response(['error' => 'User not found after update'], 404);
     }
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'DEACTIVATE_USER', "Deactivated user: " . $user['name']);
+
     json_response(['user' => $user, 'message' => 'User updated successfully']);
 }
-// --- Handler to make user active set the is_active = 1 ---
+
 function handle_update_user_active(PDO $pdo, string $id): void
 {
     require_login();
-    $body = sanitize_recursive(json_input());
-
+    
     $stmt = $pdo->prepare("UPDATE users SET is_active = 1 WHERE id = :id");
     $stmt->execute([':id' => $id]);
     $stmt = $pdo->prepare("SELECT id, name, email, role, school, phone, gcash_number, secure_id, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1");
@@ -350,6 +377,10 @@ function handle_update_user_active(PDO $pdo, string $id): void
     if (!$user) {
         json_response(['error' => 'User not found after update'], 404);
     }
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'RESTORE_USER', "Restored user: " . $user['name']);
+
     json_response(['user' => $user, 'message' => 'User updated successfully']);
 }
 // --- Handlers ---
@@ -442,20 +473,14 @@ function handle_create_report($pdo) {
 
     $allowedTypes = ['project', 'task', 'user', 'financial', 'custom'];
     $type = $body['type'] ?? 'custom';
-    if (!in_array($type, $allowedTypes, true)) {
-        $type = 'custom';
-    }
+    if (!in_array($type, $allowedTypes, true)) $type = 'custom';
 
     $allowedStatus = ['draft', 'published', 'archived'];
     $status = $body['status'] ?? 'draft';
-    if (!in_array($status, $allowedStatus, true)) {
-        $status = 'draft';
-    }
+    if (!in_array($status, $allowedStatus, true)) $status = 'draft';
 
     $projectId = $body['project_id'] ?? null;
-    if ($projectId === '') {
-        $projectId = null;
-    }
+    if ($projectId === '') $projectId = null;
 
     $id = 'report_' . time() . '_' . substr(md5(microtime()), 0, 8);
 
@@ -474,6 +499,9 @@ function handle_create_report($pdo) {
             ':project_id' => $projectId,
             ':created_by' => $_SESSION['user_id']
         ]);
+
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'CREATE_REPORT', "Created report: $title");
 
         $stmt = $pdo->prepare("SELECT * FROM reports WHERE id = :id");
         $stmt->execute([':id' => $id]);
@@ -616,6 +644,9 @@ function handle_update_report($pdo, $id = null, $body = null) {
             json_response(['error' => 'Report not found'], 404);
         }
 
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'EDIT_REPORT', "Edited report: " . $report['title']);
+
         json_response($report);
     } catch (PDOException $e) {
         json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
@@ -629,7 +660,7 @@ function handle_edit_report($pdo, $id = null) {
 function handle_delete_report($pdo, $id) {
     require_login();
 
-    $stmt = $pdo->prepare("SELECT created_by FROM reports WHERE id = :id");
+    $stmt = $pdo->prepare("SELECT created_by, title FROM reports WHERE id = :id");
     $stmt->execute([':id' => $id]);
     $report = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -643,6 +674,9 @@ function handle_delete_report($pdo, $id) {
 
     $stmt = $pdo->prepare("DELETE FROM reports WHERE id = :id");
     $stmt->execute([':id' => $id]);
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_REPORT', "Deleted report: " . $report['title']);
 
     json_response(['message' => 'Report deleted successfully']);
 }
@@ -751,7 +785,6 @@ function normalize_project_status(string $status, array $columns): string
     return $enumValues[0] ?? $status;
 }
 
-// Update handle_create_project to support broadcasting to all supervisors
 function handle_create_project(PDO $pdo): void
 {
     require_login();
@@ -848,6 +881,8 @@ function handle_create_project(PDO $pdo): void
             $params[':' . $field] = $value;
         }
         $stmt->execute($params);
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'CREATE_PROJECT', "Created project: $title");
 
         $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
         $stmt->execute([':id' => $projectId]);
@@ -954,7 +989,6 @@ function handle_update_project(PDO $pdo, string $id): void
         $updates['documentation_url'] = $documentationUrl;
     }
 
-    // Handle broadcast to supervisors on update if requested
     if (!empty($body['broadcastToSupervisors'])) {
         $stmt = $pdo->query("SELECT id FROM users WHERE role = 'supervisor' AND is_active = 1");
         $supervisors = $stmt->fetchAll(PDO::FETCH_COLUMN);
@@ -987,15 +1021,27 @@ function handle_update_project(PDO $pdo, string $id): void
     $stmt->execute([':id' => $id]);
     $project = $stmt->fetch();
 
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'UPDATE_PROJECT', "Updated project: " . ($project['title'] ?? $id));
+
     json_response($project);
 }
 
 function handle_delete_project(PDO $pdo, string $id): void
 {
     require_login();
-    // Only admin can delete? For now let supervisor/admin delete
+    
+    $stmt = $pdo->prepare('SELECT title FROM projects WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $project = $stmt->fetch();
+    $title = $project['title'] ?? 'Unknown';
+
     $stmt = $pdo->prepare('DELETE FROM projects WHERE id = :id');
     $stmt->execute([':id' => $id]);
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_PROJECT', "Deleted project: $title");
+
     json_response(['message' => 'Project deleted']);
 }
 
@@ -1010,7 +1056,6 @@ function handle_broadcast_fabricators(PDO $pdo): void
         json_response(['error' => 'Project ID is required'], 400);
     }
 
-    // Get all active fabricators
     $stmt = $pdo->query("SELECT id FROM users WHERE role = 'fabricator' AND is_active = 1");
     $fabricators = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
@@ -1018,7 +1063,6 @@ function handle_broadcast_fabricators(PDO $pdo): void
         json_response(['message' => 'No active fabricators found']);
     }
 
-    // Create pending assignments structures
     $newAssignments = [];
     foreach ($fabricators as $fabId) {
         $newAssignments[] = [
@@ -1032,15 +1076,11 @@ function handle_broadcast_fabricators(PDO $pdo): void
         ];
     }
 
-    // Fetch existing pending assignments to merge or replace?
-    // Usually "Send to All" might append or replace. Let's append but check duplicates.
     $stmt = $pdo->prepare('SELECT pending_assignments FROM projects WHERE id = :id');
     $stmt->execute([':id' => $projectId]);
     $row = $stmt->fetch();
 
     $existing = json_decode($row['pending_assignments'] ?? '[]', true) ?: [];
-
-    // Filter out fabricators already in existing pending
     $existingFabIds = array_column($existing, 'fabricatorId');
     $finalAssignments = $existing;
 
@@ -1057,6 +1097,9 @@ function handle_broadcast_fabricators(PDO $pdo): void
         ':id' => $projectId
     ]);
 
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'BROADCAST', "Broadcasted project $projectId to fabricators");
+
     json_response(['message' => 'Broadcasted to ' . count($fabricators) . ' fabricators', 'assignments' => $finalAssignments]);
 }
 
@@ -1065,8 +1108,8 @@ function handle_respond_assignment(PDO $pdo): void
     require_login();
     $body = sanitize_recursive(json_input());
     $projectId = $body['projectId'] ?? null;
-    $assignmentId = $body['assignmentId'] ?? null; // If accepting specific assignment ID
-    $response = $body['response'] ?? 'accepted'; // accepted or declined
+    $assignmentId = $body['assignmentId'] ?? null; 
+    $response = $body['response'] ?? 'accepted'; 
     $role = $_SESSION['role'];
     $userId = $_SESSION['user_id'];
 
@@ -1074,9 +1117,11 @@ function handle_respond_assignment(PDO $pdo): void
         json_response(['error' => 'Project ID is required'], 400);
     }
 
-    // 1. Handle Supervisor Response (to a pending_supervisors broadcast)
+    // LOGGING CONTEXT (We log at the end, but prepare message here)
+    $logAction = $response === 'accepted' ? 'ACCEPT_PROJECT' : 'DECLINE_PROJECT';
+
+    // 1. Handle Supervisor Response
     if ($role === 'supervisor') {
-        // Check if this supervisor is in pending_supervisors
         $stmt = $pdo->prepare('SELECT pending_supervisors FROM projects WHERE id = :id');
         $stmt->execute([':id' => $projectId]);
         $proj = $stmt->fetch();
@@ -1084,15 +1129,17 @@ function handle_respond_assignment(PDO $pdo): void
 
         if (in_array($userId, $pendingSups)) {
             if ($response === 'accepted') {
-                // Assign this supervisor, clear pending
                 $stmt = $pdo->prepare('UPDATE projects SET supervisor_id = :sid, pending_supervisors = NULL WHERE id = :pid');
                 $stmt->execute([':sid' => $userId, ':pid' => $projectId]);
+                
+                log_activity($pdo, $userId, $logAction, "Supervisor accepted project $projectId");
                 json_response(['message' => 'Project accepted', 'status' => 'accepted']);
             } else {
-                // Declined: remove from pending list
                 $newPending = array_values(array_diff($pendingSups, [$userId]));
                 $stmt = $pdo->prepare('UPDATE projects SET pending_supervisors = :ps WHERE id = :pid');
                 $stmt->execute([':ps' => json_encode($newPending), ':pid' => $projectId]);
+                
+                log_activity($pdo, $userId, $logAction, "Supervisor declined project $projectId");
                 json_response(['message' => 'Project declined', 'status' => 'declined']);
             }
         }
@@ -1108,7 +1155,6 @@ function handle_respond_assignment(PDO $pdo): void
         $currentFabs = json_decode($proj['fabricator_ids'] ?? '[]', true) ?: [];
 
         $foundIndex = -1;
-        // Find assignment by ID or by fabricatorID if ID not sent
         foreach ($pending as $idx => $assign) {
             if (($assignmentId && $assign['id'] === $assignmentId) || $assign['fabricatorId'] === $userId) {
                 $foundIndex = $idx;
@@ -1121,7 +1167,6 @@ function handle_respond_assignment(PDO $pdo): void
                 $pending[$foundIndex]['status'] = 'accepted';
                 $pending[$foundIndex]['respondedAt'] = gmdate('c');
 
-                // Add to main fabricator list if not there
                 if (!in_array($userId, $currentFabs)) {
                     $currentFabs[] = $userId;
                 }
@@ -1130,16 +1175,17 @@ function handle_respond_assignment(PDO $pdo): void
                 $stmt->execute([
                     ':pa' => json_encode($pending),
                     ':fids' => json_encode($currentFabs),
-                    ':status' => 'in-progress', // Set to in-progress when someone accepts? Or keep pending-assignment? Let's say in-progress.
+                    ':status' => 'in-progress',
                     ':id' => $projectId
                 ]);
+                log_activity($pdo, $userId, $logAction, "Fabricator accepted assignment for project $projectId");
             } else {
                 $pending[$foundIndex]['status'] = 'declined';
                 $pending[$foundIndex]['respondedAt'] = gmdate('c');
 
-                // If declined, we just update the status in pending list
                 $stmt = $pdo->prepare('UPDATE projects SET pending_assignments = :pa WHERE id = :id');
                 $stmt->execute([':pa' => json_encode($pending), ':id' => $projectId]);
+                log_activity($pdo, $userId, $logAction, "Fabricator declined assignment for project $projectId");
             }
             json_response(['message' => 'Assignment ' . $response, 'assignments' => $pending]);
         } else {
@@ -1149,6 +1195,7 @@ function handle_respond_assignment(PDO $pdo): void
 
     json_response(['message' => 'No action taken']);
 }
+
 function handle_login(PDO $pdo): void
 {
     $body = sanitize_recursive(json_input());
@@ -1159,8 +1206,6 @@ function handle_login(PDO $pdo): void
         json_response(['error' => 'Identifier and password are required'], 400);
     }
 
-    // Try to match by email, secure_id, employee_number, or id
-    // Also handle 'admin' shorthand mapping to the admin user
     $searchId = $identifier;
     if (strtolower($identifier) === 'admin') {
         $stmt = $pdo->prepare('SELECT * FROM users WHERE role = "admin" AND is_active = 1 LIMIT 1');
@@ -1181,13 +1226,13 @@ function handle_login(PDO $pdo): void
         json_response(['error' => 'Invalid password'], 401);
     }
 
-    // Establish PHP session
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['role'] = $user['role'];
 
-    // For frontend compatibility, still return a token string
-    $token = base64_encode(random_bytes(32));
+    // LOGGING
+    log_activity($pdo, $user['id'], 'LOGIN', 'User logged in successfully');
 
+    $token = base64_encode(random_bytes(32));
     unset($user['password_hash']);
 
     json_response([
@@ -1208,19 +1253,15 @@ function handle_signup(PDO $pdo): void
         json_response(['error' => 'Email, password, and name are required'], 400);
     }
 
-    // Check existing user
     $check = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
     $check->execute([':email' => $email]);
     if ($check->fetch()) {
         json_response(['error' => 'User already exists with this email'], 409);
     }
 
-
-    // Accept role from frontend if valid, default to fabricator
     $allowedRoles = ['fabricator', 'supervisor', 'client', 'admin'];
     $role = isset($body['role']) && in_array($body['role'], $allowedRoles) ? $body['role'] : 'fabricator';
 
-    // Use different secureId prefix for supervisor
     if ($role === 'supervisor') {
         $secureId = 'SUP' . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
     } elseif ($role === 'client') {
@@ -1265,9 +1306,11 @@ function handle_signup(PDO $pdo): void
         'is_active' => 1,
     ];
 
-    // Auto-login new user into session
     $_SESSION['user_id'] = $userId;
     $_SESSION['role'] = 'fabricator';
+
+    // LOGGING
+    log_activity($pdo, $userId, 'SIGNUP', "New user registered: $name ($role)");
 
     $token = base64_encode(random_bytes(32));
 
@@ -1277,8 +1320,13 @@ function handle_signup(PDO $pdo): void
     ]);
 }
 
-function handle_logout(): void
+function handle_logout(PDO $pdo = null): void
 {
+    // Log before destroying session
+    if (isset($_SESSION['user_id']) && $pdo) {
+        log_activity($pdo, $_SESSION['user_id'], 'LOGOUT', 'User logged out');
+    }
+
     $_SESSION = [];
     if (ini_get('session.use_cookies')) {
         $params = session_get_cookie_params();
@@ -1318,8 +1366,6 @@ function handle_get_projects(PDO $pdo): void
     json_response($projects);
 }
 
-
-
 function handle_get_tasks(PDO $pdo): void
 {
     require_login();
@@ -1357,6 +1403,9 @@ function handle_create_task(PDO $pdo): void
         ':actual_hours' => $body['actualHours'] ?? 0,
     ]);
 
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'CREATE_TASK', "Created task: " . $body['title']);
+
     $stmt = $pdo->prepare('SELECT * FROM tasks WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $taskId]);
     $task = $stmt->fetch();
@@ -1376,47 +1425,23 @@ function handle_create_worklog(PDO $pdo): void
 {
     require_login();
 
-    // 1. Direct Input Reading (Bypasses potential helper function issues)
     $rawInput = file_get_contents('php://input');
     $body = json_decode($rawInput, true);
 
-    // 2. DEBUG LOGGING: Writes exactly what the server sees to a file
-    $debugMsg = "--- Worklog Attempt " . date('Y-m-d H:i:s') . " ---\n";
-    $debugMsg .= "Raw Input: " . $rawInput . "\n";
-    $debugMsg .= "Decoded Body: " . print_r($body, true) . "\n";
-    file_put_contents('debug_worklog_error.txt', $debugMsg, FILE_APPEND);
-
-    // 3. Flexible Extraction (Checks camelCase, snake_case, and lowercase)
     $projectId = $body['projectId'] ?? $body['project_id'] ?? $body['projectid'] ?? null;
-    
-    // Check all variations for user ID
     $userId = $body['fabricatorId'] ?? $body['fabricator_id'] ?? $body['userId'] ?? $body['user_id'] ?? $body['userid'] ?? null;
-    
     $date = $body['date'] ?? null;
-    
-    // Check all variations for hours
     $hoursInput = $body['hoursWorked'] ?? $body['hours_worked'] ?? $body['hoursworked'] ?? null;
 
-    // 4. Strict Validation with Specific Error Message
-    // We check !== '' to ensure we don't block 0 hours, but block empty strings
     $hasHours = isset($hoursInput) && $hoursInput !== '';
 
     if (!$projectId || !$userId || !$date || !$hasHours) {
-        // Construct a detailed error message for the frontend
-        $missing = [];
-        if (!$projectId) $missing[] = "projectId (Received: " . print_r($body['projectId'] ?? 'null', true) . ")";
-        if (!$userId) $missing[] = "userId/fabricatorId (Received keys: " . implode(', ', array_keys($body ?: [])) . ")";
-        if (!$date) $missing[] = "date";
-        if (!$hasHours) $missing[] = "hoursWorked";
-
-        // Return 400 with the specific details
         json_response([
-            'error' => "Server Validation Failed. Missing fields: " . implode('; ', $missing),
+            'error' => "Server Validation Failed. Missing fields.",
             'received_data' => $body
         ], 400);
     }
 
-    // 5. Insert Logic
     $hours = floatval($hoursInput);
     $description = $body['description'] ?? null;
     $progressPercentage = $body['progressPercentage'] ?? $body['progress_percentage'] ?? 0;
@@ -1448,7 +1473,9 @@ function handle_create_worklog(PDO $pdo): void
             ':materials_used'    => $materialsUsed,
         ]);
 
-        // Fetch and return the result
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'CREATE_WORKLOG', "Added $hours hours to project $projectId");
+
         $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id');
         $stmt->execute([':id' => $workLogId]);
         $log = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
@@ -1462,6 +1489,7 @@ function handle_create_worklog(PDO $pdo): void
         json_response(['error' => 'Database SQL Error: ' . $e->getMessage()], 500);
     }
 }
+
 function handle_get_materials(PDO $pdo): void
 {
     require_login();
@@ -1496,6 +1524,9 @@ function handle_create_material(PDO $pdo): void
         ':total_cost' => $body['totalCost'] ?? null,
     ]);
 
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'ADD_MATERIAL', "Added material: " . $body['name']);
+
     $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $materialId]);
     $material = $stmt->fetch();
@@ -1512,6 +1543,7 @@ function handle_get_users(PDO $pdo): void
     $users = $stmt->fetchAll();
     json_response($users);
 }
+
 function handle_get_inactive_users(PDO $pdo): void
 {
     require_login();
@@ -1521,8 +1553,6 @@ function handle_get_inactive_users(PDO $pdo): void
     $users = $stmt->fetchAll();
     json_response($users);
 }
-
-
 
 function handle_create_client(PDO $pdo): void
 {
@@ -1567,6 +1597,9 @@ function handle_create_client(PDO $pdo): void
         ':client_project_id' => $projectId,
     ]);
 
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'CREATE_CLIENT', "Created client: $name for project $projectId");
+
     $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $userId]);
     $user = $stmt->fetch();
@@ -1581,7 +1614,6 @@ function handle_verify_password(PDO $pdo): void
     $body = json_input();
     $inputPassword = $body['password'] ?? '';
 
-    // 1. Get the admin's hash from DB
     $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $_SESSION['user_id']]);
     $user = $stmt->fetch();
@@ -1590,13 +1622,33 @@ function handle_verify_password(PDO $pdo): void
         json_response(['success' => false, 'message' => 'User not found'], 404);
     }
 
-    // 2. The Verification
     if (password_verify($inputPassword, $user['password_hash'])) {
-        // MATCH: Return true
         json_response(['success' => true]);
     } else {
-        // NO MATCH: Return false AND a 403 status code
-        // IMPORTANT: The 'success' => false is what our Typescript check looks for
         json_response(['success' => false, 'message' => 'Incorrect password'], 403);
     }
 }
+
+function handle_get_activity_logs(PDO $pdo): void
+{
+    require_login();
+    
+    // Only admins should see logs
+    if ($_SESSION['role'] !== 'admin') {
+        json_response(['error' => 'Unauthorized'], 403);
+    }
+
+    // Join with users table to get the name of the person who did the action
+    $sql = "
+        SELECT l.*, u.name as user_name, u.role as user_role 
+        FROM activity_logs l
+        LEFT JOIN users u ON l.user_id = u.id
+        ORDER BY l.created_at DESC 
+        LIMIT 200
+    ";
+    
+    $stmt = $pdo->query($sql);
+    $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    json_response($logs);
+}
+?>
