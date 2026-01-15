@@ -51,6 +51,7 @@ export function TaskManager({
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+  const [createAttempted, setCreateAttempted] = useState(false);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -76,12 +77,14 @@ export function TaskManager({
   const openCreateModal = () => {
     resetForm();
     setSelectedTask(null);
+    setCreateAttempted(false);
     setShowCreateModal(true);
   };
 
   const closeCreateModal = () => {
     setShowCreateModal(false);
     resetForm();
+    setCreateAttempted(false);
   };
 
   const closeEditModal = () => {
@@ -149,6 +152,8 @@ export function TaskManager({
   };
 
   const editMissingFields = showEditModal ? getMissingFields() : [];
+  const createMissingFields =
+    showCreateModal && createAttempted ? getMissingFields() : [];
   const todayDate = getTodayDateString();
   const editDueDateError = showEditModal
     ? !formData.dueDate
@@ -159,22 +164,28 @@ export function TaskManager({
           ? "Due Date must be today or later"
           : ""
     : "";
+  const createDueDateError = showCreateModal && createAttempted
+    ? !formData.dueDate
+      ? "Due Date Required"
+      : !isValidDateValue(formData.dueDate)
+        ? "Due Date Invalid"
+        : !isOnOrAfterToday(formData.dueDate)
+          ? "Due Date must be today or later"
+          : ""
+    : "";
   const isEditComplete = editMissingFields.length === 0;
+  const isCreateComplete = createMissingFields.length === 0;
   const isEditMissing = (field: string) => editMissingFields.includes(field);
+  const isCreateMissing = (field: string) => createMissingFields.includes(field);
 
 
   // ────────────────────────────────────────────────
   // CREATE TASK
   // ────────────────────────────────────────────────
   const handleCreate = async () => {
+    setCreateAttempted(true);
     const missingFields = getMissingFields();
     if (missingFields.length > 0) {
-      Swal.fire({
-        icon: "warning",
-        title: "Incomplete",
-        text: `All fields should be filled. Missing: ${missingFields.join(", ")}.`,
-        customClass: swalCustomClasses,
-      });
       return;
     }
 
@@ -697,23 +708,31 @@ export function TaskManager({
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Enter task title"
                   />
+                  {isCreateMissing("Task Title") && (
+                    <p className="text-xs text-destructive">Task Title Required</p>
+                  )}
                 </div>
 
                   <div className="space-y-2">
-                    <Label>Description *</Label>
+                  <Label>Description *</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Task details / notes..."
                     rows={3}
                   />
+                  {isCreateMissing("Description") && (
+                    <p className="text-xs text-destructive">Description Required</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Status *</Label>
                     <Select value={formData.status} onValueChange={(v: Task["status"]) => setFormData({ ...formData, status: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isCreateMissing("Status") ? "Status Required" : "Select status"} />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in-progress">In Progress</SelectItem>
@@ -721,12 +740,17 @@ export function TaskManager({
                         <SelectItem value="blocked">Blocked</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isCreateMissing("Status") && (
+                      <p className="text-xs text-destructive">Status Required</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Priority *</Label>
                     <Select value={formData.priority} onValueChange={(v: Task["priority"]) => setFormData({ ...formData, priority: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isCreateMissing("Priority") ? "Priority Required" : "Select priority"} />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
@@ -734,13 +758,18 @@ export function TaskManager({
                         <SelectItem value="urgent">Urgent</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isCreateMissing("Priority") && (
+                      <p className="text-xs text-destructive">Priority Required</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Project *</Label>
                   <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })}>
-                    <SelectTrigger><SelectValue placeholder="Select project" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isCreateMissing("Project") ? "Project Required" : "Select project"} />
+                    </SelectTrigger>
                     <SelectContent>
                       {projects
                         .filter(p => currentUser.role === "admin" || p.supervisorId === currentUser.id)
@@ -749,6 +778,9 @@ export function TaskManager({
                         ))}
                     </SelectContent>
                   </Select>
+                  {isCreateMissing("Project") && (
+                    <p className="text-xs text-destructive">Project Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -757,7 +789,9 @@ export function TaskManager({
                     value={formData.assignedTo}
                     onValueChange={(v) => setFormData({ ...formData, assignedTo: v === "unassigned" ? "unassigned" : v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Select team member" /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isCreateMissing("Assign To") ? "Assign To Required" : "Select team member"} />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users
@@ -769,6 +803,9 @@ export function TaskManager({
                         ))}
                     </SelectContent>
                   </Select>
+                  {isCreateMissing("Assign To") && (
+                    <p className="text-xs text-destructive">Assign To Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -781,6 +818,9 @@ export function TaskManager({
                       setFormData({ ...formData, dueDate: normalizeDateValue(e.target.value) })
                     }
                   />
+                  {createDueDateError && (
+                    <p className="text-xs text-destructive">{createDueDateError}</p>
+                  )}
                 </div>
               </div>
 
@@ -788,7 +828,7 @@ export function TaskManager({
                 <Button variant="outline" onClick={closeCreateModal}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreate}>
+                <Button onClick={handleCreate} disabled={!isCreateComplete}>
                   Create Task
                 </Button>
               </div>
