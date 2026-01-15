@@ -231,12 +231,14 @@ html {
 html body {
   margin-right: 0 !important;
   padding-right: 0 !important;
-  overflow: visible !important;
+  overflow-x: hidden !important;
+  overflow-y: visible !important;
 }
 
 html body[data-scroll-locked] {
   margin-right: 0 !important;
   padding-right: 0 !important;
+  overflow-x: hidden !important;
   overflow-y: scroll !important;
 }
 

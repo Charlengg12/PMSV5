@@ -143,3 +143,11 @@ export interface CompanyRevenue {
   netProfit: number;
   projectsCompleted: number;
 }
+
+// types.ts or apiService.ts
+export interface ApiResponse<T> {
+  data?: T;
+  // It is likely missing the lines below:
+  success?: boolean; 
+  message?: string;
+}

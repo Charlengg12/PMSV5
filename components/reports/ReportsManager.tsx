@@ -332,6 +332,7 @@ export function ReportsManager({
         icon: 'info',
         title: 'No supervisors found',
         text: 'Please add a supervisor account before exporting.',
+        customClass: swalCustomClasses,
       });
       return;
     }
@@ -344,7 +345,21 @@ export function ReportsManager({
       {} as Record<string, string>
     );
 
-    const result = await Swal.fire({
+    // Optional: Add confirmation before showing supervisor selection
+    const confirmResult = await Swal.fire({
+      title: 'Export Report?',
+      html: `You are about to make <strong>"${report.title}"</strong> visible to a supervisor.<br/>Continue?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Continue',
+      cancelButtonText: 'Cancel',
+      customClass: swalCustomClasses,
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    // Show supervisor selection
+    const selectResult = await Swal.fire({
       title: 'Export to supervisor',
       input: 'select',
       inputOptions,
@@ -352,33 +367,54 @@ export function ReportsManager({
       showCancelButton: true,
       confirmButtonText: 'Export',
       cancelButtonText: 'Cancel',
-      reverseButtons: true,
       inputValidator: (value) => {
         if (!value) {
           return 'Please select a supervisor';
         }
         return null;
       },
+      customClass: swalCustomClasses,
     });
 
-    if (!result.isConfirmed || !result.value) return;
+    if (!selectResult.isConfirmed || !selectResult.value) return;
+
+    // ─── Loading starts here ───
+    const loadingSwal = showLoading();
+    const startTime = Date.now();
 
     try {
-      const response = await apiService.exportReport(report.id, result.value);
+      const response = await apiService.exportReport(report.id, selectResult.value);
       if (response.error) throw new Error(response.error);
+
+      // Minimum loading time
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) {
+        await delay(MIN_LOADING_TIME - elapsed);
+      }
+
+      loadingSwal.close();
 
       await Swal.fire({
         icon: 'success',
         title: 'Exported',
         text: 'Report is now visible to the selected supervisor.',
-        timer: 1600,
+        timer: 1800,
         showConfirmButton: false,
+        customClass: swalCustomClasses,
       });
     } catch (err: any) {
+      const elapsed = Date.now() - startTime;
+      if (elapsed < MIN_LOADING_TIME) {
+        await delay(MIN_LOADING_TIME - elapsed);
+      }
+
+      loadingSwal.close();
+
       await Swal.fire({
         icon: 'error',
         title: 'Error',
         text: err.message || 'Failed to export report.',
+        customClass: swalCustomClasses,
       });
     }
   };
