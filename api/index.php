@@ -1,9 +1,14 @@
 <?php
 
+use PHPMailer\PHPMailer\PHPMailer;
+
 // Simple PHP API router to replace Node/Express backend
 
 require __DIR__ . '/config.php';
 
+// LOAD PHPMAILER
+// If using Composer:
+require 'vendor/autoload.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 
@@ -1608,52 +1613,44 @@ function handle_create_client(PDO $pdo): void
 
     $userId = 'user-' . time();
 
-    $stmt = $pdo->prepare(
-        'INSERT INTO users (id, name, email, password_hash, role, school, phone, secure_id, client_project_id, is_active)
-         VALUES (:id, :name, :email, :password_hash, :role, :school, :phone, :secure_id, :client_project_id, 1)'
-    );
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO users (id, name, email, password_hash, role, school, phone, secure_id, client_project_id, is_active)
+             VALUES (:id, :name, :email, :password_hash, :role, :school, :phone, :secure_id, :client_project_id, 1)'
+        );
 
-    $stmt->execute([
-        ':id' => $userId,
-        ':name' => $name,
-        ':email' => $email,
-        ':password_hash' => $passwordHash,
-        ':role' => 'client',
-        ':school' => $projectName,
-        ':phone' => $body['phone'] ?? null,
-        ':secure_id' => $secureId,
-        ':client_project_id' => $projectId,
-    ]);
+        $stmt->execute([
+            ':id' => $userId,
+            ':name' => $name,
+            ':email' => $email,
+            ':password_hash' => $passwordHash,
+            ':role' => 'client',
+            ':school' => $projectName,
+            ':phone' => $body['phone'] ?? null,
+            ':secure_id' => $secureId,
+            ':client_project_id' => $projectId,
+        ]);
 
-    // LOGGING
-    log_activity($pdo, $_SESSION['user_id'], 'CREATE_CLIENT', "Created client: $name for project $projectId");
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'CREATE_CLIENT', "Created client: $name for project $projectId");
 
-    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $userId]);
-    $user = $stmt->fetch();
-    unset($user['password_hash']);
+        // --- NEW CODE START: Send Email ---
+        // We pass the PLAIN password here because once the function ends, we only have the hash.
+        $emailSent = send_client_credentials_email($email, $name, $password, $projectName, $secureId);
+        // --- NEW CODE END ---
 
-    json_response(['user' => $user]);
-}
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $userId]);
+        $user = $stmt->fetch();
+        unset($user['password_hash']);
 
-function handle_verify_password(PDO $pdo): void
-{
-    require_login(); 
-    $body = json_input();
-    $inputPassword = $body['password'] ?? '';
+        // Optionally add email status to response
+        $user['email_sent'] = $emailSent;
 
-    $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $_SESSION['user_id']]);
-    $user = $stmt->fetch();
+        json_response(['user' => $user]);
 
-    if (!$user) {
-        json_response(['success' => false, 'message' => 'User not found'], 404);
-    }
-
-    if (password_verify($inputPassword, $user['password_hash'])) {
-        json_response(['success' => true]);
-    } else {
-        json_response(['success' => false, 'message' => 'Incorrect password'], 403);
+    } catch (Exception $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
     }
 }
 
@@ -1829,4 +1826,56 @@ function handle_delete_announcement(PDO $pdo, string $path): void
 
     log_activity($pdo, $_SESSION['user_id'], 'DELETE_ANNOUNCEMENT', "Deleted announcement ID: $id");
     json_response(['message' => 'Deleted successfully']);
+}
+
+function send_client_credentials_email($recipientEmail, $recipientName, $plainPassword, $projectName, $secureId) {
+    $mail = new PHPMailer(true);
+
+    try {
+        // Server settings
+        // $mail->SMTPDebug = 2;                      // Enable verbose debug output (for testing)
+        $mail->isSMTP();                                            
+        $mail->Host       = 'smtp.gmail.com';         // Set the SMTP server to send through
+        $mail->SMTPAuth   = true;                                   
+        $mail->Username   = 'arkquestdev@gmail.com';   // SMTP username
+        $mail->Password   = 'jzfncfiyjuzvwqch';      // SMTP password (use App Password for Gmail, NOT your login password)
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
+        $mail->Port       = 587;                                    
+
+        // Recipients
+        $mail->setFrom('no-reply@yourcompany.com', 'Project Management System');
+        $mail->addAddress($recipientEmail, $recipientName);
+
+        // Content
+        $mail->isHTML(true);                                  
+        $mail->Subject = 'Your Client Access Credentials - ' . $projectName;
+        
+        $emailBody = "
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>
+            <h2 style='color: #333;'>Welcome to the Project Portal</h2>
+            <p>Hello <strong>$recipientName</strong>,</p>
+            <p>A client account has been created for you to view the progress of project: <strong>$projectName</strong>.</p>
+            
+            <div style='background-color: #f5f8fa; padding: 15px; border-radius: 5px; margin: 20px 0;'>
+                <p style='margin: 5px 0;'><strong>Login URL:</strong> <a href='http://localhost:5173/login'>Click here to login</a></p>
+                <p style='margin: 5px 0;'><strong>Client ID:</strong> $secureId</p>
+                <p style='margin: 5px 0;'><strong>Email:</strong> $recipientEmail</p>
+                <p style='margin: 5px 0;'><strong>Password:</strong> <span style='font-family: monospace; background: #ddd; padding: 2px 5px; border-radius: 3px;'>$plainPassword</span></p>
+            </div>
+
+             
+            <p style='color: #888; font-size: 12px; margin-top: 30px;'>This is an automated message. Please do not reply.</p>
+        </div>
+        ";
+
+        $mail->Body    = $emailBody;
+        $mail->AltBody = "Hello $recipientName,\n\nYour account for $projectName is ready.\n\nClient ID: $secureId\nEmail: $recipientEmail\nPassword: $plainPassword\n\nLogin at: http://localhost:5173/login";
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        // Log the error but don't crash the application
+        error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+        return false;
+    }
 }
