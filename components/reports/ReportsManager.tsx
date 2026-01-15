@@ -1,23 +1,40 @@
-import { useState, useEffect } from 'react';
-import Swal from 'sweetalert2';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Textarea } from '../ui/textarea';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { Plus, Edit, Trash2, Calendar, User, Building, AlertCircle, FileText, Download, Eye } from 'lucide-react';
-import { Project, User as UserType, Task } from '../../types';
-import { apiService } from '../../utils/apiService';
+import { useState, useEffect } from "react";
+import Swal from "sweetalert2";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Textarea } from "../ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Calendar,
+  User,
+  Building,
+  AlertCircle,
+  FileText,
+  Download,
+  Eye,
+} from "lucide-react";
+import { Project, User as UserType, Task } from "../../types";
+import { apiService } from "../../utils/apiService";
 
 interface Report {
   id: string;
   title: string;
   description: string;
-  type: 'project' | 'task' | 'user' | 'financial' | 'custom';
-  status: 'draft' | 'published' | 'archived';
+  type: "project" | "task" | "user" | "financial" | "custom";
+  status: "draft" | "published" | "archived";
   project_id?: string;
   shared_with?: string[];
   created_by: string;
@@ -48,7 +65,7 @@ export function ReportsManager({
   projects,
   users,
   tasks,
-  currentUser
+  currentUser,
 }: ReportsManagerProps) {
   const [reports, setReports] = useState<Report[]>([]);
   const [loading, setLoading] = useState(true);
@@ -62,14 +79,14 @@ export function ReportsManager({
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
 
   const [formData, setFormData] = useState({
-    title: '',
-    description: '',
-    type: 'project' as Report['type'],
-    status: 'draft' as Report['status'],
-    project_id: '',
+    title: "",
+    description: "",
+    type: "project" as Report["type"],
+    status: "draft" as Report["status"],
+    project_id: "",
   });
 
-  const allProjectsValue = '__all__';
+  const allProjectsValue = "__all__";
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -84,8 +101,8 @@ export function ReportsManager({
         const reportData = response.data || response;
         setReports(Array.isArray(reportData) ? reportData : []);
       } catch (err: any) {
-        setError(err.message || 'Failed to load reports');
-        console.error('Reports fetch error:', err);
+        setError(err.message || "Failed to load reports");
+        console.error("Reports fetch error:", err);
       } finally {
         setLoading(false);
       }
@@ -95,20 +112,21 @@ export function ReportsManager({
 
   const resetForm = () => {
     setFormData({
-      title: '',
-      description: '',
-      type: 'project',
-      status: 'draft',
-      project_id: '',
+      title: "",
+      description: "",
+      type: "project",
+      status: "draft",
+      project_id: "",
     });
   };
 
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   const showLoading = () => {
     return Swal.fire({
-      title: 'Processing...',
-      text: 'Please wait a moment',
+      title: "Processing...",
+      text: "Please wait a moment",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -127,12 +145,12 @@ export function ReportsManager({
     if (!title || isCreating) return;
 
     const result = await Swal.fire({
-      title: 'Create this report?',
+      title: "Create this report?",
       html: `Title: <strong>${title}</strong><br>Type: <strong>${formData.type}</strong>`,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Create',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "Create",
+      cancelButtonText: "Cancel",
       customClass: swalCustomClasses,
     });
 
@@ -153,9 +171,9 @@ export function ReportsManager({
       const response = await apiService.createReport(payload);
       if (response.error) throw new Error(response.error);
 
-      if (!response.data) throw new Error('No report returned');
+      if (!response.data) throw new Error("No report returned");
 
-      setReports(prev => [response.data, ...prev]);
+      setReports((prev) => [response.data, ...prev]);
       resetForm();
       setShowCreateForm(false);
 
@@ -165,9 +183,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       Swal.fire({
-        icon: 'success',
-        title: 'Created!',
-        text: 'New report has been created successfully.',
+        icon: "success",
+        title: "Created!",
+        text: "New report has been created successfully.",
         timer: 1800,
         showConfirmButton: false,
         customClass: swalCustomClasses,
@@ -179,9 +197,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       Swal.fire({
-        icon: 'error',
-        title: 'Failed',
-        text: err.message || 'Could not create report.',
+        icon: "error",
+        title: "Failed",
+        text: err.message || "Could not create report.",
         customClass: swalCustomClasses,
       });
     } finally {
@@ -196,12 +214,12 @@ export function ReportsManager({
     if (!selectedReport || !formData.title.trim()) return;
 
     const result = await Swal.fire({
-      title: 'Save changes?',
+      title: "Save changes?",
       html: `Update report: <strong>${formData.title}</strong>`,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Update',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "Update",
+      cancelButtonText: "Cancel",
       customClass: swalCustomClasses,
     });
 
@@ -214,7 +232,8 @@ export function ReportsManager({
       const payload = {
         id: selectedReport.id,
         title: formData.title.trim(),
-        description: formData.description.trim() || selectedReport.description || '',
+        description:
+          formData.description.trim() || selectedReport.description || "",
         type: formData.type,
         status: formData.status,
         project_id: formData.project_id || null,
@@ -222,17 +241,20 @@ export function ReportsManager({
         created_at: selectedReport.created_at,
       };
 
-      const response = await apiService.request(`/reports/${selectedReport.id}`, {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
+      const response = await apiService.request(
+        `/reports/${selectedReport.id}`,
+        {
+          method: "PUT",
+          body: JSON.stringify(payload),
+        }
+      );
 
       if (response.error) throw new Error(response.error);
 
       const updated = response.data || response;
 
-      setReports(prev =>
-        prev.map(r => (r.id === selectedReport.id ? { ...r, ...updated } : r))
+      setReports((prev) =>
+        prev.map((r) => (r.id === selectedReport.id ? { ...r, ...updated } : r))
       );
 
       setSelectedReport(null);
@@ -245,9 +267,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       Swal.fire({
-        icon: 'success',
-        title: 'Updated!',
-        text: 'Report has been successfully updated.',
+        icon: "success",
+        title: "Updated!",
+        text: "Report has been successfully updated.",
         timer: 1800,
         showConfirmButton: false,
         customClass: swalCustomClasses,
@@ -259,9 +281,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       Swal.fire({
-        icon: 'error',
-        title: 'Failed',
-        text: err.message || 'Could not update report.',
+        icon: "error",
+        title: "Failed",
+        text: err.message || "Could not update report.",
         customClass: swalCustomClasses,
       });
     }
@@ -272,12 +294,12 @@ export function ReportsManager({
   // ────────────────────────────────────────────────
   const handleDelete = async (report: Report) => {
     const result = await Swal.fire({
-      title: 'Delete report?',
+      title: "Delete report?",
       html: `This will permanently delete <strong>"${report.title}"</strong>.<br/>This action cannot be undone.`,
-      icon: 'warning',
+      icon: "warning",
       showCancelButton: true,
-      confirmButtonText: 'Delete',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "Delete",
+      cancelButtonText: "Cancel",
       customClass: swalCustomClasses,
     });
 
@@ -290,7 +312,7 @@ export function ReportsManager({
       const response = await apiService.deleteReport(report.id);
       if (response.error) throw new Error(response.error);
 
-      setReports(prev => prev.filter(r => r.id !== report.id));
+      setReports((prev) => prev.filter((r) => r.id !== report.id));
       if (selectedReport?.id === report.id) {
         setSelectedReport(null);
       }
@@ -301,9 +323,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       Swal.fire({
-        icon: 'success',
-        title: 'Deleted',
-        text: 'Report has been deleted successfully.',
+        icon: "success",
+        title: "Deleted",
+        text: "Report has been deleted successfully.",
         timer: 1800,
         showConfirmButton: false,
         customClass: swalCustomClasses,
@@ -315,44 +337,40 @@ export function ReportsManager({
       loadingSwal.close();
 
       Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.message || 'Failed to delete report.',
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to delete report.",
         customClass: swalCustomClasses,
       });
     }
   };
 
-
   const handleExport = async (report: Report) => {
-    const supervisors = users.filter(user => user.role === 'supervisor');
+    const supervisors = users.filter((user) => user.role === "supervisor");
 
     if (supervisors.length === 0) {
       await Swal.fire({
-        icon: 'info',
-        title: 'No supervisors found',
-        text: 'Please add a supervisor account before exporting.',
+        icon: "info",
+        title: "No supervisors found",
+        text: "Please add a supervisor account before exporting.",
         customClass: swalCustomClasses,
       });
       return;
     }
 
-    const inputOptions = supervisors.reduce(
-      (options, supervisor) => {
-        options[supervisor.id] = supervisor.name;
-        return options;
-      },
-      {} as Record<string, string>
-    );
+    const inputOptions = supervisors.reduce((options, supervisor) => {
+      options[supervisor.id] = supervisor.name;
+      return options;
+    }, {} as Record<string, string>);
 
     // Optional: Add confirmation before showing supervisor selection
     const confirmResult = await Swal.fire({
-      title: 'Export Report?',
+      title: "Export Report?",
       html: `You are about to make <strong>"${report.title}"</strong> visible to a supervisor.<br/>Continue?`,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Continue',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "Continue",
+      cancelButtonText: "Cancel",
       customClass: swalCustomClasses,
     });
 
@@ -360,16 +378,16 @@ export function ReportsManager({
 
     // Show supervisor selection
     const selectResult = await Swal.fire({
-      title: 'Export to supervisor',
-      input: 'select',
+      title: "Export to supervisor",
+      input: "select",
       inputOptions,
-      inputPlaceholder: 'Select a supervisor',
+      inputPlaceholder: "Select a supervisor",
       showCancelButton: true,
-      confirmButtonText: 'Export',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "Export",
+      cancelButtonText: "Cancel",
       inputValidator: (value) => {
         if (!value) {
-          return 'Please select a supervisor';
+          return "Please select a supervisor";
         }
         return null;
       },
@@ -383,7 +401,10 @@ export function ReportsManager({
     const startTime = Date.now();
 
     try {
-      const response = await apiService.exportReport(report.id, selectResult.value);
+      const response = await apiService.exportReport(
+        report.id,
+        selectResult.value
+      );
       if (response.error) throw new Error(response.error);
 
       // Minimum loading time
@@ -395,9 +416,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       await Swal.fire({
-        icon: 'success',
-        title: 'Exported',
-        text: 'Report is now visible to the selected supervisor.',
+        icon: "success",
+        title: "Exported",
+        text: "Report is now visible to the selected supervisor.",
         timer: 1800,
         showConfirmButton: false,
         customClass: swalCustomClasses,
@@ -411,9 +432,9 @@ export function ReportsManager({
       loadingSwal.close();
 
       await Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: err.message || 'Failed to export report.',
+        icon: "error",
+        title: "Error",
+        text: err.message || "Failed to export report.",
         customClass: swalCustomClasses,
       });
     }
@@ -423,10 +444,10 @@ export function ReportsManager({
     setSelectedReport(report);
     setFormData({
       title: report.title,
-      description: report.description || '',
+      description: report.description || "",
       type: report.type,
       status: report.status,
-      project_id: report.project_id || '',
+      project_id: report.project_id || "",
     });
     setShowEditForm(true);
   };
@@ -436,58 +457,78 @@ export function ReportsManager({
     setShowViewForm(true);
   };
 
-  const getStatusColor = (status: Report['status']) => {
+  const getStatusColor = (status: Report["status"]) => {
     switch (status) {
-      case 'published': return 'default';
-      case 'draft':     return 'secondary';
-      case 'archived':  return 'outline';
-      default:          return 'outline';
+      case "published":
+        return "default";
+      case "draft":
+        return "secondary";
+      case "archived":
+        return "outline";
+      default:
+        return "outline";
     }
   };
 
-  const getTypeColor = (type: Report['type']) => {
+  const getTypeColor = (type: Report["type"]) => {
     switch (type) {
-      case 'project':   return 'default';
-      case 'task':      return 'secondary';
-      case 'user':      return 'outline';
-      case 'financial': return 'destructive';
-      case 'custom':    return 'outline';
-      default:          return 'outline';
+      case "project":
+        return "default";
+      case "task":
+        return "secondary";
+      case "user":
+        return "outline";
+      case "financial":
+        return "destructive";
+      case "custom":
+        return "outline";
+      default:
+        return "outline";
     }
   };
 
-  const canCreateReport = currentUser.role === 'admin' || currentUser.role === 'supervisor';
+  const canCreateReport =
+    currentUser.role === "admin" || currentUser.role === "supervisor";
   const canEditReport = (report: Report) =>
-    currentUser.role === 'admin' || report.created_by === currentUser.id;
+    currentUser.role === "admin" || report.created_by === currentUser.id;
 
   const getFilteredReports = () => {
-    if (currentUser.role === 'admin') return reports;
-    if (currentUser.role === 'supervisor') {
-      return reports.filter(r =>
-        r.created_by === currentUser.id ||
-        r.status === 'published' ||
-        (r.project_id && projects.some(p => p.id === r.project_id && p.supervisor_id === currentUser.id)) ||
-        (r.shared_with && r.shared_with.includes(currentUser.id))
+    if (currentUser.role === "admin") return reports;
+    if (currentUser.role === "supervisor") {
+      return reports.filter(
+        (r) =>
+          r.created_by === currentUser.id ||
+          r.status === "published" ||
+          (r.project_id &&
+            projects.some(
+              (p) => p.id === r.project_id && p.supervisor_id === currentUser.id
+            )) ||
+          (r.shared_with && r.shared_with.includes(currentUser.id))
       );
     }
-    return reports.filter(r => r.status === 'published');
+    return reports.filter((r) => r.status === "published");
   };
 
   const filteredReports = getFilteredReports();
 
   return (
     <div className="space-y-6 relative">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Reports & Analytics</h2>
-          <p className="text-sm text-muted-foreground">
+          <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
+            Reports & Analytics
+          </h2>
+          <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
             Generate and manage comprehensive project reports
           </p>
         </div>
         {canCreateReport && (
-          <Button onClick={() => setShowCreateForm(true)}>
+          <Button
+            onClick={() => setShowCreateForm(true)}
+            className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm md:text-base"
+          >
             <Plus className="h-4 w-4 mr-2" />
-            Create Report
+            <span className="inline">Create Report</span>
           </Button>
         )}
       </div>
@@ -512,12 +553,17 @@ export function ReportsManager({
 
           <TabsContent value="all" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredReports.map(report => (
-                <Card key={report.id} className="hover:shadow-md transition-shadow">
+              {filteredReports.map((report) => (
+                <Card
+                  key={report.id}
+                  className="hover:shadow-md transition-shadow"
+                >
                   <CardHeader className="pb-3">
                     <div className="flex justify-between items-start">
                       <div className="flex-1">
-                        <CardTitle className="text-lg">{report.title}</CardTitle>
+                        <CardTitle className="text-lg">
+                          {report.title}
+                        </CardTitle>
                         {report.description && (
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                             {report.description}
@@ -540,26 +586,35 @@ export function ReportsManager({
                         <div className="flex items-center gap-2">
                           <Building className="h-4 w-4 text-muted-foreground" />
                           <span className="truncate">
-                            {projects.find(p => p.id === report.project_id)?.name || 'Unknown'}
+                            {projects.find((p) => p.id === report.project_id)
+                              ?.name || "Unknown"}
                           </span>
                         </div>
                       )}
                       <div className="flex items-center gap-2">
                         <User className="h-4 w-4 text-muted-foreground" />
                         <span>
-                          Created by: {users.find(u => u.id === report.created_by)?.name || 'Unknown'}
+                          Created by:{" "}
+                          {users.find((u) => u.id === report.created_by)
+                            ?.name || "Unknown"}
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-muted-foreground" />
                         <span>
-                          Created: {new Date(report.created_at).toLocaleDateString('en-PH')}
+                          Created:{" "}
+                          {new Date(report.created_at).toLocaleDateString(
+                            "en-PH"
+                          )}
                         </span>
                         {report.updated_at !== report.created_at && (
                           <>
                             <span>•</span>
                             <span>
-                              Updated: {new Date(report.updated_at).toLocaleDateString('en-PH')}
+                              Updated:{" "}
+                              {new Date(report.updated_at).toLocaleDateString(
+                                "en-PH"
+                              )}
                             </span>
                           </>
                         )}
@@ -567,7 +622,11 @@ export function ReportsManager({
                     </div>
 
                     <div className="flex flex-wrap gap-2 mt-5">
-                      <Button variant="outline" size="sm" onClick={() => handleView(report)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleView(report)}
+                      >
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
@@ -581,7 +640,11 @@ export function ReportsManager({
                       </Button>
                       {canEditReport(report) && (
                         <>
-                          <Button variant="outline" size="sm" onClick={() => handleEdit(report)}>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEdit(report)}
+                          >
                             <Edit className="h-4 w-4 mr-2" />
                             Edit
                           </Button>
@@ -652,12 +715,17 @@ export function ReportsManager({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Create New Report</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowCreateForm(false)}
+                >
                   ×
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mb-6">
-                Generate a comprehensive report with customizable filters and data.
+                Generate a comprehensive report with customizable filters and
+                data.
               </p>
 
               <div className="space-y-6">
@@ -666,7 +734,9 @@ export function ReportsManager({
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="Enter report title"
                   />
                 </div>
@@ -676,7 +746,9 @@ export function ReportsManager({
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="Enter report description"
                     rows={3}
                   />
@@ -687,7 +759,9 @@ export function ReportsManager({
                     <Label>Type</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={v => setFormData({ ...formData, type: v as Report['type'] })}
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, type: v as Report["type"] })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -696,7 +770,9 @@ export function ReportsManager({
                         <SelectItem value="project">Project Report</SelectItem>
                         <SelectItem value="task">Task Report</SelectItem>
                         <SelectItem value="user">User Report</SelectItem>
-                        <SelectItem value="financial">Financial Report</SelectItem>
+                        <SelectItem value="financial">
+                          Financial Report
+                        </SelectItem>
                         <SelectItem value="custom">Custom Report</SelectItem>
                       </SelectContent>
                     </Select>
@@ -706,7 +782,12 @@ export function ReportsManager({
                     <Label>Status</Label>
                     <Select
                       value={formData.status}
-                      onValueChange={v => setFormData({ ...formData, status: v as Report['status'] })}
+                      onValueChange={(v) =>
+                        setFormData({
+                          ...formData,
+                          status: v as Report["status"],
+                        })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -720,21 +801,32 @@ export function ReportsManager({
                   </div>
                 </div>
 
-                {formData.type === 'project' && (
+                {formData.type === "project" && (
                   <div className="space-y-2">
                     <Label>Associated Project (optional)</Label>
                     <Select
                       value={formData.project_id || allProjectsValue}
-                      onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
+                      onValueChange={(v) =>
+                        setFormData({
+                          ...formData,
+                          project_id: v === allProjectsValue ? "" : v,
+                        })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select project or leave blank for all" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={allProjectsValue}>All Projects</SelectItem>
+                        <SelectItem value={allProjectsValue}>
+                          All Projects
+                        </SelectItem>
                         {projects
-                          .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
-                          .map(project => (
+                          .filter(
+                            (p) =>
+                              currentUser.role === "admin" ||
+                              p.supervisor_id === currentUser.id
+                          )
+                          .map((project) => (
                             <SelectItem key={project.id} value={project.id}>
                               {project.name}
                             </SelectItem>
@@ -746,14 +838,17 @@ export function ReportsManager({
               </div>
 
               <div className="flex justify-end gap-3 mt-8">
-                <Button variant="outline" onClick={() => setShowCreateForm(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowCreateForm(false)}
+                >
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreate}
                   disabled={!formData.title.trim() || isCreating}
                 >
-                  {isCreating ? 'Creating...' : 'Create Report'}
+                  {isCreating ? "Creating..." : "Create Report"}
                 </Button>
               </div>
             </div>
@@ -770,11 +865,15 @@ export function ReportsManager({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Edit Report</h2>
-                <Button variant="ghost" size="icon" onClick={() => {
-                  setShowEditForm(false);
-                  setSelectedReport(null);
-                  resetForm();
-                }}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setSelectedReport(null);
+                    resetForm();
+                  }}
+                >
                   ×
                 </Button>
               </div>
@@ -788,7 +887,9 @@ export function ReportsManager({
                   <Input
                     id="edit-title"
                     value={formData.title}
-                    onChange={e => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="Enter report title"
                   />
                 </div>
@@ -798,7 +899,9 @@ export function ReportsManager({
                   <Textarea
                     id="edit-description"
                     value={formData.description}
-                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="Enter report description"
                     rows={3}
                   />
@@ -809,7 +912,9 @@ export function ReportsManager({
                     <Label>Type</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={v => setFormData({ ...formData, type: v as Report['type'] })}
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, type: v as Report["type"] })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -818,7 +923,9 @@ export function ReportsManager({
                         <SelectItem value="project">Project Report</SelectItem>
                         <SelectItem value="task">Task Report</SelectItem>
                         <SelectItem value="user">User Report</SelectItem>
-                        <SelectItem value="financial">Financial Report</SelectItem>
+                        <SelectItem value="financial">
+                          Financial Report
+                        </SelectItem>
                         <SelectItem value="custom">Custom Report</SelectItem>
                       </SelectContent>
                     </Select>
@@ -828,7 +935,12 @@ export function ReportsManager({
                     <Label>Status</Label>
                     <Select
                       value={formData.status}
-                      onValueChange={v => setFormData({ ...formData, status: v as Report['status'] })}
+                      onValueChange={(v) =>
+                        setFormData({
+                          ...formData,
+                          status: v as Report["status"],
+                        })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -842,21 +954,32 @@ export function ReportsManager({
                   </div>
                 </div>
 
-                {formData.type === 'project' && (
+                {formData.type === "project" && (
                   <div className="space-y-2">
                     <Label>Associated Project (optional)</Label>
                     <Select
                       value={formData.project_id || allProjectsValue}
-                      onValueChange={v => setFormData({ ...formData, project_id: v === allProjectsValue ? '' : v })}
+                      onValueChange={(v) =>
+                        setFormData({
+                          ...formData,
+                          project_id: v === allProjectsValue ? "" : v,
+                        })
+                      }
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select project or leave blank" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={allProjectsValue}>All Projects</SelectItem>
+                        <SelectItem value={allProjectsValue}>
+                          All Projects
+                        </SelectItem>
                         {projects
-                          .filter(p => currentUser.role === 'admin' || p.supervisor_id === currentUser.id)
-                          .map(project => (
+                          .filter(
+                            (p) =>
+                              currentUser.role === "admin" ||
+                              p.supervisor_id === currentUser.id
+                          )
+                          .map((project) => (
                             <SelectItem key={project.id} value={project.id}>
                               {project.name}
                             </SelectItem>
@@ -898,8 +1021,14 @@ export function ReportsManager({
           <div className="bg-background border rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">{selectedReport.title}</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowViewForm(false)}>
+                <h2 className="text-xl font-semibold">
+                  {selectedReport.title}
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowViewForm(false)}
+                >
                   ×
                 </Button>
               </div>
@@ -923,13 +1052,17 @@ export function ReportsManager({
                   <div>
                     <p className="text-muted-foreground">Created</p>
                     <p className="font-medium mt-1">
-                      {new Date(selectedReport.created_at).toLocaleString('en-PH')}
+                      {new Date(selectedReport.created_at).toLocaleString(
+                        "en-PH"
+                      )}
                     </p>
                   </div>
                   <div>
                     <p className="text-muted-foreground">Last Updated</p>
                     <p className="font-medium mt-1">
-                      {new Date(selectedReport.updated_at).toLocaleString('en-PH')}
+                      {new Date(selectedReport.updated_at).toLocaleString(
+                        "en-PH"
+                      )}
                     </p>
                   </div>
                 </div>
@@ -937,15 +1070,25 @@ export function ReportsManager({
                 <div className="border rounded-lg p-8 bg-muted/40 min-h-[240px] flex items-center justify-center text-muted-foreground">
                   <div className="text-center">
                     <FileText className="h-12 w-12 mx-auto mb-4 opacity-70" />
-                    <p className="text-lg font-medium mb-1">Report Preview Area</p>
-                    <p className="text-sm">Report content, charts, and detailed analytics will appear here</p>
-                    <p className="text-xs mt-3 opacity-70">(Implementation pending)</p>
+                    <p className="text-lg font-medium mb-1">
+                      Report Preview Area
+                    </p>
+                    <p className="text-sm">
+                      Report content, charts, and detailed analytics will appear
+                      here
+                    </p>
+                    <p className="text-xs mt-3 opacity-70">
+                      (Implementation pending)
+                    </p>
                   </div>
                 </div>
               </div>
 
               <div className="flex justify-end mt-8">
-                <Button variant="outline" onClick={() => setShowViewForm(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowViewForm(false)}
+                >
                   Close
                 </Button>
               </div>
