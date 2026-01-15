@@ -320,6 +320,33 @@ class ApiService {
         });
     }
     
+
+   // Announcements
+    async getAnnouncements(): Promise<ApiResponse<any[]>> {
+        return this.request('/announcements');
+    }
+
+    // Updated to accept array of roles
+    async createAnnouncement(data: { title: string; content: string; targetRoles: string[] }): Promise<ApiResponse<any>> {
+        return this.request('/announcements', {
+            method: 'POST',
+            body: JSON.stringify(data),
+        });
+    }
+
+    // NEW: Update method
+    async updateAnnouncement(id: number, data: { title?: string; content?: string; targetRoles?: string[] }): Promise<ApiResponse<any>> {
+        return this.request(`/announcements/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(data),
+        });
+    }
+
+    async deleteAnnouncement(id: number): Promise<ApiResponse<any>> {
+        return this.request(`/announcements/${id}`, {
+            method: 'DELETE',
+        });
+    }
 }
 
 export const apiService = new ApiService();

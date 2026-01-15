@@ -18,6 +18,24 @@ $path = '/' . trim($path, '/');
 
 // Basic routing
 switch ($method . ' ' . $path) {
+
+
+    // case 'PUT /announcements/:id':
+    //     handle_update_announcement($pdo, $path);
+    //     break;
+
+case 'GET /announcements':
+        handle_get_announcements($pdo);
+        break;
+
+    case 'POST /announcements':
+        handle_create_announcement($pdo);
+        break;
+
+    // case 'DELETE /announcements/:id':
+    //     handle_delete_announcement($pdo, $path);
+    //     break;
+
     case 'GET /activity-logs':
         handle_get_activity_logs($pdo);
         break;
@@ -187,6 +205,16 @@ switch ($method . ' ' . $path) {
     } elseif ($method === 'DELETE' && preg_match('#^(reports/([^/]+)|/reports/([^/]+))$#', $path, $m)) {
         $id = $m[2] ?? $m[3] ?? null;
         if ($id) handle_delete_report($pdo, $id);
+        } elseif (preg_match('#^PUT /users/active/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_user_active($pdo, $matches[1]);
+
+   
+    } elseif (preg_match('#^PUT /announcements/(\d+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_announcement($pdo, $path);
+    } elseif (preg_match('#^DELETE /announcements/(\d+)$#', $method . ' ' . $path, $matches)) {
+        handle_delete_announcement($pdo, $path);
+
+    } elseif ($method === 'DELETE' && preg_match('#^/reports/([^/]+)$#', $path, $m)) {
     } else {
         json_response(['error' => 'Not found'], 404);
     }
@@ -1651,4 +1679,154 @@ function handle_get_activity_logs(PDO $pdo): void
     $logs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     json_response($logs);
 }
-?>
+
+// ----------------------------------------------------------------------
+// ANNOUNCEMENT HANDLERS
+// ----------------------------------------------------------------------
+
+function handle_get_announcements(PDO $pdo): void
+{
+    require_login();
+    $currentUserRole = $_SESSION['role'];
+
+    // Fetch all recent announcements
+    $sql = "
+        SELECT a.*, u.name as author_name 
+        FROM announcements a
+        JOIN users u ON a.created_by = u.id
+        ORDER BY a.created_at DESC
+        LIMIT 50
+    ";
+
+    $stmt = $pdo->query($sql);
+    $all = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $filtered = [];
+
+    // Filter in PHP because JSON querying varies by SQL version
+    foreach ($all as $ann) {
+        // Decode the target roles (e.g., '["admin", "supervisor"]')
+        $targets = json_decode($ann['target_role'] ?? '[]', true);
+        if (!is_array($targets)) $targets = [];
+
+        // Logic: Show if:
+        // 1. User is Admin (sees everything)
+        // 2. Targets include 'all'
+        // 3. Targets include the user's specific role
+        if ($currentUserRole === 'admin' || in_array('all', $targets) || in_array($currentUserRole, $targets)) {
+            $filtered[] = $ann;
+        }
+    }
+
+    json_response($filtered);
+}
+
+function handle_create_announcement(PDO $pdo): void
+{
+    require_login();
+    
+    if (!in_array($_SESSION['role'], ['admin', 'supervisor'])) {
+        json_response(['error' => 'Unauthorized'], 403);
+    }
+
+    $body = sanitize_recursive(json_input());
+    
+    if (empty($body['title']) || empty($body['content'])) {
+        json_response(['error' => 'Title and content are required'], 400);
+    }
+
+    // Expecting an array of roles from frontend, e.g., ["admin", "fabricator"]
+    $roles = $body['targetRoles'] ?? ['all'];
+    $rolesJson = json_encode($roles);
+
+    $stmt = $pdo->prepare("INSERT INTO announcements (title, content, created_by, target_role) VALUES (:title, :content, :uid, :roles)");
+    $stmt->execute([
+        ':title' => $body['title'],
+        ':content' => $body['content'],
+        ':uid' => $_SESSION['user_id'],
+        ':roles' => $rolesJson
+    ]);
+
+    log_activity($pdo, $_SESSION['user_id'], 'POST_ANNOUNCEMENT', "Posted: " . $body['title']);
+    json_response(['message' => 'Posted successfully']);
+}
+
+function handle_update_announcement(PDO $pdo, string $path): void
+{
+    require_login();
+    
+    // Only Admin can edit ANY post. Supervisors can only edit their own? 
+    // Requirement says: "Admin can edit announcement of other users"
+    
+    if (preg_match('#/announcements/(\d+)#', $path, $matches)) {
+        $id = $matches[1];
+    } else {
+        json_response(['error' => 'Invalid ID'], 400);
+    }
+
+    $body = sanitize_recursive(json_input());
+    
+    // Check permission
+    if ($_SESSION['role'] !== 'admin') {
+        // If not admin, check if they own it
+        $check = $pdo->prepare("SELECT created_by FROM announcements WHERE id = :id");
+        $check->execute([':id' => $id]);
+        $owner = $check->fetchColumn();
+        if ($owner !== $_SESSION['user_id']) {
+            json_response(['error' => 'Unauthorized'], 403);
+        }
+    }
+
+    $fields = [];
+    $params = [':id' => $id];
+
+    if (!empty($body['title'])) {
+        $fields[] = "title = :title";
+        $params[':title'] = $body['title'];
+    }
+    if (!empty($body['content'])) {
+        $fields[] = "content = :content";
+        $params[':content'] = $body['content'];
+    }
+    if (!empty($body['targetRoles'])) {
+        $fields[] = "target_role = :roles";
+        $params[':roles'] = json_encode($body['targetRoles']);
+    }
+
+    if (empty($fields)) {
+        json_response(['message' => 'No changes']);
+    }
+
+    $sql = "UPDATE announcements SET " . implode(', ', $fields) . " WHERE id = :id";
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+
+    log_activity($pdo, $_SESSION['user_id'], 'EDIT_ANNOUNCEMENT', "Edited announcement ID: $id");
+    json_response(['message' => 'Updated successfully']);
+}
+
+function handle_delete_announcement(PDO $pdo, string $path): void
+{
+    require_login();
+    
+    if (preg_match('#/announcements/(\d+)#', $path, $matches)) {
+        $id = $matches[1];
+    } else {
+        json_response(['error' => 'Invalid ID'], 400);
+    }
+
+    // Admin can delete anyone's. Supervisors can delete their own.
+    if ($_SESSION['role'] !== 'admin') {
+        $check = $pdo->prepare("SELECT created_by FROM announcements WHERE id = :id");
+        $check->execute([':id' => $id]);
+        $owner = $check->fetchColumn();
+        if ($owner !== $_SESSION['user_id']) {
+            json_response(['error' => 'Unauthorized'], 403);
+        }
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM announcements WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_ANNOUNCEMENT', "Deleted announcement ID: $id");
+    json_response(['message' => 'Deleted successfully']);
+}
