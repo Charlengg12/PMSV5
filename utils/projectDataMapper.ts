@@ -12,6 +12,30 @@ export function mapProjectFromBackend(raw: any): Project {
   const start = raw.start_date || raw.startDate || null;
   const end = raw.end_date || raw.due_date || raw.endDate || null;
 
+  const pendingAssignments = Array.isArray(raw.pending_assignments)
+    ? raw.pending_assignments
+    : typeof raw.pending_assignments === 'string'
+      ? safeParseJsonArray(raw.pending_assignments)
+      : Array.isArray(raw.pendingAssignments)
+        ? raw.pendingAssignments
+        : [];
+
+  const pendingSupervisors = Array.isArray(raw.pending_supervisors)
+    ? raw.pending_supervisors
+    : typeof raw.pending_supervisors === 'string'
+      ? safeParseJsonArray(raw.pending_supervisors)
+      : Array.isArray(raw.pendingSupervisors)
+        ? raw.pendingSupervisors
+        : [];
+
+  const fabricatorBudgets = Array.isArray(raw.fabricator_budgets)
+    ? raw.fabricator_budgets
+    : typeof raw.fabricator_budgets === 'string'
+      ? safeParseJsonArray(raw.fabricator_budgets)
+      : Array.isArray(raw.fabricatorBudgets)
+        ? raw.fabricatorBudgets
+        : undefined;
+
   return {
     id: raw.id,
     name: raw.name || raw.title || '',
@@ -26,13 +50,18 @@ export function mapProjectFromBackend(raw: any): Project {
     budget: toNumberOrZero(raw.budget),
     spent: toNumberOrZero(raw.spent),
     revenue: toNumberOrZero(raw.revenue),
+    fabricatorAllocation: toNumberOrZero(raw.fabricator_allocation ?? raw.fabricatorAllocation),
+    materialsAllocation: toNumberOrZero(raw.materials_allocation ?? raw.materialsAllocation),
+    supervisorAllocation: toNumberOrZero(raw.supervisor_allocation ?? raw.supervisorAllocation),
+    companyAllocation: toNumberOrZero(raw.company_allocation ?? raw.companyAllocation),
     clientName: raw.client_name || raw.clientName || '',
     documentationUrl: raw.documentation_url || raw.documentationUrl || undefined,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : undefined,
-    fabricatorBudgets: Array.isArray(raw.fabricatorBudgets) ? raw.fabricatorBudgets : undefined,
+    fabricatorBudgets,
     createdBy: raw.created_by || raw.createdBy || '',
     createdAt: normalizeDateString(raw.created_at || raw.createdAt || new Date().toISOString()),
-    pendingAssignments: Array.isArray(raw.pendingAssignments) ? raw.pendingAssignments : undefined,
+    pendingAssignments: pendingAssignments.length > 0 ? pendingAssignments : undefined,
+    pendingSupervisors: pendingSupervisors.length > 0 ? pendingSupervisors : undefined,
   } as Project;
 }
 

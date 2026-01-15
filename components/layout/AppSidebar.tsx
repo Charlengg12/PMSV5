@@ -22,6 +22,7 @@ import {
   Eye,
   Download,
   LogOut,
+  Activity, // <--- Added Activity Icon
 } from "lucide-react";
 import { User } from "../../types";
 import { useSidebar } from "../ui/sidebar";
@@ -44,6 +45,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   const menuLinkClassName = isCollapsedDesktop
     ? "flex items-center justify-center px-2 py-2"
     : "flex items-center gap-3 px-3 py-2.5";
+
   // SweetAlert logout confirmation
   const handleLogoutClick = async () => {
     const result = await Swal.fire({
@@ -72,6 +74,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       }, 3000); // 3s delay for spinner effect
     }
   };
+
   // Base navigation items for all users
   const navigationItems = useMemo(() => {
     const baseItems = [
@@ -116,6 +119,13 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
           url: "#reports",
           icon: BarChart3,
         },
+        // --- ADDED ACTIVITY LOGS HERE ---
+        {
+          title: "Activity Logs",
+          url: "#activity-logs",
+          icon: Activity,
+        },
+        // -------------------------------
         {
           title: "Settings",
           url: "#settings",
@@ -205,7 +215,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   return (
     <>
       {showLogoutSpinner && <CustomLogoutSpinner />}
-      <Sidebar className="border-r-0" collapsible="icon">
+      <Sidebar className="border-r-0 h-screen min-h-screen" collapsible="icon">
         <SidebarContent className="gap-0 bg-sidebar no-scrollbar">
           <div className="border-b border-sidebar-border px-4 py-3">
             <CompanyLogo
