@@ -18,6 +18,11 @@ $path = '/' . trim($path, '/');
 
 // Basic routing
 switch ($method . ' ' . $path) {
+
+case 'POST /auth/verify-password':
+        handle_verify_password($pdo);
+        break;
+
     case 'GET /health':
         json_response([
             'status' => 'ok',
@@ -735,7 +740,8 @@ function handle_update_project(PDO $pdo, string $id): void
         'client_id',
         'spent', 
         'revenue',
-        'supervisor_id'
+        'supervisor_id',
+        'documentationUrl'
     ];
 
     foreach ($allowed as $field) {
@@ -787,7 +793,6 @@ function handle_update_project(PDO $pdo, string $id): void
     $stmt->execute($params);
 
     $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
-
     // the foreach is to handle values meant for ENUM columns (i.e. status)
     foreach ($params as $key => $val) {
         $stmt->bindValue($key, $val, PDO::PARAM_STR);
@@ -1383,4 +1388,30 @@ function handle_create_client(PDO $pdo): void
     unset($user['password_hash']);
 
     json_response(['user' => $user]);
+}
+
+function handle_verify_password(PDO $pdo): void
+{
+    require_login(); 
+    $body = json_input();
+    $inputPassword = $body['password'] ?? '';
+
+    // 1. Get the admin's hash from DB
+    $stmt = $pdo->prepare('SELECT password_hash FROM users WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $_SESSION['user_id']]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        json_response(['success' => false, 'message' => 'User not found'], 404);
+    }
+
+    // 2. The Verification
+    if (password_verify($inputPassword, $user['password_hash'])) {
+        // MATCH: Return true
+        json_response(['success' => true]);
+    } else {
+        // NO MATCH: Return false AND a 403 status code
+        // IMPORTANT: The 'success' => false is what our Typescript check looks for
+        json_response(['success' => false, 'message' => 'Incorrect password'], 403);
+    }
 }
