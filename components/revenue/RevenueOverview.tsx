@@ -27,11 +27,14 @@ const MIN_LOADING_TIME = 2000; // 2 seconds minimum for loading state
 const formatCompactAmount = (value: number) => {
   if (!Number.isFinite(value)) return "0";
   const absValue = Math.abs(value);
-  if (absValue >= 1_000_000) {
-    const scaled = Math.trunc((value / 1_000_000) * 10) / 10;
+  const formatScaled = (denominator: number, suffix: string) => {
+    const scaled = Math.trunc((value / denominator) * 10) / 10;
     const formatted = scaled.toFixed(1).replace(/\.0$/, "");
-    return `${formatted} M`;
-  }
+    return `${formatted} ${suffix}`;
+  };
+  if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
+  if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
+  if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
   return Math.trunc(value).toLocaleString();
 };
 
