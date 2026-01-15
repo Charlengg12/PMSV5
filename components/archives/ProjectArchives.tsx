@@ -101,7 +101,7 @@ export function ProjectArchives({
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  // const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const isArchivableProject = (project: Project) => {
     const normalizedStatus = safeText(project.status).toLowerCase().trim();
@@ -200,17 +200,6 @@ export function ProjectArchives({
           >
             {filteredProjects.length} Archived Projects
           </Badge>
-          {(currentUser.role === "admin" ||
-            currentUser.role === "supervisor") && (
-            <Button
-              size="sm"
-              className="h-9 px-3 w-full sm:w-auto"
-              onClick={() => setShowCreateDialog(true)}
-            >
-              <Archive className="h-4 w-4 mr-2" />
-              Add Record
-            </Button>
-          )}
         </div>
       </div>
 
@@ -852,35 +841,6 @@ export function ProjectArchives({
           }}
         />
       )}
-
-      {/* Delete Confirmation */}
-      {/* Create Archive Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Archived Project</DialogTitle>
-            <DialogDescription>
-              Create a new historical project record for the archives.
-            </DialogDescription>
-          </DialogHeader>
-          <CreateProjectForm
-            users={users}
-            currentUser={currentUser}
-            onSubmit={async (data) => {
-              if (onCreateProject) {
-                // Ensure status is completed for archive
-                await onCreateProject({
-                  ...data,
-                  status: "completed",
-                  progress: 100,
-                });
-                setShowCreateDialog(false);
-              }
-            }}
-            onCancel={() => setShowCreateDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent>
