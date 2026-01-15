@@ -344,18 +344,19 @@ export function ProjectsGrid({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl">Projects</h2>
+          <h2 className="text-xl sm:text-2xl">Projects</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Manage and track your projects
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           {(currentUser.role === "admin" ||
             currentUser.role === "supervisor") && (
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={handleArchiveAllCompleted}
               disabled={getArchivableProjects().length === 0}
               title={
@@ -370,7 +371,7 @@ export function ProjectsGrid({
           {canCreateProject && (
             <Button
               onClick={() => setShowCreateForm(true)}
-              className="bg-accent hover:bg-accent/90"
+              className="bg-accent hover:bg-accent/90 w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Project

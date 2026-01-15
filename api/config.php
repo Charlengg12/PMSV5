@@ -20,7 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 $dbHost = getenv('DB_HOST') ?: 'localhost';
 $dbUser = getenv('DB_USER') ?: 'root';
 $dbPass = getenv('DB_PASSWORD') ?: '';
-$dbName = getenv('DB_NAME') ?: 'ehubph_pms2';
+$dbName = getenv('DB_NAME') ?: 'ehubph_pms';
 $dbPort = getenv('DB_PORT') ?: '3306';
 
 try {

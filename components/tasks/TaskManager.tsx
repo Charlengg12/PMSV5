@@ -14,7 +14,15 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Textarea } from "../ui/textarea";
-import { Plus, Edit, Trash2, Calendar, User, Building, CheckCircle } from "lucide-react";
+import {
+  Plus,
+  Edit,
+  Trash2,
+  Calendar,
+  User,
+  Building,
+  CheckCircle,
+} from "lucide-react";
 import { Task, Project, User as UserType } from "../../types";
 
 interface TaskManagerProps {
@@ -518,56 +526,80 @@ export function TaskManager({
   // ────────────────────────────────────────────────
   const getStatusColor = (status: Task["status"]) => {
     switch (status) {
-      case "completed":   return "default";
-      case "in-progress": return "secondary";
-      case "pending":     return "outline";
-      case "blocked":     return "destructive";
-      default:            return "outline";
+      case "completed":
+        return "default";
+      case "in-progress":
+        return "secondary";
+      case "pending":
+        return "outline";
+      case "blocked":
+        return "destructive";
+      default:
+        return "outline";
     }
   };
 
   const getPriorityColor = (priority: Task["priority"]) => {
     switch (priority) {
-      case "urgent": return "destructive";
-      case "high":   return "destructive";
-      case "medium": return "secondary";
-      case "low":    return "outline";
-      default:       return "outline";
+      case "urgent":
+        return "destructive";
+      case "high":
+        return "destructive";
+      case "medium":
+        return "secondary";
+      case "low":
+        return "outline";
+      default:
+        return "outline";
     }
   };
 
   const getFilteredTasks = () => {
     if (currentUser.role === "admin") return tasks;
     if (currentUser.role === "supervisor") {
-      const supervisorProjects = projects.filter(p => p.supervisorId === currentUser.id);
-      return tasks.filter(t => supervisorProjects.some(p => p.id === t.projectId));
+      const supervisorProjects = projects.filter(
+        (p) => p.supervisorId === currentUser.id
+      );
+      return tasks.filter((t) =>
+        supervisorProjects.some((p) => p.id === t.projectId)
+      );
     }
-    return tasks.filter(t => t.assignedTo === currentUser.id || t.createdBy === currentUser.id);
+    return tasks.filter(
+      (t) => t.assignedTo === currentUser.id || t.createdBy === currentUser.id
+    );
   };
 
   const filteredTasks = getFilteredTasks();
-  const canCreateTask = currentUser.role === "admin" || currentUser.role === "supervisor";
+  const canCreateTask =
+    currentUser.role === "admin" || currentUser.role === "supervisor";
 
   const canEditTask = (task: Task) =>
     currentUser.role === "admin" ||
     task.createdBy === currentUser.id ||
     (currentUser.role === "supervisor" &&
-      projects.some(p => p.id === task.projectId && p.supervisorId === currentUser.id));
+      projects.some(
+        (p) => p.id === task.projectId && p.supervisorId === currentUser.id
+      ));
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold">Task Management</h2>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-left">
+          <h2 className="text-xl sm:text-2xl font-bold">Task Management</h2>
           <p className="text-sm text-muted-foreground">
             Create, manage, and track project tasks
           </p>
         </div>
         {canCreateTask && (
-          <Button onClick={openCreateModal}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Task
-          </Button>
+          <div className="flex justify-center sm:justify-end">
+            <Button
+              onClick={openCreateModal}
+              className="w-full sm:w-auto text-base sm:text-sm px-4 py-2"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Task
+            </Button>
+          </div>
         )}
       </div>
 
@@ -577,7 +609,9 @@ export function TaskManager({
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start gap-3">
                 <div className="flex-1">
-                  <CardTitle className="text-lg leading-tight">{task.title}</CardTitle>
+                  <CardTitle className="text-lg leading-tight">
+                    {task.title}
+                  </CardTitle>
                   {task.description && (
                     <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                       {task.description}
@@ -585,8 +619,12 @@ export function TaskManager({
                   )}
                 </div>
                 <div className="flex gap-1.5 shrink-0">
-                  <Badge variant={getStatusColor(task.status)}>{task.status}</Badge>
-                  <Badge variant={getPriorityColor(task.priority)}>{task.priority}</Badge>
+                  <Badge variant={getStatusColor(task.status)}>
+                    {task.status}
+                  </Badge>
+                  <Badge variant={getPriorityColor(task.priority)}>
+                    {task.priority}
+                  </Badge>
                 </div>
               </div>
             </CardHeader>
@@ -594,25 +632,35 @@ export function TaskManager({
             <CardContent className="text-sm space-y-2.5">
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-muted-foreground" />
-                <span>Project: {projects.find(p => p.id === task.projectId)?.name || "—"}</span>
+                <span>
+                  Project:{" "}
+                  {projects.find((p) => p.id === task.projectId)?.name || "—"}
+                </span>
               </div>
 
               {task.assignedTo && (
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
-                  <span>Assigned: {users.find(u => u.id === task.assignedTo)?.name || "—"}</span>
+                  <span>
+                    Assigned:{" "}
+                    {users.find((u) => u.id === task.assignedTo)?.name || "—"}
+                  </span>
                 </div>
               )}
 
               {task.dueDate && (
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
-                  <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>
+                  <span>
+                    Due: {new Date(task.dueDate).toLocaleDateString()}
+                  </span>
                 </div>
               )}
 
               <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
-                <span>By: {users.find(u => u.id === task.createdBy)?.name || "—"}</span>
+                <span>
+                  By: {users.find((u) => u.id === task.createdBy)?.name || "—"}
+                </span>
                 <span>•</span>
                 <span>{new Date(task.createdAt).toLocaleDateString()}</span>
               </div>
@@ -672,7 +720,9 @@ export function TaskManager({
           <CardContent className="py-12 text-center">
             <h3 className="text-lg font-medium mb-2">No tasks found</h3>
             <p className="text-muted-foreground mb-6">
-              {canCreateTask ? "Create your first task to get started." : "No tasks assigned to you yet."}
+              {canCreateTask
+                ? "Create your first task to get started."
+                : "No tasks assigned to you yet."}
             </p>
             {canCreateTask && (
               <Button onClick={openCreateModal}>
@@ -692,7 +742,9 @@ export function TaskManager({
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-xl font-semibold">Create New Task</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Fill in the task details below</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Fill in the task details below
+                  </p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={closeCreateModal}>
                   ✕
@@ -705,7 +757,9 @@ export function TaskManager({
                   <Input
                     id="create-title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                     placeholder="Enter task title"
                   />
                   {isCreateMissing("Task Title") && (
@@ -717,7 +771,9 @@ export function TaskManager({
                   <Label>Description *</Label>
                   <Textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     placeholder="Task details / notes..."
                     rows={3}
                   />
@@ -766,15 +822,26 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Project *</Label>
-                  <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })}>
+                  <Select
+                    value={formData.projectId}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, projectId: v })
+                    }
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder={isCreateMissing("Project") ? "Project Required" : "Select project"} />
+                      <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
                       {projects
-                        .filter(p => currentUser.role === "admin" || p.supervisorId === currentUser.id)
-                        .map(project => (
-                          <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                        .filter(
+                          (p) =>
+                            currentUser.role === "admin" ||
+                            p.supervisorId === currentUser.id
+                        )
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
                         ))}
                     </SelectContent>
                   </Select>
@@ -787,16 +854,24 @@ export function TaskManager({
                   <Label>Assign To *</Label>
                   <Select
                     value={formData.assignedTo}
-                    onValueChange={(v) => setFormData({ ...formData, assignedTo: v === "unassigned" ? "unassigned" : v })}
+                    onValueChange={(v) =>
+                      setFormData({
+                        ...formData,
+                        assignedTo: v === "unassigned" ? "unassigned" : v,
+                      })
+                    }
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder={isCreateMissing("Assign To") ? "Assign To Required" : "Select team member"} />
+                      <SelectValue placeholder="Select team member" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users
-                        .filter(u => u.role === "fabricator" || u.role === "supervisor")
-                        .map(user => (
+                        .filter(
+                          (u) =>
+                            u.role === "fabricator" || u.role === "supervisor"
+                        )
+                        .map((user) => (
                           <SelectItem key={user.id} value={user.id}>
                             {user.name} ({user.secureId})
                           </SelectItem>
@@ -845,7 +920,9 @@ export function TaskManager({
               <div className="flex justify-between items-center">
                 <div>
                   <h3 className="text-xl font-semibold">Edit Task</h3>
-                  <p className="text-sm text-muted-foreground mt-1">Update task information</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Update task information
+                  </p>
                 </div>
                 <Button variant="ghost" size="icon" onClick={closeEditModal}>
                   ✕
@@ -858,7 +935,9 @@ export function TaskManager({
                   <Input
                     id="edit-title"
                     value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                   />
                   {isEditMissing("Task Title") && (
                     <p className="text-xs text-destructive">Task Title Required</p>
@@ -869,7 +948,9 @@ export function TaskManager({
                   <Label>Description *</Label>
                   <Textarea
                     value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, description: e.target.value })
+                    }
                     rows={3}
                   />
                   {isEditMissing("Description") && (
@@ -923,8 +1004,16 @@ export function TaskManager({
                     </SelectTrigger>
                     <SelectContent>
                       {projects
-                        .filter(p => currentUser.role === "admin" || p.supervisorId === currentUser.id)
-                        .map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                        .filter(
+                          (p) =>
+                            currentUser.role === "admin" ||
+                            p.supervisorId === currentUser.id
+                        )
+                        .map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.name}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   {isEditMissing("Project") && (
@@ -941,8 +1030,11 @@ export function TaskManager({
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users
-                        .filter(u => u.role === "fabricator" || u.role === "supervisor")
-                        .map(u => (
+                        .filter(
+                          (u) =>
+                            u.role === "fabricator" || u.role === "supervisor"
+                        )
+                        .map((u) => (
                           <SelectItem key={u.id} value={u.id}>
                             {u.name} ({u.secureId})
                           </SelectItem>
