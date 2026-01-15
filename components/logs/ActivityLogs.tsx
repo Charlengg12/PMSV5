@@ -115,7 +115,8 @@ export function ActivityLogs() {
 
   const getActionLabel = (action: string): string => {
     const upper = action.toUpperCase();
-    if (upper.includes("DEACTIVATE") || upper.includes("DELETE")) return "Deactivate";
+    if (upper.includes("DEACTIVATE") || upper.includes("DELETE"))
+      return "Deactivate";
     if (upper.includes("CREATE") || upper.includes("ADD")) return "Create";
     if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Update";
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return "Login";
@@ -145,7 +146,8 @@ export function ActivityLogs() {
 
   const getRoleIcon = (role: string) => {
     const r = role.toLowerCase().trim();
-    if (r.includes("admin")) return <Shield className="h-3.5 w-3.5 text-indigo-600" />;
+    if (r.includes("admin"))
+      return <Shield className="h-3.5 w-3.5 text-indigo-600" />;
     if (r.includes("supervisor") || r.includes("moderator"))
       return <UserCheck className="h-3.5 w-3.5 text-emerald-600" />;
     if (r.includes("manager") || r.includes("lead"))
@@ -177,7 +179,9 @@ export function ActivityLogs() {
           actionLabel.includes(term) ||
           log.description.toLowerCase().includes(term) ||
           log.ip_address.toLowerCase().includes(term) ||
-          format(new Date(log.created_at), "MMM d, yyyy h:mm a").toLowerCase().includes(term)
+          format(new Date(log.created_at), "MMM d, yyyy h:mm a")
+            .toLowerCase()
+            .includes(term)
         );
       });
     }
@@ -194,10 +198,12 @@ export function ActivityLogs() {
   };
 
   return (
-    <div className="space-y-6 p-2 md:p-4">
+    <div className="space-y-6">
       <div className="flex items-center gap-3">
         <Activity className="h-7 w-7 text-blue-600" />
-        <h2 className="text-2xl font-bold tracking-tight">System Activity Logs</h2>
+        <h2 className="text-2xl font-bold tracking-tight">
+          System Activity Logs
+        </h2>
       </div>
 
       <div className="rounded-lg border bg-white shadow-sm">
@@ -311,7 +317,9 @@ export function ActivityLogs() {
                           </div>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="font-medium text-gray-700">{log.user_name}</div>
+                          <div className="font-medium text-gray-700">
+                            {log.user_name}
+                          </div>
                           <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 capitalize">
                             {getRoleIcon(log.user_role)}
                             <span>{log.user_role}</span>

@@ -37,10 +37,24 @@ interface AppSidebarProps {
 }
 
 export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
-  const { isMobile, setOpenMobile, state } = useSidebar();
+  const { isMobile, setOpenMobile, state, setOpen } = useSidebar();
   const [showLogoutSpinner, setShowLogoutSpinner] = useState(false);
   const [activeHash, setActiveHash] = useState("");
-  const isCollapsed = state === "collapsed";
+  const [isMd, setIsMd] = useState(false);
+  // Detect md (iPad) screen
+  useEffect(() => {
+    const checkMd = () => {
+      const width = window.innerWidth;
+      setIsMd(width >= 768 && width < 1024);
+    };
+    checkMd();
+    window.addEventListener("resize", checkMd);
+    return () => window.removeEventListener("resize", checkMd);
+  }, []);
+  useEffect(() => {
+    if (isMd) setOpen(false); // collapse sidebar on md
+  }, [isMd, setOpen]);
+  const isCollapsed = state === "collapsed" || isMd;
   const isCollapsedDesktop = isCollapsed && !isMobile;
   const menuLinkClassName = isCollapsedDesktop
     ? "flex items-center justify-center px-2 py-2"
