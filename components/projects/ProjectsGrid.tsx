@@ -351,7 +351,7 @@ export function ProjectsGrid({
       <div className="relative flex-1 sm:min-w-[280px]">
         <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <Input
-          placeholder="Search projects (name, client, supervisor, team...)"
+          placeholder="Search project..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10 w-full max-w-md"
