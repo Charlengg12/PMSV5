@@ -1,14 +1,17 @@
 <?php
 
-use PHPMailer\PHPMailer\PHPMailer;
+require __DIR__ . '/../vendor/autoload.php';
 
 // Simple PHP API router to replace Node/Express backend
 
 require __DIR__ . '/config.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
 // LOAD PHPMAILER
 // If using Composer:
-require 'vendor/autoload.php';
 $method = $_SERVER['REQUEST_METHOD'];
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 
@@ -1829,42 +1832,51 @@ function handle_delete_announcement(PDO $pdo, string $path): void
 }
 
 function send_client_credentials_email($recipientEmail, $recipientName, $plainPassword, $projectName, $secureId) {
+    // Create instance. "true" enables exceptions
     $mail = new PHPMailer(true);
 
     try {
-        // Server settings
-        // $mail->SMTPDebug = 2;                      // Enable verbose debug output (for testing)
+        // --- SERVER SETTINGS ---
+        $mail->SMTPDebug = 0;                      // 0 = OFF. (CRITICAL for JSON APIs)
         $mail->isSMTP();                                            
-        $mail->Host       = 'smtp.gmail.com';         // Set the SMTP server to send through
+        $mail->Host       = 'smtp.gmail.com';     
         $mail->SMTPAuth   = true;                                   
-        $mail->Username   = 'arkquestdev@gmail.com';   // SMTP username
-        $mail->Password   = 'jzfncfiyjuzvwqch';      // SMTP password (use App Password for Gmail, NOT your login password)
+        
+        // --- YOUR CREDENTIALS ---
+        $mail->Username   = 'arkquestdev@gmail.com';   // Your Gmail address
+        $mail->Password   = 'jzfncfiyjuzvwqch';         // Your 16-digit App Password
+        
         $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
         $mail->Port       = 587;                                    
 
-        // Recipients
-        $mail->setFrom('no-reply@yourcompany.com', 'Project Management System');
+        // --- RECIPIENTS ---
+        $mail->setFrom($mail->Username, 'Electronik Hub');
         $mail->addAddress($recipientEmail, $recipientName);
 
-        // Content
+        // --- CONTENT ---
         $mail->isHTML(true);                                  
         $mail->Subject = 'Your Client Access Credentials - ' . $projectName;
         
         $emailBody = "
         <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>
-            <h2 style='color: #333;'>Welcome to the Project Portal</h2>
-            <p>Hello <strong>$recipientName</strong>,</p>
-            <p>A client account has been created for you to view the progress of project: <strong>$projectName</strong>.</p>
-            
-            <div style='background-color: #f5f8fa; padding: 15px; border-radius: 5px; margin: 20px 0;'>
-                <p style='margin: 5px 0;'><strong>Login URL:</strong> <a href='http://localhost:5173/login'>Click here to login</a></p>
-                <p style='margin: 5px 0;'><strong>Client ID:</strong> $secureId</p>
-                <p style='margin: 5px 0;'><strong>Email:</strong> $recipientEmail</p>
-                <p style='margin: 5px 0;'><strong>Password:</strong> <span style='font-family: monospace; background: #ddd; padding: 2px 5px; border-radius: 3px;'>$plainPassword</span></p>
+            <div style='text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px;'>
+                <h2 style='color: #2563eb; margin: 0;'>Elektronik Hub</h2>
+                <p style='color: #666; margin: 5px 0 0; font-size: 14px;'>Project Management Portal</p>
             </div>
 
-             
-            <p style='color: #888; font-size: 12px; margin-top: 30px;'>This is an automated message. Please do not reply.</p>
+            <p>Hello <strong>$recipientName</strong>,</p>
+            <p>Welcome to <strong>Elektronik Hub</strong>! A client account has been created for you to view the progress of project: <strong>$projectName</strong>.</p>
+            
+            <div style='background-color: #f5f8fa; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #e1e8ed;'>
+               
+                <p style='margin: 5px 0;'><strong>Client ID:</strong> <span style='font-family: monospace;'>$secureId</span></p>
+                <p style='margin: 5px 0;'><strong>Email:</strong> $recipientEmail</p>
+                <p style='margin: 5px 0;'><strong>Password:</strong> <span style='font-family: monospace; background: #ddd; padding: 2px 6px; border-radius: 4px;'>$plainPassword</span></p>
+            </div>
+
+            <p>Best regards,<br><strong>The Elektronik Hub Team</strong></p>
+
+            <p style='color: #999; font-size: 11px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;'>This is an automated message sent from the Elektronik Hub system. Please do not reply.</p>
         </div>
         ";
 
@@ -1873,9 +1885,11 @@ function send_client_credentials_email($recipientEmail, $recipientName, $plainPa
 
         $mail->send();
         return true;
-    } catch (Exception $e) {
-        // Log the error but don't crash the application
-        error_log("Message could not be sent. Mailer Error: {$mail->ErrorInfo}");
+
+    } catch (Throwable $e) { 
+        // We use 'Throwable' to catch ANY crash.
+        // We log it to the server file system, but we return 'false' so the script continues.
+        error_log("MAILER ERROR: " . $e->getMessage());
         return false;
     }
 }
