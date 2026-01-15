@@ -268,12 +268,13 @@ export function LoginForm({
       </Card>
 
       {/* Success animation overlay - only shown after valid login */}
+      
       {showLoginAnimation && (
         <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center z-50">
           <div className="loader flex items-center justify-center gap-5 mb-12">
-            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-pulse"></div>
-            <div className="w-14 h-14 bg-[#e28a33] rounded-lg animate-pulse delay-150"></div>
-            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-pulse delay-300"></div>
+            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-[rotate_1.5s_linear_infinite]"></div>
+            <div className="w-14 h-14 bg-[#e28a33] rounded-lg animate-[rotate_1.8s_linear_infinite] delay-500"></div>
+            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-[rotate_2s_linear_infinite] delay-300"></div>
           </div>
           <div className="text-lg font-medium text-primary">
             Logging in, please wait...
