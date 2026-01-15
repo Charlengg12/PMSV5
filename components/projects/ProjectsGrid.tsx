@@ -312,6 +312,15 @@ export function ProjectsGrid({
         text: "The project has been successfully moved to archives.",
         timer: 1500,
         showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
       });
     }
   };
