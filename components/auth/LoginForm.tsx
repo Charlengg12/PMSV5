@@ -35,10 +35,11 @@ export function LoginForm({
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showLoginAnimation, setShowLoginAnimation] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setError(""); // Clear error when user types
+    setError(""); // Clear error on type
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -47,75 +48,40 @@ export function LoginForm({
     setError("");
 
     try {
-      // Check if we're in demo mode (no proper Supabase setup)
-      // Try API login first
+      // Attempt real API login
       const response = await apiService.login(
         formData.identifier,
         formData.password
       );
 
-      if (response.data) {
-        // Set the token in the API service
+      if (response.data?.user) {
+        // Success - store token if present
         if (response.data.token) {
           apiService.setToken(response.data.token);
         }
 
-        const rawUserData = response.data.user;
-        const userData = mapUserDataFromBackend(rawUserData);
-        onLogin(userData);
-      } else {
-        // If API fails, try demo mode as fallback
-        if (
-          formData.identifier.toLowerCase() === "admin" &&
-          formData.password === "password123"
-        ) {
-          const demoAdminUser = {
-            id: "admin-1",
-            name: "Demo Administrator",
-            email: "admin@ehub.com",
-            role: "admin" as const,
-            school: "Ehub University",
-            phone: "+63 123 456 7890",
-            gcashNumber: "09123456789",
-            secureId: "ADM001",
-            employeeNumber: "EMP001",
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            department: "Administration",
-          };
-          onLogin(demoAdminUser);
-          return;
-        }
-        if (
-          formData.identifier.toLowerCase() === "supervisor" &&
-          formData.password === "password123"
-        ) {
-          const demoSupervisorUser = {
-            id: "supervisor-1",
-            name: "Demo Supervisor",
-            email: "supervisor@ehub.com",
-            role: "supervisor" as const,
-            school: "Ehub University",
-            phone: "+63 987 654 3210",
-            gcashNumber: "09987654321",
-            secureId: "SUP001",
-            employeeNumber: "EMP101",
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            department: "Demo Department",
-          };
-          onLogin(demoSupervisorUser);
-          return;
-        }
-        throw new Error(response.error || "Login failed");
+        const userData = mapUserDataFromBackend(response.data.user);
+
+        // Show success animation → wait 2s → login
+        setShowLoginAnimation(true);
+        setTimeout(() => {
+          setShowLoginAnimation(false);
+          onLogin(userData);
+        }, 2000);
+        return;
       }
+
+      // No user data from API → fall through to demo check
+      throw new Error("No user data returned from API");
     } catch (err) {
-      // If API is completely unavailable, try demo mode
-      if (
-        formData.identifier.toLowerCase() === "admin" &&
-        formData.password === "password123"
-      ) {
-        const demoAdminUser = {
+      // Demo mode fallback
+      let demoUser: User | null = null;
+
+      const identifierLower = formData.identifier.toLowerCase();
+      const password = formData.password;
+
+      if (identifierLower === "admin" && password === "password123") {
+        demoUser = {
           id: "admin-1",
           name: "Demo Administrator",
           email: "admin@ehub.com",
@@ -129,14 +95,8 @@ export function LoginForm({
           createdAt: new Date().toISOString(),
           department: "Administration",
         };
-        onLogin(demoAdminUser);
-        return;
-      }
-      if (
-        formData.identifier.toLowerCase() === "supervisor" &&
-        formData.password === "password123"
-      ) {
-        const demoSupervisorUser = {
+      } else if (identifierLower === "supervisor" && password === "password123") {
+        demoUser = {
           id: "supervisor-1",
           name: "Demo Supervisor",
           email: "supervisor@ehub.com",
@@ -150,10 +110,21 @@ export function LoginForm({
           createdAt: new Date().toISOString(),
           department: "Demo Department",
         };
-        onLogin(demoSupervisorUser);
+      }
+
+      if (demoUser) {
+        setShowLoginAnimation(true);
+        setTimeout(() => {
+          setShowLoginAnimation(false);
+          onLogin(demoUser);
+        }, 2000);
         return;
       }
-      setError(err instanceof Error ? err.message : "Login failed");
+
+      // Real login failure
+      setError(
+        err instanceof Error ? err.message : "Invalid credentials or server error"
+      );
     } finally {
       setIsLoading(false);
     }
@@ -161,8 +132,8 @@ export function LoginForm({
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-primary relative overflow-hidden">
-      {/* Background decorative elements */}
-      <div className="absolute inset-0 overflow-hidden">
+      {/* Background decorative blobs */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
       </div>
@@ -188,8 +159,9 @@ export function LoginForm({
             </CardDescription>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+
+        <CardContent className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
               <Label htmlFor="identifier">
                 Employee ID / Secure ID / Email
@@ -199,10 +171,9 @@ export function LoginForm({
                 type="text"
                 placeholder="Enter your ID or email"
                 value={formData.identifier}
-                onChange={(e) =>
-                  handleInputChange("identifier", e.target.value)
-                }
+                onChange={(e) => handleInputChange("identifier", e.target.value)}
                 required
+                disabled={isLoading || showLoginAnimation}
               />
               <p className="text-xs text-muted-foreground">
                 Use your Employee ID, Secure ID, or email address
@@ -217,10 +188,9 @@ export function LoginForm({
                   type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={formData.password}
-                  onChange={(e) =>
-                    handleInputChange("password", e.target.value)
-                  }
+                  onChange={(e) => handleInputChange("password", e.target.value)}
                   required
+                  disabled={isLoading || showLoginAnimation}
                 />
                 <Button
                   type="button"
@@ -228,6 +198,7 @@ export function LoginForm({
                   size="sm"
                   className="absolute right-0 top-0 h-full px-3"
                   onClick={() => setShowPassword(!showPassword)}
+                  disabled={isLoading || showLoginAnimation}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -247,7 +218,7 @@ export function LoginForm({
             <Button
               type="submit"
               className="w-full h-12 text-base bg-accent hover:bg-accent/90 font-[Archivo_Black]"
-              disabled={isLoading}
+              disabled={isLoading || showLoginAnimation}
             >
               {isLoading ? (
                 <>
@@ -263,17 +234,17 @@ export function LoginForm({
             </Button>
           </form>
 
-          {/* Forgot Password Link */}
           <div className="text-center">
             <button
               onClick={onShowForgotPassword}
               className="text-sm text-primary hover:underline"
+              disabled={isLoading || showLoginAnimation}
             >
               Forgot your password?
             </button>
           </div>
 
-          <div className="relative">
+          <div className="relative py-2">
             <div className="absolute inset-0 flex items-center">
               <Separator />
             </div>
@@ -284,17 +255,31 @@ export function LoginForm({
             </div>
           </div>
 
-          {/* Fabricator Signup */}
           <Button
             onClick={onShowSignup}
             variant="outline"
             className="w-full h-11"
+            disabled={isLoading || showLoginAnimation}
           >
             <UserPlus className="h-4 w-4 mr-2" />
             Sign Up as Fabricator
           </Button>
         </CardContent>
       </Card>
+
+      {/* Success animation overlay - only shown after valid login */}
+      {showLoginAnimation && (
+        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center z-50">
+          <div className="loader flex items-center justify-center gap-5 mb-12">
+            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-pulse"></div>
+            <div className="w-14 h-14 bg-[#e28a33] rounded-lg animate-pulse delay-150"></div>
+            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-pulse delay-300"></div>
+          </div>
+          <div className="text-lg font-medium text-primary">
+            Logging in, please wait...
+          </div>
+        </div>
+      )}
     </div>
   );
 }
