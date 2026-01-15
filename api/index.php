@@ -647,16 +647,122 @@ function handle_delete_report($pdo, $id) {
     json_response(['message' => 'Report deleted successfully']);
 }
 
+function get_table_columns(PDO $pdo, string $table): array
+{
+    $stmt = $pdo->query("SHOW COLUMNS FROM `$table`");
+    $columns = [];
+    foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $column) {
+        $columns[$column['Field']] = $column;
+    }
+    return $columns;
+}
+
+function parse_enum_values(?string $type): array
+{
+    if (!$type) {
+        return [];
+    }
+    if (!preg_match('/^enum\\((.*)\\)$/i', $type, $matches)) {
+        return [];
+    }
+    $values = [];
+    if (preg_match_all("/'((?:\\\\'|[^'])*)'/", $matches[1], $valueMatches)) {
+        foreach ($valueMatches[1] as $value) {
+            $values[] = str_replace("\\'", "'", $value);
+        }
+    }
+    return $values;
+}
+
+function ensure_projects_schema(PDO $pdo): array
+{
+    $columns = get_table_columns($pdo, 'projects');
+    $addColumns = [
+        'revenue' => "ALTER TABLE projects ADD COLUMN revenue DECIMAL(15,2) DEFAULT NULL",
+        'spent' => "ALTER TABLE projects ADD COLUMN spent DECIMAL(15,2) DEFAULT 0",
+        'fabricator_budgets' => "ALTER TABLE projects ADD COLUMN fabricator_budgets JSON NULL",
+        'fabricator_allocation' => "ALTER TABLE projects ADD COLUMN fabricator_allocation DECIMAL(15,2) DEFAULT NULL",
+        'materials_allocation' => "ALTER TABLE projects ADD COLUMN materials_allocation DECIMAL(15,2) DEFAULT NULL",
+        'supervisor_allocation' => "ALTER TABLE projects ADD COLUMN supervisor_allocation DECIMAL(15,2) DEFAULT NULL",
+        'company_allocation' => "ALTER TABLE projects ADD COLUMN company_allocation DECIMAL(15,2) DEFAULT NULL",
+        'documentation_url' => "ALTER TABLE projects ADD COLUMN documentation_url TEXT NULL",
+        'client_name' => "ALTER TABLE projects ADD COLUMN client_name VARCHAR(255) DEFAULT NULL",
+        'created_by' => "ALTER TABLE projects ADD COLUMN created_by VARCHAR(255) DEFAULT NULL"
+    ];
+
+    foreach ($addColumns as $name => $sql) {
+        if (!isset($columns[$name])) {
+            try {
+                $pdo->exec($sql);
+                $columns[$name] = ['Field' => $name];
+            } catch (PDOException $e) {
+                // Ignore schema updates if the environment doesn't allow ALTER TABLE.
+            }
+        }
+    }
+
+    if (isset($columns['status'])) {
+        $existing = parse_enum_values($columns['status']['Type'] ?? '');
+        $required = [
+            '0_Created',
+            '1_Assigned_to_FAB',
+            '2_Ready_for_Supervisor_Review',
+            '3_Ready_for_Admin_Review',
+            '4_Ready_for_Client_Signoff',
+            'planning',
+            'pending-assignment',
+            'in-progress',
+            'review',
+            'completed',
+            'on-hold',
+            'cancelled'
+        ];
+        $merged = array_values(array_unique(array_merge($existing, $required)));
+        if (count($merged) > count($existing)) {
+            $enumList = implode("','", array_map('addslashes', $merged));
+            try {
+                $pdo->exec("ALTER TABLE projects MODIFY COLUMN status ENUM('" . $enumList . "') DEFAULT 'planning'");
+                $columns = get_table_columns($pdo, 'projects');
+            } catch (PDOException $e) {
+                // Ignore enum update failures and let callers normalize status instead.
+            }
+        }
+    }
+
+    return $columns;
+}
+
+function normalize_project_status(string $status, array $columns): string
+{
+    $status = trim($status);
+    if ($status === '') {
+        return 'planning';
+    }
+    $enumValues = parse_enum_values($columns['status']['Type'] ?? '');
+    if (!$enumValues) {
+        return $status;
+    }
+    if (in_array($status, $enumValues, true)) {
+        return $status;
+    }
+    if (in_array('planning', $enumValues, true)) {
+        return 'planning';
+    }
+    return $enumValues[0] ?? $status;
+}
+
 // Update handle_create_project to support broadcasting to all supervisors
 function handle_create_project(PDO $pdo): void
 {
     require_login();
     $body = sanitize_recursive(json_input());
 
-    $projectId = 'project-' . time();
+    $columns = ensure_projects_schema($pdo);
 
-    $title = $body['name'] ?? $body['title'] ?? null;
-    if (!$title) {
+    $projectId = 'project-' . time() . '-' . substr(md5(microtime()), 0, 6);
+
+    $title = trim($body['name'] ?? $body['title'] ?? '');
+    if ($title === '') {
         json_response(['error' => 'Project title is required'], 400);
     }
 
@@ -667,53 +773,90 @@ function handle_create_project(PDO $pdo): void
         $pendingSupervisors = $supervisors;
     }
 
-    // UPDATED: Added allocation columns to INSERT statement
-    $stmt = $pdo->prepare(
-        'INSERT INTO projects (
-            id, title, description, status, priority, progress, 
-            start_date, due_date, budget, revenue, spent, fabricator_budgets,
-            fabricator_allocation, materials_allocation, supervisor_allocation, company_allocation,
-            client_id, supervisor_id, fabricator_ids, pending_supervisors
-        )
-         VALUES (
-            :id, :title, :description, :status, :priority, :progress, 
-            :start_date, :due_date, :budget, :revenue, :spent, :fabricator_budgets
-            :fabricator_allocation, :materials_allocation, :supervisor_allocation, :company_allocation,
-            :client_id, :supervisor_id, :fabricator_ids, :pending_supervisors
-        )'
-    );
+    $statusInput = $body['status'] ?? 'planning';
+    $status = normalize_project_status((string) $statusInput, $columns);
 
-    $stmt->execute([
-        ':id' => $projectId,
-        ':title' => $title,
-        ':description' => $body['description'] ?? null,
-        ':status' => $body['status'] ?? 'planning',
-        ':priority' => $body['priority'] ?? 'medium',
-        ':progress' => $body['progress'] ?? 0,
-        ':start_date' => $body['startDate'] ?? null,
-        ':due_date' => $body['endDate'] ?? ($body['dueDate'] ?? null),
-        
-        // Financial mappings
-        ':budget' => $body['budget'] ?? 0.00, // This is Total Allocated
-        ':revenue' => $body['revenue'] ?? 0.00, // This is Client Price
-        ':spent' => 0.00,
-        ':fabricator_allocation' => $body['fabricator_allocation'] ?? 0.00,
-        ':materials_allocation' => $body['materials_allocation'] ?? 0.00,
-        ':supervisor_allocation' => $body['supervisor_allocation'] ?? 0.00,
-        ':company_allocation' => $body['company_allocation'] ?? 0.00,
-        ':fabricator_budgets' => isset($body['fabricatorBudgets']) ? json_encode($body['fabricatorBudgets']) : json_encode([]),
-        ':client_id' => $body['clientId'] ?? null,
-        ':supervisor_id' => $body['supervisorId'] ?? null,
-        ':fabricator_ids' => isset($body['fabricatorIds']) ? json_encode($body['fabricatorIds']) : json_encode([]),
-        ':created_by' => $_SESSION['user_id'],
-        ':pending_supervisors' => json_encode($pendingSupervisors),
-    ]);
+    $fabricatorIds = $body['fabricatorIds'] ?? $body['fabricator_ids'] ?? [];
+    if (!is_array($fabricatorIds)) {
+        $fabricatorIds = [];
+    }
 
-    $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $projectId]);
-    $project = $stmt->fetch();
+    $pendingAssignments = $body['pendingAssignments'] ?? $body['pending_assignments'] ?? [];
+    if (!is_array($pendingAssignments)) {
+        $pendingAssignments = [];
+    }
 
-    json_response($project);
+    $documentationUrl = $body['documentationUrl'] ?? $body['documentation_url'] ?? null;
+    if (is_string($documentationUrl) && trim($documentationUrl) === '') {
+        $documentationUrl = null;
+    }
+
+    $clientName = $body['clientName'] ?? $body['client_name'] ?? null;
+    if (is_string($clientName) && trim($clientName) === '') {
+        $clientName = null;
+    }
+
+    $payload = [
+        'id' => $projectId,
+        'title' => $title,
+        'description' => $body['description'] ?? null,
+        'status' => $status,
+        'priority' => $body['priority'] ?? 'medium',
+        'progress' => $body['progress'] ?? 0,
+        'start_date' => $body['startDate'] ?? $body['start_date'] ?? null,
+        'due_date' => $body['endDate'] ?? ($body['dueDate'] ?? ($body['due_date'] ?? null)),
+        'budget' => $body['budget'] ?? 0.00,
+        'revenue' => $body['revenue'] ?? 0.00,
+        'spent' => $body['spent'] ?? 0.00,
+        'fabricator_budgets' => json_encode($body['fabricatorBudgets'] ?? []),
+        'fabricator_allocation' => $body['fabricatorAllocation'] ?? $body['fabricator_allocation'] ?? 0.00,
+        'materials_allocation' => $body['materialsAllocation'] ?? $body['materials_allocation'] ?? 0.00,
+        'supervisor_allocation' => $body['supervisorAllocation'] ?? $body['supervisor_allocation'] ?? 0.00,
+        'company_allocation' => $body['companyAllocation'] ?? $body['company_allocation'] ?? 0.00,
+        'documentation_url' => $documentationUrl,
+        'client_id' => $body['clientId'] ?? $body['client_id'] ?? null,
+        'client_name' => $clientName,
+        'supervisor_id' => $body['supervisorId'] ?? $body['supervisor_id'] ?? null,
+        'fabricator_ids' => json_encode($fabricatorIds),
+        'pending_supervisors' => json_encode($pendingSupervisors),
+        'pending_assignments' => json_encode($pendingAssignments),
+        'created_by' => $_SESSION['user_id'] ?? ($body['createdBy'] ?? null),
+    ];
+
+    $filtered = [];
+    foreach ($payload as $field => $value) {
+        if (isset($columns[$field])) {
+            $filtered[$field] = $value;
+        }
+    }
+
+    if (empty($filtered)) {
+        json_response(['error' => 'No valid project fields to insert'], 400);
+    }
+
+    $fields = array_keys($filtered);
+    $placeholders = array_map(function ($field) {
+        return ':' . $field;
+    }, $fields);
+
+    $sql = 'INSERT INTO projects (' . implode(', ', $fields) . ') VALUES (' . implode(', ', $placeholders) . ')';
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $params = [];
+        foreach ($filtered as $field => $value) {
+            $params[':' . $field] = $value;
+        }
+        $stmt->execute($params);
+
+        $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $projectId]);
+        $project = $stmt->fetch();
+
+        json_response($project);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
 }
 
 function handle_update_project(PDO $pdo, string $id): void
@@ -721,67 +864,111 @@ function handle_update_project(PDO $pdo, string $id): void
     require_login();
     $body = sanitize_recursive(json_input());
 
-    // Build dynamic update query
-    $fields = [];
-    $params = [':id' => $id];
+    $columns = ensure_projects_schema($pdo);
+    $updates = [];
 
-    // Allowed fields to update
-    $allowed = [
-        'title',
-        'description',
-        'status',
-        'priority',
-        'progress',
-        'start_date',
-        'due_date',
-        'budget',
-        'spent',
-        'revenue',
-        'client_id',
-        'spent', 
-        'revenue',
-        'supervisor_id',
-        'documentationUrl'
-    ];
+    if (array_key_exists('title', $body) || array_key_exists('name', $body)) {
+        $updates['title'] = $body['title'] ?? $body['name'];
+    }
+    if (array_key_exists('description', $body)) {
+        $updates['description'] = $body['description'];
+    }
+    if (array_key_exists('status', $body)) {
+        $updates['status'] = normalize_project_status((string) $body['status'], $columns);
+    }
+    if (array_key_exists('priority', $body)) {
+        $updates['priority'] = $body['priority'];
+    }
+    if (array_key_exists('progress', $body)) {
+        $updates['progress'] = $body['progress'];
+    }
+    if (array_key_exists('startDate', $body) || array_key_exists('start_date', $body)) {
+        $updates['start_date'] = $body['startDate'] ?? $body['start_date'];
+    }
+    if (array_key_exists('endDate', $body) || array_key_exists('dueDate', $body) || array_key_exists('due_date', $body)) {
+        $updates['due_date'] = $body['endDate'] ?? $body['dueDate'] ?? $body['due_date'];
+    }
+    if (array_key_exists('budget', $body)) {
+        $updates['budget'] = $body['budget'];
+    }
+    if (array_key_exists('spent', $body)) {
+        $updates['spent'] = $body['spent'];
+    }
+    if (array_key_exists('revenue', $body)) {
+        $updates['revenue'] = $body['revenue'];
+    }
 
-    foreach ($allowed as $field) {
-        // Map frontend camelCase to snake_case if needed, but for now assuming frontend sends matching or handled manually
-        // Let's handle some common mappings
-        $val = null;
-        if (isset($body[$field])) $val = $body[$field];
-        // Handle camelCase variations if passed from frontend
-        if ($field === 'start_date' && isset($body['startDate'])) $val = $body['startDate'];
-        if ($field === 'due_date' && isset($body['dueDate'])) $val = $body['dueDate'];
-        if ($field === 'client_id' && isset($body['clientId'])) $val = $body['clientId'];
-        if ($field === 'supervisor_id' && isset($body['supervisorId'])) $val = $body['supervisorId'];
-
-        if ($val !== null) {
-            $fields[] = "$field = :$field";
-            $params[":$field"] = $val;
+    if (array_key_exists('clientId', $body) || array_key_exists('client_id', $body)) {
+        $updates['client_id'] = $body['clientId'] ?? $body['client_id'];
+    }
+    if (array_key_exists('clientName', $body) || array_key_exists('client_name', $body)) {
+        $clientName = $body['clientName'] ?? $body['client_name'];
+        if (is_string($clientName) && trim($clientName) === '') {
+            $clientName = null;
         }
+        $updates['client_name'] = $clientName;
     }
-        
-    // Supplemental conditions in case theres a field mismatch with $body's fields & DB fields
-    if (isset($body['name'])) {
-        $fields[] = "title = :title";
-        $params[':title'] = $body['name'];
+    if (array_key_exists('supervisorId', $body) || array_key_exists('supervisor_id', $body)) {
+        $updates['supervisor_id'] = $body['supervisorId'] ?? $body['supervisor_id'];
     }
-    if (isset($body['endDate'])) {
-        $fields[] = "due_date = :due_date";
-        $params[':due_date'] = $body['endDate'];
+    if (array_key_exists('fabricatorIds', $body) || array_key_exists('fabricator_ids', $body)) {
+        $fabricatorIds = $body['fabricatorIds'] ?? $body['fabricator_ids'] ?? [];
+        if (!is_array($fabricatorIds)) {
+            $fabricatorIds = [];
+        }
+        $updates['fabricator_ids'] = json_encode($fabricatorIds);
+    }
+    if (array_key_exists('fabricatorBudgets', $body) || array_key_exists('fabricator_budgets', $body)) {
+        $fabricatorBudgets = $body['fabricatorBudgets'] ?? $body['fabricator_budgets'] ?? [];
+        if (!is_array($fabricatorBudgets)) {
+            $fabricatorBudgets = [];
+        }
+        $updates['fabricator_budgets'] = json_encode($fabricatorBudgets);
+    }
+    if (array_key_exists('pendingAssignments', $body) || array_key_exists('pending_assignments', $body)) {
+        $pendingAssignments = $body['pendingAssignments'] ?? $body['pending_assignments'] ?? [];
+        if (!is_array($pendingAssignments)) {
+            $pendingAssignments = [];
+        }
+        $updates['pending_assignments'] = json_encode($pendingAssignments);
     }
 
-    if (isset($body['fabricatorIds'])) {
-        $fields[] = "fabricator_ids = :fabricator_ids";
-        $params[':fabricator_ids'] = json_encode($body['fabricatorIds']);
+    if (array_key_exists('fabricatorAllocation', $body) || array_key_exists('fabricator_allocation', $body)) {
+        $updates['fabricator_allocation'] = $body['fabricatorAllocation'] ?? $body['fabricator_allocation'];
+    }
+    if (array_key_exists('materialsAllocation', $body) || array_key_exists('materials_allocation', $body)) {
+        $updates['materials_allocation'] = $body['materialsAllocation'] ?? $body['materials_allocation'];
+    }
+    if (array_key_exists('supervisorAllocation', $body) || array_key_exists('supervisor_allocation', $body)) {
+        $updates['supervisor_allocation'] = $body['supervisorAllocation'] ?? $body['supervisor_allocation'];
+    }
+    if (array_key_exists('companyAllocation', $body) || array_key_exists('company_allocation', $body)) {
+        $updates['company_allocation'] = $body['companyAllocation'] ?? $body['company_allocation'];
+    }
+
+    if (array_key_exists('documentationUrl', $body) || array_key_exists('documentation_url', $body)) {
+        $documentationUrl = $body['documentationUrl'] ?? $body['documentation_url'];
+        if (is_string($documentationUrl) && trim($documentationUrl) === '') {
+            $documentationUrl = null;
+        }
+        $updates['documentation_url'] = $documentationUrl;
     }
 
     // Handle broadcast to supervisors on update if requested
     if (!empty($body['broadcastToSupervisors'])) {
         $stmt = $pdo->query("SELECT id FROM users WHERE role = 'supervisor' AND is_active = 1");
         $supervisors = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        $fields[] = "pending_supervisors = :pending_supervisors";
-        $params[':pending_supervisors'] = json_encode($supervisors);
+        $updates['pending_supervisors'] = json_encode($supervisors);
+    }
+
+    $fields = [];
+    $params = [':id' => $id];
+    foreach ($updates as $field => $value) {
+        if (!isset($columns[$field])) {
+            continue;
+        }
+        $fields[] = "$field = :$field";
+        $params[":$field"] = $value;
     }
 
     if (empty($fields)) {
@@ -789,17 +976,15 @@ function handle_update_project(PDO $pdo, string $id): void
     }
 
     $sql = "UPDATE projects SET " . implode(', ', $fields) . " WHERE id = :id";
-    $stmt = $pdo->prepare($sql);
-    $stmt->execute($params);
-
-    $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
-    // the foreach is to handle values meant for ENUM columns (i.e. status)
-    foreach ($params as $key => $val) {
-        $stmt->bindValue($key, $val, PDO::PARAM_STR);
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
     }
 
+    $stmt = $pdo->prepare('SELECT * FROM projects WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $id]);
-
     $project = $stmt->fetch();
 
     json_response($project);
