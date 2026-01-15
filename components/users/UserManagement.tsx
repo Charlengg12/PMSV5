@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { apiService } from "../../utils/apiService";
 import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -39,8 +39,8 @@ import {
   User as UserIcon,
   Edit,
   Trash2,
-  Lock, // Added
-  Loader2, // Added
+  Loader2,
+  Search,
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
 import { User } from "../../types";
@@ -54,7 +54,7 @@ interface UserManagementProps {
 
 const swalCustomClasses = {
   container: "swal-container",
-  popup: "swal-popup",
+  popup: "swal-popup !max-w-md",
   title: "swal-title",
   htmlContainer: "swal-content",
   confirmButton: "swal-confirm-button",
@@ -69,69 +69,76 @@ export function UserManagement({
 }: UserManagementProps) {
   const [showSupervisorForm, setShowSupervisorForm] = useState(false);
 
-  // -- Secure ID Logic --
   const [showSecureIds, setShowSecureIds] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [verifyPassword, setVerifyPassword] = useState("");
   const [verifyError, setVerifyError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
-  // -------------------
 
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showInactiveModal, setShowInactiveModal] = useState(false);
   const [inactiveUsers, setInactiveUsers] = useState<User[]>([]);
   const [loadingInactive, setLoadingInactive] = useState(false);
-  const [editEmailError, setEditEmailError] = useState<string>("");
-  const [editPhoneError, setEditPhoneError] = useState<string>("");
-  const [editGcashError, setEditGcashError] = useState<string>("");
+
+  const [editEmailError, setEditEmailError] = useState("");
+  const [editPhoneError, setEditPhoneError] = useState("");
+  const [editGcashError, setEditGcashError] = useState("");
+
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [selectedRole, setSelectedRole] = useState<string>("all"); // "all" | "admin" | "supervisor" | "fabricator" | "client"
+
+  const [displayCount, setDisplayCount] = useState(5);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
 
-  useEffect(() => {
-    if (showInactiveModal && currentUser.role === "admin") {
-      const fetchInactive = async () => {
-        setLoadingInactive(true);
-        try {
-          const response = await apiService.getInactiveUsers();
-          if (response.data) {
-            setInactiveUsers(response.data.map(mapUserDataFromBackend));
-          }
-        } catch (err) {
-          console.error("Failed to load inactive users", err);
-          Swal.fire({
-            icon: "error",
-            title: "Error",
-            text: "Could not load inactive users.",
-            timer: 2500,
-            customClass: swalCustomClasses,
-          });
-        } finally {
-          setLoadingInactive(false);
-        }
-      };
-      fetchInactive();
-    }
-  }, [showInactiveModal, currentUser.role]);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
-  // --- NEW: Handle Password Verification ---
+  const canManageUsers = currentUser.role === "admin";
+
+  // Fetch inactive users
+  useEffect(() => {
+    if (!showInactiveModal || !canManageUsers) return;
+
+    const fetchInactive = async () => {
+      setLoadingInactive(true);
+      try {
+        const response = await apiService.getInactiveUsers();
+        if (response.data) {
+          setInactiveUsers(response.data.map(mapUserDataFromBackend));
+        }
+      } catch (err) {
+        console.error("Failed to load inactive users", err);
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "Could not load inactive users.",
+          timer: 2200,
+          customClass: swalCustomClasses,
+        });
+      } finally {
+        setLoadingInactive(false);
+      }
+    };
+    fetchInactive();
+  }, [showInactiveModal, canManageUsers]);
+
+  // Secure ID toggle
   const handleToggleSecureIds = () => {
     if (showSecureIds) {
-      // Hide immediately
       setShowSecureIds(false);
-    } else {
-      // Show password modal
-      setVerifyPassword("");
-      setVerifyError("");
-      setShowPasswordModal(true);
+      return;
     }
+
+    setVerifyPassword("");
+    setVerifyError("");
+    setShowPasswordModal(true);
   };
 
   const handleVerifyPassword = async () => {
-    if (!verifyPassword) {
-      setVerifyError("Please enter your password");
+    if (!verifyPassword.trim()) {
+      setVerifyError("Password is required");
       return;
     }
 
@@ -139,22 +146,19 @@ export function UserManagement({
     setVerifyError("");
 
     try {
-      // Call the API function we added earlier
       await apiService.verifyPassword(verifyPassword);
-
-      // If successful:
       setShowSecureIds(true);
       setShowPasswordModal(false);
 
       Swal.fire({
         icon: "success",
-        title: "Verified",
-        text: "Secure IDs are now visible.",
-        timer: 1500,
+        title: "Access Granted",
+        text: "Secure IDs are now visible",
+        timer: 1400,
         showConfirmButton: false,
         customClass: swalCustomClasses,
       });
-    } catch (err: any) {
+    } catch {
       setVerifyError("Incorrect password. Please try again.");
     } finally {
       setIsVerifying(false);
@@ -190,12 +194,12 @@ export function UserManagement({
 
     let hasError = false;
 
-    if (!emailRegex.test(editingUser.email)) {
-      setEditEmailError(
-        "Please enter a valid Gmail address (example@gmail.com)"
-      );
+    if (!emailRegex.test(editingUser.email ?? "")) {
+      setEditEmailError("Please enter a valid Gmail address (example@gmail.com)");
       hasError = true;
-    } else setEditEmailError("");
+    } else {
+      setEditEmailError("");
+    }
 
     if (editingUser.phone && !phoneRegex.test(editingUser.phone)) {
       setEditPhoneError("Phone must be +639xxxxxxxxx or 09xxxxxxxxx");
@@ -207,7 +211,9 @@ export function UserManagement({
     ) {
       setEditPhoneError("Phone must be 11 or 13 digits");
       hasError = true;
-    } else setEditPhoneError("");
+    } else {
+      setEditPhoneError("");
+    }
 
     if (editingUser.gcashNumber && !gcashRegex.test(editingUser.gcashNumber)) {
       setEditGcashError("GCash must start with 09 and be 11 digits");
@@ -218,7 +224,9 @@ export function UserManagement({
     ) {
       setEditGcashError("GCash number must be exactly 11 digits");
       hasError = true;
-    } else setEditGcashError("");
+    } else {
+      setEditGcashError("");
+    }
 
     if (hasError) return;
 
@@ -519,301 +527,324 @@ export function UserManagement({
     }
   };
 
-  const canManageUsers = currentUser.role === "admin";
+  // ────────────────────────────────────────────────
+  // Filtering + displayed users logic
+  // ────────────────────────────────────────────────
   const normalizedSearch = searchTerm.trim().toLowerCase();
+
   const filteredUsers = useMemo(() => {
-    if (!normalizedSearch) return users;
-    return users.filter((user) => {
-      const haystack = [
-        user.name,
-        user.email,
-        user.role,
-        user.school,
-        user.employeeNumber,
-        user.secureId,
-        user.phone,
-        user.gcashNumber,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(normalizedSearch);
-    });
-  }, [normalizedSearch, users]);
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / rowsPerPage));
-  const safePage = Math.min(currentPage, totalPages);
-  const startIndex = (safePage - 1) * rowsPerPage;
-  const endIndex = Math.min(startIndex + rowsPerPage, filteredUsers.length);
-  const paginatedUsers = filteredUsers.slice(
-    startIndex,
-    startIndex + rowsPerPage
-  );
-  const visibleUserIds = useMemo(
-    () => paginatedUsers.map((user) => user.id),
-    [paginatedUsers]
-  );
-  const selectedVisibleCount = visibleUserIds.filter((id) =>
-    selectedUserIds.includes(id)
-  ).length;
-  const allVisibleSelected =
-    visibleUserIds.length > 0 && selectedVisibleCount === visibleUserIds.length;
-  const someVisibleSelected = selectedVisibleCount > 0 && !allVisibleSelected;
-  const columnCount = 5 + (showSecureIds ? 1 : 0) + (canManageUsers ? 2 : 0);
+    let result = users;
 
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
+    // Role filter
+    if (selectedRole !== "all") {
+      result = result.filter((user) => user.role === selectedRole);
     }
-  }, [currentPage, totalPages]);
 
+    // Text search
+    if (normalizedSearch) {
+      result = result.filter((user) => {
+        const haystack = [
+          user.name,
+          user.email,
+          user.role,
+          user.school,
+          user.employeeNumber,
+          user.secureId,
+          user.phone,
+          user.gcashNumber,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return haystack.includes(normalizedSearch);
+      });
+    }
+
+    return result;
+  }, [users, normalizedSearch, selectedRole]);
+
+  const displayedUsers = useMemo(() => {
+    return filteredUsers.slice(0, displayCount);
+  }, [filteredUsers, displayCount]);
+
+  const hasMore = displayCount < filteredUsers.length;
+
+  const loadMore = useCallback(() => {
+    if (!hasMore || loadingMore) return;
+    setLoadingMore(true);
+    // Small delay to simulate network + give smooth feel
+    setTimeout(() => {
+      setDisplayCount((prev) => prev + 5);
+      setLoadingMore(false);
+    }, 500);
+  }, [hasMore, loadingMore]);
+
+  // Reset display count when filters change
+  useEffect(() => {
+    setDisplayCount(5);
+  }, [searchTerm, selectedRole]);
+
+  // Intersection Observer for infinite scroll
+  useEffect(() => {
+    if (!loadMoreTriggerRef.current) return;
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+          loadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    observerRef.current.observe(loadMoreTriggerRef.current);
+
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, [hasMore, loadingMore, loadMore]);
+
+  // Keep selected IDs in sync when users list changes
   useEffect(() => {
     const userIds = new Set(users.map((user) => user.id));
     setSelectedUserIds((prev) => prev.filter((id) => userIds.has(id)));
   }, [users]);
 
   return (
-    <div className="space-y-6 px-1 sm:px-0">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <h2 className="text-2xl font-bold">User Management</h2>
+    <div className="space-y-6 px-2 sm:px-4 lg:px-6 pb-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">
+            {/* add user icon */}
+            <UserIcon className="h-6 w-6 inline mr-2" />
+            User Management
+            </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage system users, roles and permissions
+          </p>
+        </div>
+
         <div className="flex flex-wrap gap-3">
           {canManageUsers && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="whitespace-nowrap"
-              onClick={() => setShowInactiveModal(true)}
-            >
-              <UserX className="h-4 w-4 mr-2" />
-              Inactive Users
-            </Button>
-          )}
-          {canManageUsers && (
-            <Button
-              size="sm"
-              className="whitespace-nowrap"
-              onClick={() => setShowSupervisorForm(true)}
-            >
-              <UserPlus className="h-4 w-4 mr-2" />
-              Add Supervisor
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                onClick={() => setShowInactiveModal(true)}
+              >
+                <UserX size={16} />
+                Inactive Users
+              </Button>
+
+              <Button
+                size="sm"
+                className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm"
+                onClick={() => setShowSupervisorForm(true)}
+              >
+                <UserPlus size={16} />
+                Add Supervisor
+              </Button>
+            </>
           )}
         </div>
       </div>
 
-      <Card>
+      <Card className="border shadow-sm">
         <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-            <CardTitle>System Users</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <CardTitle className="text-lg font-semibold">System Users</CardTitle>
+
             <Button
-              variant={showSecureIds ? "destructive" : "outline"} // Red when showing
+              variant={showSecureIds ? "destructive" : "outline"}
               size="sm"
+              className="gap-2"
               onClick={handleToggleSecureIds}
             >
-              {showSecureIds ? (
-                <EyeOff className="h-4 w-4" />
-              ) : (
-                <Eye className="h-4 w-4" />
-              )}
+              {showSecureIds ? <EyeOff size={16} /> : <Eye size={16} />}
               {showSecureIds ? "Hide" : "Show"} Secure IDs
             </Button>
-            {/* ---------------------- */}
           </div>
         </CardHeader>
+
         <CardContent>
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-4">
-            <div className="w-full md:w-1/2">
+          {/* Filters */}
+          <div className="flex flex-col-reverse lg:flex-row justify-between lg:items-end gap-5 mb-6">
+            <div className="relative flex-1 max-w-lg">
+              <Search className="absolute left-3 top-4.5 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               <Input
-                placeholder="Search..."
+                placeholder="Search name, email, school, employee #, phone, GCash..."
                 value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-muted/40 border-muted-foreground/30"
               />
-              <span className="text-xs text-muted-foreground italic font-regular"><span className="text-red-500 font-semibold">Note:</span> You can search by name, email, role, school, employee number, secure ID, phone number, or GCash number.</span>
+              <p className="mt-1 text-xs text-muted-foreground"><span className="font-medium text-[#ef4444]">Note:</span> Search is case-insensitive and supports partial matches.</p>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-sm text-muted-foreground">Rows</span>
-              <Select
-                value={String(rowsPerPage)}
-                onValueChange={(value) => {
-                  setRowsPerPage(Number(value));
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="w-20">
-                  <SelectValue />
+
+            <div className="min-w-[200px]">
+              <Label className="text-sm mb-1.5 block">Filter by Role:</Label>
+              <Select value={selectedRole} onValueChange={setSelectedRole}>
+                <SelectTrigger>
+                  <SelectValue placeholder="All roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="5">5</SelectItem>
-                  <SelectItem value="10">10</SelectItem>
-                  <SelectItem value="20">20</SelectItem>
-                  <SelectItem value="50">50</SelectItem>
+                  <SelectItem value="all">All Roles</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                  <SelectItem value="supervisor">Supervisor</SelectItem>
+                  <SelectItem value="fabricator">Fabricator</SelectItem>
+                  <SelectItem value="client">Client</SelectItem>
                 </SelectContent>
               </Select>
-              {canManageUsers && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  disabled={selectedUserIds.length === 0}
-                  onClick={handleDeactivateSelected}
-                >
-                  Deactivate Selected
-                </Button>
-              )}
             </div>
+
+            {canManageUsers && selectedUserIds.length > 0 && (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleDeactivateSelected}
+              >
+                Deactivate {selectedUserIds.length}
+              </Button>
+            )}
           </div>
-          <div className="overflow-x-auto max-w-full">
-            <Table className="w-full min-w-[900px] table-fixed [&_th]:whitespace-normal [&_td]:whitespace-normal">
-              <TableHeader>
+
+          {/* Table */}
+          <div className="rounded-lg border overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/50">
                 <TableRow>
                   {canManageUsers && (
-                    <TableHead className="w-10 text-center align-middle">
-                      <div className="flex items-center justify-center">
-                        <Checkbox
-                          checked={
-                            allVisibleSelected
-                              ? true
-                              : someVisibleSelected
-                              ? "indeterminate"
-                              : false
+                    <TableHead className="w-12 text-center">
+                      <Checkbox
+                        checked={
+                          displayedUsers.length > 0 &&
+                          displayedUsers.every((u) => selectedUserIds.includes(u.id))
+                        }
+                        indeterminate={
+                          displayedUsers.some((u) => selectedUserIds.includes(u.id)) &&
+                          !displayedUsers.every((u) => selectedUserIds.includes(u.id))
+                        }
+                        onCheckedChange={(checked) => {
+                          if (checked) {
+                            setSelectedUserIds((prev) => [
+                              ...new Set([...prev, ...displayedUsers.map((u) => u.id)]),
+                            ]);
+                          } else {
+                            setSelectedUserIds((prev) =>
+                              prev.filter((id) => !displayedUsers.some((u) => u.id === id))
+                            );
                           }
-                          onCheckedChange={(value) => {
-                            if (value) {
-                              const next = new Set(selectedUserIds);
-                              visibleUserIds.forEach((id) => next.add(id));
-                              setSelectedUserIds(Array.from(next));
-                            } else {
-                              setSelectedUserIds((prev) =>
-                                prev.filter(
-                                  (id) => !visibleUserIds.includes(id)
-                                )
-                              );
-                            }
-                          }}
-                          aria-label="Select all visible users"
-                        />
-                      </div>
+                        }}
+                      />
                     </TableHead>
                   )}
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>School</TableHead>
-                  <TableHead>Contact</TableHead>
-                  {showSecureIds && <TableHead>Secure ID</TableHead>}
-                  <TableHead>Employee #</TableHead>
-                  {canManageUsers && (
-                    <TableHead className="text-right">Actions</TableHead>
-                  )}
+                  <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                  <TableHead className="min-w-[110px]">Role</TableHead>
+                  <TableHead className="min-w-[140px]">School</TableHead>
+                  <TableHead className="min-w-[160px]">Contact</TableHead>
+                  {showSecureIds && <TableHead className="min-w-[160px]">Secure ID</TableHead>}
+                  <TableHead className="min-w-[120px]">Employee #</TableHead>
+                  {canManageUsers && <TableHead className="w-28 text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
+
               <TableBody>
-                {paginatedUsers.length === 0 ? (
+                {displayedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={columnCount}
-                      className="text-center text-muted-foreground"
-                    >
-                      No users match your search.
+                    <TableCell colSpan={100} className="h-48 text-center text-muted-foreground">
+                      No users found matching your filters
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-muted/40">
+                  displayedUsers.map((user) => (
+                    <TableRow key={user.id} className="hover:bg-muted/60 transition-colors">
                       {canManageUsers && (
-                        <TableCell className="p-0 text-center align-middle">
-                          <div className="flex items-center justify-center">
-                            <Checkbox
-                              checked={selectedUserIds.includes(user.id)}
-                              disabled={user.id === currentUser.id}
-                              onCheckedChange={(value) => {
-                                if (value) {
-                                  setSelectedUserIds((prev) =>
-                                    prev.includes(user.id)
-                                      ? prev
-                                      : [...prev, user.id]
-                                  );
-                                } else {
-                                  setSelectedUserIds((prev) =>
-                                    prev.filter((id) => id !== user.id)
-                                  );
-                                }
-                              }}
-                              aria-label={`Select ${user.name}`}
-                            />
-                          </div>
+                        <TableCell className="text-center">
+                          <Checkbox
+                            checked={selectedUserIds.includes(user.id)}
+                            disabled={user.id === currentUser.id}
+                            onCheckedChange={(checked) => {
+                              setSelectedUserIds((prev) =>
+                                checked
+                                  ? [...prev, user.id]
+                                  : prev.filter((id) => id !== user.id)
+                              );
+                            }}
+                          />
                         </TableCell>
                       )}
-                      <TableCell className="font-medium">
-                        <div>{user.name}</div>
-                        <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                          <Mail className="h-3.5 w-3.5 shrink-0" />
+
+                      <TableCell>
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                          <Mail size={13} className="shrink-0" />
                           <span className="break-all">{user.email}</span>
                         </div>
                       </TableCell>
+
                       <TableCell>
-                        <Badge variant={getRoleBadgeVariant(user.role)}>
-                          <span className="md:hidden">
-                            {getRoleIcon(user.role)}
-                          </span>
-                          <span className="hidden md:inline">
-                            {user.role.toUpperCase()}
-                          </span>
+                        <Badge
+                          variant={getRoleBadgeVariant(user.role)}
+                          className="font-medium capitalize"
+                        >
+                          <span className="md:hidden mr-1.5">{getRoleIcon(user.role)}</span>
+                          <span className="hidden md:inline">{user.role}</span>
                         </Badge>
                       </TableCell>
+
                       <TableCell className="text-muted-foreground capitalize">
-                        {user.school || "N/A"}
+                        {user.school || "—"}
                       </TableCell>
-                      <TableCell>
-                        <div className="space-y-1 text-sm">
-                          {user.phone && (
-                            <div className="flex items-center gap-1.5">
-                              <Phone className="h-3.5 w-3.5 shrink-0" />
-                              {user.phone}
-                            </div>
-                          )}
-                          {user.gcashNumber && (
-                            <div className="text-muted-foreground italic text-xs">
-                              GCash: {user.gcashNumber}
-                            </div>
-                          )}
-                        </div>
+
+                      <TableCell className="text-sm">
+                        {user.phone && (
+                          <div className="flex items-center gap-1.5">
+                            <Phone size={14} className="shrink-0 text-muted-foreground" />
+                            {user.phone}
+                          </div>
+                        )}
+                        {user.gcashNumber && (
+                          <div className="text-xs text-muted-foreground/80 mt-1 italic">
+                            GCash: {user.gcashNumber}
+                          </div>
+                        )}
                       </TableCell>
+
                       {showSecureIds && (
                         <TableCell>
-                          <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">
-                            {user.secureId || "N/A"}
+                          <code className="text-xs font-mono bg-muted px-2.5 py-1 rounded break-all">
+                            {user.secureId || "—"}
                           </code>
                         </TableCell>
                       )}
+
                       <TableCell>
-                        <code className="text-xs font-mono">
-                          {user.employeeNumber || "N/A"}
+                        <code className="text-xs font-mono text-muted-foreground">
+                          {user.employeeNumber || "—"}
                         </code>
                       </TableCell>
+
                       {canManageUsers && (
                         <TableCell className="text-right">
-                          <div className="flex flex-row flex-nowrap gap-2 justify-end">
+                          <div className="flex items-center justify-end gap-1.5">
                             <Button
-                              variant="outline"
-                              size="sm"
-                              aria-label="Edit"
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
                               onClick={() => handleEditUser(user)}
                             >
-                              <Edit className="h-4 w-4 md:hidden" />
-                              <span className="hidden md:inline">Edit</span>
+                              <Edit size={16} />
                             </Button>
+
                             {user.id !== currentUser.id && (
                               <Button
-                                variant="destructive"
-                                size="sm"
-                                aria-label="Deactivate"
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                                 onClick={() => handleDeactivateUser(user.id)}
                               >
-                                <Trash2 className="h-4 w-4 md:hidden" />
-                                <span className="hidden md:inline">
-                                  Deactivate
-                                </span>
+                                <Trash2 size={16} />
                               </Button>
                             )}
                           </div>
@@ -825,102 +856,96 @@ export function UserManagement({
               </TableBody>
             </Table>
           </div>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              {filteredUsers.length === 0
-                ? "No users found."
-                : `Showing ${startIndex + 1}-${endIndex} of ${
-                    filteredUsers.length
-                  }`}
+
+          {/* Load more area */}
+          {hasMore && (
+            <div
+              ref={loadMoreTriggerRef}
+              className="py-10 flex justify-center items-center text-sm text-muted-foreground"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Loading more users...
+                </>
+              ) : (
+                "Scroll down to load more"
+              )}
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage === 1}
-                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-              >
-                Previous
-              </Button>
-              <span className="text-sm">
-                {safePage} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={safePage === totalPages}
-                onClick={() =>
-                  setCurrentPage((page) => Math.min(totalPages, page + 1))
-                }
-              >
-                Next
-              </Button>
+          )}
+
+          {!hasMore && filteredUsers.length > 0 && (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              All matching users have been loaded
             </div>
-          </div>
+          )}
+
+          {filteredUsers.length === 0 && (
+            <div className="py-12 text-center text-muted-foreground">
+              No users match the current filters
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* --- NEW: Password Verification Modal --- */}
+      {/* Password Verification Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-md">
-            <div className="p-5 border-b">
+          <div className="bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
+            <div className="p-6 border-b">
               <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
+                <h3 className="text-lg font-semibold flex items-center gap-2.5">
                   <Shield className="h-5 w-5 text-primary" />
-                  Security Verification
-                </h2>
+                  Security Check
+                </h3>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowPasswordModal(false)}
                 >
-                  <X className="h-5 w-5" />
+                  <X size={20} />
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Please enter your admin password to reveal Secure IDs.
+              <p className="text-sm text-muted-foreground mt-1.5">
+                Enter your password to view Secure IDs.
               </p>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-6 space-y-5">
               <div className="space-y-2">
-                <Label htmlFor="verify-pass">Password</Label>
+                <Label htmlFor="verify-password">Password</Label>
                 <Input
-                  id="verify-pass"
+                  id="verify-password"
                   type="password"
-                  placeholder="Enter password..."
+                  autoFocus
                   value={verifyPassword}
                   onChange={(e) => {
                     setVerifyPassword(e.target.value);
                     setVerifyError("");
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleVerifyPassword();
-                  }}
+                  onKeyDown={(e) => e.key === "Enter" && handleVerifyPassword()}
                   className={verifyError ? "border-destructive" : ""}
-                  autoFocus
                 />
                 {verifyError && (
-                  <p className="text-sm text-destructive">{verifyError}</p>
+                  <p className="text-sm text-destructive mt-1.5">{verifyError}</p>
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 pt-2">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowPasswordModal(false)}
-                >
+              <div className="flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleVerifyPassword} disabled={isVerifying}>
+                <Button
+                  onClick={handleVerifyPassword}
+                  disabled={isVerifying || !verifyPassword.trim()}
+                >
                   {isVerifying ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Verifying...
                     </>
                   ) : (
-                    "Verify & Show"
+                    "Confirm"
                   )}
                 </Button>
               </div>
@@ -928,17 +953,15 @@ export function UserManagement({
           </div>
         </div>
       )}
-      {/* ------------------------------------- */}
 
       {/* Inactive Users Modal */}
       {showInactiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col">
-            {/* ... (Existing Inactive Modal Content) ... */}
-            <div className="p-5 sm:p-6 border-b">
+          <div className="bg-background border rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="p-6 border-b">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <UserX className="h-5 w-5" />
+                <h2 className="text-xl font-semibold flex items-center gap-2.5">
+                  <UserX className="h-5 w-5 text-destructive" />
                   Inactive / Deactivated Users
                 </h2>
                 <Button
@@ -946,140 +969,120 @@ export function UserManagement({
                   size="icon"
                   onClick={() => setShowInactiveModal(false)}
                 >
-                  <X className="h-5 w-5" />
+                  <X size={20} />
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                These accounts are deactivated and cannot log in.
+              <p className="text-sm text-muted-foreground mt-1.5">
+                These accounts are currently deactivated and cannot log in.
               </p>
             </div>
 
-            <div className="flex-1 overflow-hidden p-4 sm:p-6">
+            <div className="flex-1 overflow-auto p-6">
               {loadingInactive ? (
-                <div className="h-full flex items-center justify-center text-muted-foreground">
-                  Loading inactive users...
+                <div className="h-full flex items-center justify-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  Loading...
                 </div>
               ) : inactiveUsers.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-muted-foreground">
-                  <Users className="h-14 w-14 mb-4 opacity-50" />
+                  <Users className="h-16 w-16 mb-4 opacity-50" />
                   <p className="text-lg font-medium">No inactive users found</p>
                 </div>
               ) : (
-                <div className="h-full overflow-auto">
-                  <Table>
-                    <TableHeader className="sticky top-0 bg-background z-10">
-                      <TableRow>
-                        <TableHead className="min-w-[180px]">Name</TableHead>
-                        <TableHead className="min-w-[110px]">Role</TableHead>
-                        <TableHead className="min-w-[140px]">School</TableHead>
-                        <TableHead className="min-w-[160px]">Contact</TableHead>
-                        {showSecureIds && (
-                          <TableHead className="min-w-[140px]">
-                            Secure ID
-                          </TableHead>
-                        )}
-                        <TableHead className="min-w-[110px]">
-                          Employee #
-                        </TableHead>
-                        <TableHead className="min-w-[140px] text-right">
-                          Action
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {inactiveUsers.map((user) => (
-                        <TableRow key={user.id}>
-                          <TableCell>
-                            <div className="font-medium">{user.name}</div>
-                            <div className="text-sm text-muted-foreground flex items-center gap-1.5 mt-1">
-                              <Mail className="h-3.5 w-3.5 shrink-0" />
-                              <span className="break-all">{user.email}</span>
+                <Table>
+                  <TableHeader className="sticky top-0 bg-background z-10 border-b">
+                    <TableRow>
+                      <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                      <TableHead className="min-w-[110px]">Role</TableHead>
+                      <TableHead className="min-w-[140px]">School</TableHead>
+                      <TableHead className="min-w-[160px]">Contact</TableHead>
+                      {showSecureIds && <TableHead className="min-w-[160px]">Secure ID</TableHead>}
+                      <TableHead className="min-w-[120px]">Employee #</TableHead>
+                      <TableHead className="min-w-[140px] text-right">Action</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inactiveUsers.map((user) => (
+                      <TableRow key={user.id} className="hover:bg-muted/50">
+                        <TableCell>
+                          <div className="font-medium">{user.name}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                            <Mail size={13} />
+                            <span className="break-all">{user.email}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getRoleBadgeVariant(user.role)}>
+                            {user.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground capitalize">
+                          {user.school || "—"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {user.phone && (
+                            <div className="flex items-center gap-1.5">
+                              <Phone size={14} className="shrink-0" />
+                              {user.phone}
                             </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={getRoleBadgeVariant(user.role)}>
-                              {user.role.toUpperCase()}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {user.school || "N/A"}
-                          </TableCell>
-                          <TableCell>
-                            <div className="space-y-1 text-sm">
-                              {user.phone && (
-                                <div className="flex items-center gap-1.5">
-                                  <Phone className="h-3.5 w-3.5 shrink-0" />
-                                  {user.phone}
-                                </div>
-                              )}
-                              {user.gcashNumber && (
-                                <div className="text-muted-foreground">
-                                  GCash: {user.gcashNumber}
-                                </div>
-                              )}
-                            </div>
-                          </TableCell>
-                          {showSecureIds && (
-                            <TableCell>
-                              <code className="text-xs bg-muted px-1.5 py-0.5 rounded break-all">
-                                {user.secureId || "N/A"}
-                              </code>
-                            </TableCell>
                           )}
+                          {user.gcashNumber && (
+                            <div className="text-xs text-muted-foreground/80 mt-1">
+                              GCash: {user.gcashNumber}
+                            </div>
+                          )}
+                        </TableCell>
+                        {showSecureIds && (
                           <TableCell>
-                            <code className="text-xs font-mono">
-                              {user.employeeNumber || "N/A"}
+                            <code className="text-xs font-mono bg-muted px-2 py-1 rounded break-all">
+                              {user.secureId || "—"}
                             </code>
                           </TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              variant="default"
-                              size="sm"
-                              onClick={() => handleRestoreUser(user.id)}
-                            >
-                              <UserCheck className="h-4 w-4 mr-1.5" />
-                              Restore
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
+                        )}
+                        <TableCell>
+                          <code className="text-xs font-mono text-muted-foreground">
+                            {user.employeeNumber || "—"}
+                          </code>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleRestoreUser(user.id)}
+                          >
+                            <UserCheck size={16} className="mr-1.5" />
+                            Restore
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               )}
             </div>
           </div>
         </div>
       )}
 
-      {/* Supervisor Signup Form */}
-      {showSupervisorForm && (
-        <SupervisorSignupForm
-          onSignup={handleCreateSupervisor}
-          onClose={() => setShowSupervisorForm(false)}
-        />
-      )}
-
       {/* Edit User Modal */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-lg shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            {/* ... (Existing Edit Modal Content - matching your code) ... */}
-            <div className="p-5 sm:p-6 border-b sticky top-0 bg-background z-10">
+          <div className="bg-background border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Edit User</h2>
                 <Button variant="ghost" size="icon" onClick={handleCancelEdit}>
-                  <X className="h-5 w-5" />
+                  <X size={20} />
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
-                Update user information.
+                Update user details below
               </p>
             </div>
 
-            <div className="p-5 sm:p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 sm:gap-6">
-                <div>
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
                   <Label>Name</Label>
                   <Input
                     value={editingUser.name || ""}
@@ -1088,7 +1091,8 @@ export function UserManagement({
                     }
                   />
                 </div>
-                <div>
+
+                <div className="space-y-2">
                   <Label>Email</Label>
                   <Input
                     value={editingUser.email || ""}
@@ -1099,13 +1103,11 @@ export function UserManagement({
                     className={editEmailError ? "border-destructive" : ""}
                   />
                   {editEmailError && (
-                    <p className="text-sm text-destructive mt-1.5">
-                      {editEmailError}
-                    </p>
+                    <p className="text-sm text-destructive">{editEmailError}</p>
                   )}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label>Phone</Label>
                   <Input
                     value={editingUser.phone || ""}
@@ -1113,43 +1115,35 @@ export function UserManagement({
                     onChange={(e) => {
                       let val = e.target.value.replace(/[^\d+]/g, "");
                       if (val.includes("+")) val = "+" + val.replace(/\+/g, "");
-                      val = val.startsWith("+")
-                        ? val.slice(0, 13)
-                        : val.slice(0, 11);
+                      val = val.startsWith("+") ? val.slice(0, 13) : val.slice(0, 11);
                       setEditingUser({ ...editingUser, phone: val });
                       setEditPhoneError("");
                     }}
                     className={editPhoneError ? "border-destructive" : ""}
                   />
                   {editPhoneError && (
-                    <p className="text-sm text-destructive mt-1.5">
-                      {editPhoneError}
-                    </p>
+                    <p className="text-sm text-destructive">{editPhoneError}</p>
                   )}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label>GCash Number</Label>
                   <Input
                     value={editingUser.gcashNumber || ""}
                     maxLength={11}
                     onChange={(e) => {
-                      const val = e.target.value
-                        .replace(/[^\d]/g, "")
-                        .slice(0, 11);
+                      const val = e.target.value.replace(/[^\d]/g, "").slice(0, 11);
                       setEditingUser({ ...editingUser, gcashNumber: val });
                       setEditGcashError("");
                     }}
                     className={editGcashError ? "border-destructive" : ""}
                   />
                   {editGcashError && (
-                    <p className="text-sm text-destructive mt-1.5">
-                      {editGcashError}
-                    </p>
+                    <p className="text-sm text-destructive">{editGcashError}</p>
                   )}
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label>School / Institution</Label>
                   <Input
                     value={editingUser.school || ""}
@@ -1159,7 +1153,7 @@ export function UserManagement({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label>Role</Label>
                   <Select
                     value={editingUser.role}
@@ -1182,7 +1176,7 @@ export function UserManagement({
                   </Select>
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label>Secure ID</Label>
                   <Input
                     value={editingUser.secureId || ""}
@@ -1195,7 +1189,7 @@ export function UserManagement({
                   />
                 </div>
 
-                <div>
+                <div className="space-y-2">
                   <Label>Employee #</Label>
                   <Input
                     value={editingUser.employeeNumber || ""}
@@ -1215,11 +1209,14 @@ export function UserManagement({
                   onClick={handleCancelEdit}
                   className="w-full sm:w-auto"
                 >
-                  <X className="h-4 w-4 mr-2" />
+                  <X size={16} className="mr-2" />
                   Cancel
                 </Button>
-                <Button onClick={handleSaveUser} className="w-full sm:w-auto">
-                  <Save className="h-4 w-4 mr-2" />
+                <Button
+                  onClick={handleSaveUser}
+                  className="w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700"
+                >
+                  <Save size={16} className="mr-2" />
                   Save Changes
                 </Button>
               </div>
@@ -1228,13 +1225,20 @@ export function UserManagement({
         </div>
       )}
 
+      {showSupervisorForm && (
+        <SupervisorSignupForm
+          onSignup={handleCreateSupervisor}
+          onClose={() => setShowSupervisorForm(false)}
+        />
+      )}
+
       {!canManageUsers && (
-        <Card className="mt-8">
+        <Card className="mt-10 border-dashed bg-muted/30">
           <CardContent className="py-12 text-center">
-            <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">Limited Access</h3>
-            <p className="text-muted-foreground">
-              Only administrators can manage users and view inactive accounts.
+            <Shield className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
+            <h3 className="text-lg font-medium mb-2">Administrator Access Required</h3>
+            <p className="text-muted-foreground max-w-md mx-auto">
+              Only admins can manage users, view inactive accounts, add supervisors, edit details or reveal secure IDs.
             </p>
           </CardContent>
         </Card>
