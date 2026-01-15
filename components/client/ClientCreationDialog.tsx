@@ -137,8 +137,7 @@ export function ClientCreationDialog({
       });
 
       if (response.data) {
-        const newClient = response.data;
-        setCreatedClient(newClient);
+const newClient = response.data.user || response.data;        setCreatedClient(newClient);
         onClientCreated(newClient);
 
         Swal.close();

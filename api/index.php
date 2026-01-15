@@ -1,9 +1,17 @@
 <?php
 
+require __DIR__ . '/../vendor/autoload.php';
+
 // Simple PHP API router to replace Node/Express backend
 
 require __DIR__ . '/config.php';
 
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+// LOAD PHPMAILER
+// If using Composer:
 $method = $_SERVER['REQUEST_METHOD'];
 $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
 
@@ -1627,32 +1635,45 @@ function handle_create_client(PDO $pdo): void
 
     $userId = 'user-' . time();
 
-    $stmt = $pdo->prepare(
-        'INSERT INTO users (id, name, email, password_hash, role, school, phone, secure_id, client_project_id, is_active)
-         VALUES (:id, :name, :email, :password_hash, :role, :school, :phone, :secure_id, :client_project_id, 1)'
-    );
+    try {
+        $stmt = $pdo->prepare(
+            'INSERT INTO users (id, name, email, password_hash, role, school, phone, secure_id, client_project_id, is_active)
+             VALUES (:id, :name, :email, :password_hash, :role, :school, :phone, :secure_id, :client_project_id, 1)'
+        );
 
-    $stmt->execute([
-        ':id' => $userId,
-        ':name' => $name,
-        ':email' => $email,
-        ':password_hash' => $passwordHash,
-        ':role' => 'client',
-        ':school' => $projectName,
-        ':phone' => $body['phone'] ?? null,
-        ':secure_id' => $secureId,
-        ':client_project_id' => $projectId,
-    ]);
+        $stmt->execute([
+            ':id' => $userId,
+            ':name' => $name,
+            ':email' => $email,
+            ':password_hash' => $passwordHash,
+            ':role' => 'client',
+            ':school' => $projectName,
+            ':phone' => $body['phone'] ?? null,
+            ':secure_id' => $secureId,
+            ':client_project_id' => $projectId,
+        ]);
 
-    // LOGGING
-    log_activity($pdo, $_SESSION['user_id'], 'CREATE_CLIENT', "Created client: $name for project $projectId");
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'CREATE_CLIENT', "Created client: $name for project $projectId");
 
-    $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
-    $stmt->execute([':id' => $userId]);
-    $user = $stmt->fetch();
-    unset($user['password_hash']);
+        // --- NEW CODE START: Send Email ---
+        // We pass the PLAIN password here because once the function ends, we only have the hash.
+        $emailSent = send_client_credentials_email($email, $name, $password, $projectName, $secureId);
+        // --- NEW CODE END ---
 
-    json_response(['user' => $user]);
+        $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $userId]);
+        $user = $stmt->fetch();
+        unset($user['password_hash']);
+
+        // Optionally add email status to response
+        $user['email_sent'] = $emailSent;
+
+        json_response(['user' => $user]);
+
+    } catch (Exception $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
 }
 
 function handle_verify_password(PDO $pdo): void
@@ -1848,4 +1869,67 @@ function handle_delete_announcement(PDO $pdo, string $path): void
 
     log_activity($pdo, $_SESSION['user_id'], 'DELETE_ANNOUNCEMENT', "Deleted announcement ID: $id");
     json_response(['message' => 'Deleted successfully']);
+}
+
+function send_client_credentials_email($recipientEmail, $recipientName, $plainPassword, $projectName, $secureId) {
+    // Create instance. "true" enables exceptions
+    $mail = new PHPMailer(true);
+
+    try {
+        // --- SERVER SETTINGS ---
+        $mail->SMTPDebug = 0;                      // 0 = OFF. (CRITICAL for JSON APIs)
+        $mail->isSMTP();                                            
+        $mail->Host       = 'smtp.gmail.com';     
+        $mail->SMTPAuth   = true;                                   
+        
+        // --- YOUR CREDENTIALS ---
+        $mail->Username   = 'arkquestdev@gmail.com';   // Your Gmail address
+        $mail->Password   = 'hhjgxeprnxljiqdm';         // Your 16-digit App Password
+        
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
+        $mail->Port       = 587;                                    
+
+        // --- RECIPIENTS ---
+        $mail->setFrom($mail->Username, 'Electronik Hub');
+        $mail->addAddress($recipientEmail, $recipientName);
+
+        // --- CONTENT ---
+        $mail->isHTML(true);                                  
+        $mail->Subject = 'Your Client Access Credentials - ' . $projectName;
+        
+        $emailBody = "
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>
+            <div style='text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px;'>
+                <h2 style='color: #2563eb; margin: 0;'>Elektronik Hub</h2>
+                <p style='color: #666; margin: 5px 0 0; font-size: 14px;'>Project Management Portal</p>
+            </div>
+
+            <p>Hello <strong>$recipientName</strong>,</p>
+            <p>Welcome to <strong>Elektronik Hub</strong>! A client account has been created for you to view the progress of project: <strong>$projectName</strong>.</p>
+            
+            <div style='background-color: #f5f8fa; padding: 15px; border-radius: 5px; margin: 20px 0; border: 1px solid #e1e8ed;'>
+               
+                <p style='margin: 5px 0;'><strong>Client ID:</strong> <span style='font-family: monospace;'>$secureId</span></p>
+                <p style='margin: 5px 0;'><strong>Email:</strong> $recipientEmail</p>
+                <p style='margin: 5px 0;'><strong>Password:</strong> <span style='font-family: monospace; background: #ddd; padding: 2px 6px; border-radius: 4px;'>$plainPassword</span></p>
+            </div>
+
+            <p>Best regards,<br><strong>The Elektronik Hub Team</strong></p>
+
+            <p style='color: #999; font-size: 11px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;'>This is an automated message sent from the Elektronik Hub system. Please do not reply.</p>
+        </div>
+        ";
+
+        $mail->Body    = $emailBody;
+        $mail->AltBody = "Hello $recipientName,\n\nYour account for $projectName is ready.\n\nClient ID: $secureId\nEmail: $recipientEmail\nPassword: $plainPassword\n\nLogin at: http://localhost:5173/login";
+
+        $mail->send();
+        return true;
+
+    } catch (Throwable $e) { 
+        // We use 'Throwable' to catch ANY crash.
+        // We log it to the server file system, but we return 'false' so the script continues.
+        error_log("MAILER ERROR: " . $e->getMessage());
+        return false;
+    }
 }
