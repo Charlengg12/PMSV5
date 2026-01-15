@@ -7,7 +7,16 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { Separator } from "../ui/separator";
-import { IdCard, Mail, Phone, Edit, Save, X, UploadCloud, User as UserIcon } from "lucide-react";
+import {
+  IdCard,
+  Mail,
+  Phone,
+  Edit,
+  Save,
+  X,
+  UploadCloud,
+  User as UserIcon,
+} from "lucide-react";
 import { User } from "../../types";
 import { apiService } from "../../utils/apiService";
 import { mapUserDataFromBackend } from "../../utils/userDataMapper";
@@ -31,11 +40,16 @@ const MIN_LOADING_TIME = 2000;
 
 const getDisplayRole = (role: User["role"]) => {
   switch (role) {
-    case "admin":       return "System Administrator";
-    case "supervisor":  return "Supervisor";
-    case "fabricator":  return "Fabricator";
-    case "client":      return "Client";
-    default:            return "User";
+    case "admin":
+      return "System Administrator";
+    case "supervisor":
+      return "Supervisor";
+    case "fabricator":
+      return "Fabricator";
+    case "client":
+      return "Client";
+    default:
+      return "User";
   }
 };
 
@@ -47,10 +61,14 @@ const getNameParts = (fullName: string) => {
   };
 };
 
-function InfoItem({ label, value, icon: Icon }: { 
-  label: string; 
-  value: string; 
-  icon?: any 
+function InfoItem({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string;
+  icon?: any;
 }) {
   return (
     <div className="space-y-0.5">
@@ -73,12 +91,18 @@ export function AdminSettingsPage({
   const [isSaving, setIsSaving] = useState(false);
   const [gcashQr, setGcashQr] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [errors, setErrors] = useState({
+    email: "",
+    phone: "",
+    gcashNumber: "",
+  });
 
   const { firstName, lastName } = getNameParts(currentUser.name);
   const displayRole = getDisplayRole(currentUser.role);
 
-  const employeeId = currentUser.employeeNumber || currentUser.secureId || currentUser.id;
-  const secureId   = currentUser.secureId || "N/A";
+  const employeeId =
+    currentUser.employeeNumber || currentUser.secureId || currentUser.id;
+  const secureId = currentUser.secureId || "N/A";
   const clientProject = currentUser.clientProjectId || "N/A";
   const storageKey = `gcash-qr:${currentUser.id}`;
   const [formData, setFormData] = useState({
@@ -90,6 +114,10 @@ export function AdminSettingsPage({
     gcashNumber: currentUser.gcashNumber || "",
   });
 
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/; // Only gmail.com allowed
+  const phoneRegex = /^(\+639|09)\d{9}$/; // Format: +639123456789 or 09123456789
+  const gcashRegex = /^09\d{9}$/; // Format: 09123456789
+
   useEffect(() => {
     setFormData({
       firstName,
@@ -100,6 +128,7 @@ export function AdminSettingsPage({
       gcashNumber: currentUser.gcashNumber || "",
     });
     setIsEditing(false);
+    setErrors({ email: "", phone: "", gcashNumber: "" });
 
     // Load QR from localStorage
     try {
@@ -108,19 +137,112 @@ export function AdminSettingsPage({
     } catch {
       setGcashQr(null);
     }
-  }, [currentUser.id, currentUser.name, currentUser.email, currentUser.phone, currentUser.school, currentUser.gcashNumber]);
+  }, [
+    currentUser.id,
+    currentUser.name,
+    currentUser.email,
+    currentUser.phone,
+    currentUser.school,
+    currentUser.gcashNumber,
+  ]);
 
-  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const validateForm = () => {
+    const newErrors = {
+      email: "",
+      phone: "",
+      gcashNumber: "",
+    };
+    let isValid = true;
 
-  const showLoading = () => Swal.fire({
-    title: "Saving...",
-    text: "Updating your profile details",
-    allowOutsideClick: false,
-    allowEscapeKey: false,
-    showConfirmButton: false,
-    didOpen: () => Swal.showLoading(),
-    customClass: swalCustomClasses,
-  });
+    // Phone validation
+    if (formData.phone && !phoneRegex.test(formData.phone)) {
+      newErrors.phone = "Format: +639XXXXXXXXX or 09XXXXXXXXX";
+      isValid = false;
+    }
+
+    // GCash validation
+    if (formData.gcashNumber && !gcashRegex.test(formData.gcashNumber)) {
+      newErrors.gcashNumber =
+        "Format: 09XXXXXXXXX (11 digits starting with 09)";
+      isValid = false;
+    }
+
+    setErrors(newErrors);
+    return isValid;
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow empty value
+    if (value === "") {
+      setFormData((prev) => ({ ...prev, phone: value }));
+      setErrors((prev) => ({ ...prev, phone: "" }));
+      return;
+    }
+
+    // Only allow numbers and + symbol at the start
+    if (!/^[+]?\d*$/.test(value)) {
+      return;
+    }
+
+    // Limit length based on format
+    if (value.startsWith("+639")) {
+      // +639XXXXXXXXX format (13 chars)
+      if (value.length <= 13) {
+        setFormData((prev) => ({ ...prev, phone: value }));
+        setErrors((prev) => ({ ...prev, phone: "" }));
+      }
+    } else if (value.startsWith("09")) {
+      // 09XXXXXXXXX format (11 chars)
+      if (value.length <= 11) {
+        setFormData((prev) => ({ ...prev, phone: value }));
+        setErrors((prev) => ({ ...prev, phone: "" }));
+      }
+    } else {
+      // Allow partial typing
+      if (value.length <= 13) {
+        setFormData((prev) => ({ ...prev, phone: value }));
+        setErrors((prev) => ({ ...prev, phone: "" }));
+      }
+    }
+  };
+
+  const handleGcashChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+
+    // Allow empty value
+    if (value === "") {
+      setFormData((prev) => ({ ...prev, gcashNumber: value }));
+      setErrors((prev) => ({ ...prev, gcashNumber: "" }));
+      return;
+    }
+
+    // Only allow numbers
+    if (!/^\d*$/.test(value)) {
+      return;
+    }
+
+    // Limit to 11 digits (09XXXXXXXXX)
+    if (value.length <= 11) {
+      setFormData((prev) => ({ ...prev, gcashNumber: value }));
+      setErrors((prev) => ({ ...prev, gcashNumber: "" }));
+    }
+  };
+
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
+
+  const showLoading = () =>
+    Swal.fire({
+      title: "Saving...",
+      text: "Updating your profile details",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: false,
+      didOpen: () => Swal.showLoading(),
+      customClass: swalCustomClasses,
+    });
 
   const handleEdit = () => {
     setFormData({
@@ -131,17 +253,24 @@ export function AdminSettingsPage({
       department: currentUser.school || "",
       gcashNumber: currentUser.gcashNumber || "",
     });
+    setErrors({ email: "", phone: "", gcashNumber: "" });
     setIsEditing(true);
   };
 
   const handleCancel = () => {
     setIsEditing(false);
+    setErrors({ email: "", phone: "", gcashNumber: "" });
   };
 
   const handleSave = async () => {
+    // Validate form before proceeding
+    if (!validateForm()) {
+      return;
+    }
+
     const trimmedFirst = formData.firstName.trim();
-    const trimmedLast  = formData.lastName.trim();
-    const fullName     = `${trimmedFirst} ${trimmedLast}`.trim();
+    const trimmedLast = formData.lastName.trim();
+    const fullName = `${trimmedFirst} ${trimmedLast}`.trim();
     const trimmedEmail = formData.email.trim();
 
     if (!fullName || !trimmedEmail) {
@@ -195,6 +324,7 @@ export function AdminSettingsPage({
 
       onUpdateCurrentUser(updatedUser);
       setIsEditing(false);
+      setErrors({ email: "", phone: "", gcashNumber: "" });
 
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_LOADING_TIME) await delay(MIN_LOADING_TIME - elapsed);
@@ -301,8 +431,8 @@ export function AdminSettingsPage({
                   <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
                     {currentUser.name}
                   </h2>
-                  <Badge 
-                    variant="secondary" 
+                  <Badge
+                    variant="secondary"
                     className="text-xs font-medium px-3 py-1 bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1"
                   >
                     <UserIcon className="h-4 w-4" />
@@ -317,9 +447,9 @@ export function AdminSettingsPage({
             </div>
 
             {!isEditing && (
-              <Button 
-                variant="default" 
-                size="sm" 
+              <Button
+                variant="default"
+                size="sm"
                 className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
                 onClick={handleEdit}
               >
@@ -334,14 +464,6 @@ export function AdminSettingsPage({
 
         <CardContent className="pt-8 px-6 md:px-8 pb-10">
           <div className="space-y-10">
-            {/* Quick access row */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              <InfoItem label="Employee ID" value={employeeId} icon={IdCard} />
-              <InfoItem label="Phone" value={currentUser.phone || "Not set"} icon={Phone} />
-              <InfoItem label="Email" value={currentUser.email} icon={Mail} />
-              <InfoItem label="Secure ID" value={secureId} />
-            </div>
-
             {/* Personal Information Section */}
             <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
@@ -361,15 +483,6 @@ export function AdminSettingsPage({
                       Upload QR
                     </Button>
                   )}
-                  {!isEditing && (
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleEdit}
-                    >
-                      Edit
-                    </Button>
-                  )}
                 </div>
               </div>
 
@@ -386,8 +499,21 @@ export function AdminSettingsPage({
                 <InfoItem label="Last Name" value={lastName} />
                 <InfoItem label="Email" value={currentUser.email || "—"} />
                 <InfoItem label="Phone" value={currentUser.phone || "—"} />
-                <InfoItem label="Department" value={currentUser.school || "—"} />
-                <InfoItem label="GCash Number" value={currentUser.gcashNumber || "—"} />
+                <InfoItem
+                  label="GCash Number"
+                  value={currentUser.gcashNumber || "—"}
+                />
+                <InfoItem
+                  label="Employee ID"
+                  value={employeeId}
+                  icon={IdCard}
+                />
+                <InfoItem label="Secure ID" value={secureId} />
+
+                <InfoItem
+                  label="Department"
+                  value={currentUser.school || "—"}
+                />
               </div>
 
               {/* GCash QR Section */}
@@ -402,9 +528,9 @@ export function AdminSettingsPage({
                     </p>
                   </div>
                   {gcashQr && isEditing && (
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={handleRemoveQr}
                       className="text-red-600 hover:text-red-700 hover:bg-red-50"
                     >
@@ -441,41 +567,26 @@ export function AdminSettingsPage({
                 )}
               </div>
             </div>
-
-            {/* System Information */}
-            <div className="bg-gray-50 rounded-xl border border-gray-100 p-6">
-              <h4 className="text-base font-semibold text-gray-800 mb-4">
-                System Information
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <InfoItem label="User ID" value={currentUser.id} />
-                <InfoItem label="Employee ID" value={employeeId} />
-                <InfoItem label="Secure ID" value={secureId} />
-                <InfoItem label="Client Project" value={clientProject} />
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
 
       {/* Edit Modal Overlay */}
       {isEditing && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
           onClick={handleCancel}
         >
-          <div 
+          <div
             className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-            onClick={e => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-900">
-                Edit Profile
-              </h2>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <h2 className="text-2xl font-bold text-gray-900">Edit Profile</h2>
+              <Button
+                variant="ghost"
+                size="icon"
                 onClick={handleCancel}
                 className="rounded-full hover:bg-gray-100"
               >
@@ -487,74 +598,137 @@ export function AdminSettingsPage({
             <div className="p-6 md:p-8 space-y-8">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="first-name" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="first-name"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     First Name
                   </Label>
                   <Input
                     id="first-name"
                     value={formData.firstName}
-                    onChange={e => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        firstName: e.target.value,
+                      }))
+                    }
                     className="border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg transition-all"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="last-name" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="last-name"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Last Name
                   </Label>
                   <Input
                     id="last-name"
                     value={formData.lastName}
-                    onChange={e => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        lastName: e.target.value,
+                      }))
+                    }
                     className="border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg transition-all"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="email"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Email
                   </Label>
                   <Input
                     id="email"
                     type="email"
                     value={formData.email}
-                    onChange={e => setFormData(prev => ({ ...prev, email: e.target.value }))}
-                    className="border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg transition-all"
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        email: e.target.value,
+                      }))
+                    }
+                    className={`rounded-lg transition-all ${
+                      errors.email
+                        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                        : "border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    }`}
                   />
+                  {errors.email && (
+                    <p className="text-sm text-red-600 mt-1">{errors.email}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phone" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="phone"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Phone Number
                   </Label>
                   <Input
                     id="phone"
+                    placeholder="+639XXXXXXXXX or 09XXXXXXXXX"
                     value={formData.phone}
-                    onChange={e => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-                    className="border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg transition-all"
+                    onChange={handlePhoneChange}
+                    className={`rounded-lg transition-all ${
+                      errors.phone
+                        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                        : "border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    }`}
                   />
+                  {errors.phone && (
+                    <p className="text-sm text-red-600 mt-1">{errors.phone}</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="department" className="text-sm font-medium text-gray-700">
+                  <Label
+                    htmlFor="gcash-number"
+                    className="text-sm font-medium text-gray-700"
+                  >
+                    GCash Number
+                  </Label>
+                  <Input
+                    id="gcash-number"
+                    placeholder="09XXXXXXXXX"
+                    value={formData.gcashNumber}
+                    onChange={handleGcashChange}
+                    className={`rounded-lg transition-all ${
+                      errors.gcashNumber
+                        ? "border-red-500 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                        : "border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                    }`}
+                  />
+                  {errors.gcashNumber && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.gcashNumber}
+                    </p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="department"
+                    className="text-sm font-medium text-gray-700"
+                  >
                     Department / School
                   </Label>
                   <Input
                     id="department"
                     value={formData.department}
-                    onChange={e => setFormData(prev => ({ ...prev, department: e.target.value }))}
-                    className="border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg transition-all"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="gcash-number" className="text-sm font-medium text-gray-700">
-                    GCash Number
-                  </Label>
-                  <Input
-                    id="gcash-number"
-                    value={formData.gcashNumber}
-                    onChange={e => setFormData(prev => ({ ...prev, gcashNumber: e.target.value }))}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        department: e.target.value,
+                      }))
+                    }
                     className="border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 rounded-lg transition-all"
                   />
                 </div>
@@ -582,9 +756,9 @@ export function AdminSettingsPage({
                       Upload QR
                     </Button>
                     {gcashQr && (
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleRemoveQr}
                         className="text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
@@ -614,15 +788,15 @@ export function AdminSettingsPage({
 
             {/* Modal Footer */}
             <div className="flex justify-end gap-3 px-6 py-5 border-t bg-gray-50 rounded-b-2xl">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={handleCancel}
                 disabled={isSaving}
                 className="border-gray-300 hover:bg-gray-50"
               >
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleSave}
                 disabled={isSaving}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-[140px]"
