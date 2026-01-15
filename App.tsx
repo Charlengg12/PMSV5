@@ -283,14 +283,36 @@ export default function App() {
     setAuthView("main");
   };
 
-  const handleUpdateTaskStatus = (taskId: string, status: Task["status"]) => {
+  const handleUpdateTaskStatus = async (
+    taskId: string,
+    status: Task["status"]
+  ) => {
+    const previousTask = tasks.find((task) => task.id === taskId);
+    const updatedAt = new Date().toISOString();
+
     setTasks((prevTasks) =>
       prevTasks.map((task) =>
-        task.id === taskId
-          ? { ...task, status, updatedAt: new Date().toISOString() }
-          : task
+        task.id === taskId ? { ...task, status, updatedAt } : task
       )
     );
+
+    try {
+      const { data } = await apiService.updateTask(taskId, { status, updatedAt });
+      if (data) {
+        setTasks((prevTasks) =>
+          prevTasks.map((task) => (task.id === taskId ? { ...task, ...data } : task))
+        );
+      }
+    } catch (error) {
+      console.error("Failed to update task status:", error);
+      if (previousTask) {
+        setTasks((prevTasks) =>
+          prevTasks.map((task) =>
+            task.id === taskId ? { ...task, ...previousTask } : task
+          )
+        );
+      }
+    }
   };
 
   const handleCreateTask = (

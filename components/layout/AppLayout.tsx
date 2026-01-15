@@ -1,19 +1,26 @@
-import { ReactNode } from 'react';
-import { User } from '../../types';
-import { AppSidebar } from './AppSidebar';
-import { SidebarProvider, SidebarInset } from '../ui/sidebar';
-import { Header } from './Header';
+import { ReactNode } from "react";
+import { User } from "../../types";
+import { AppSidebar } from "./AppSidebar";
+import { SidebarProvider, SidebarInset } from "../ui/sidebar";
+import { Header } from "./Header";
 
 interface AppLayoutProps {
   children: ReactNode;
   currentUser: User;
   onLogout: () => void;
-  currentTheme: 'light' | 'dark' | 'auto';
-  onThemeChange: (theme: 'light' | 'dark' | 'auto') => void;
+  currentTheme: "light" | "dark" | "auto";
+  onThemeChange: (theme: "light" | "dark" | "auto") => void;
   isTransitioning?: boolean;
 }
 
-export function AppLayout({ children, currentUser, onLogout, currentTheme, onThemeChange, isTransitioning }: AppLayoutProps) {
+export function AppLayout({
+  children,
+  currentUser,
+  onLogout,
+  currentTheme,
+  onThemeChange,
+  isTransitioning,
+}: AppLayoutProps) {
   return (
     <SidebarProvider storageKey={`sidebar_state_${currentUser.id}`}>
       <div className="h-screen flex w-full bg-background overflow-hidden">
