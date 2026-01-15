@@ -676,16 +676,15 @@ export function UserManagement({
           {/* Filters */}
           <div className="flex flex-col-reverse lg:flex-row justify-between lg:items-end gap-5 mb-6">
             <div className="relative flex-1 max-w-lg">
-              <Search className="absolute left-3 top-4.5 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+              <Search className="absolute left-3 top-4.5 -translate-y-1/2 h-4 w-4 text-[#e28a33] pointer-events-none" />
               <Input
-                placeholder="Search name, email, school, employee #, phone, GCash..."
+                placeholder="Search user...."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-muted/40 border-muted-foreground/30"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="font-medium text-[#ef4444]">Note:</span> Search
-                is case-insensitive and supports partial matches.
+                <span className="font-medium text-[#e28a33]">Note:</span> Search by name, email, role, school, employee number, secure ID, phone, or GCash number.
               </p>
             </div>
 

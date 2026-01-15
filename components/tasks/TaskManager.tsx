@@ -23,6 +23,8 @@ import {
   Building,
   CheckCircle,
   SquareCheckBig,
+  Search,
+  X,
 } from "lucide-react";
 import { Task, Project, User as UserType } from "../../types";
 
@@ -61,6 +63,10 @@ export function TaskManager({
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [createAttempted, setCreateAttempted] = useState(false);
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -187,10 +193,91 @@ export function TaskManager({
   const isEditMissing = (field: string) => editMissingFields.includes(field);
   const isCreateMissing = (field: string) => createMissingFields.includes(field);
 
+  // ─── Role-based filtering ──────────────────────────────────────
+  const getFilteredTasksByRole = () => {
+    if (currentUser.role === "admin") return tasks;
+    if (currentUser.role === "supervisor") {
+      const supervisorProjects = projects.filter(
+        (p) => p.supervisorId === currentUser.id
+      );
+      return tasks.filter((t) =>
+        supervisorProjects.some((p) => p.id === t.projectId)
+      );
+    }
+    // fabricator or other roles
+    return tasks.filter(
+      (t) => t.assignedTo === currentUser.id || t.createdBy === currentUser.id
+    );
+  };
 
-  // ────────────────────────────────────────────────
-  // CREATE TASK
-  // ────────────────────────────────────────────────
+  const roleFilteredTasks = getFilteredTasksByRole();
+
+  // ─── Client-side search ────────────────────────────────────────
+  const searchedTasks = roleFilteredTasks.filter((task) => {
+    if (!searchTerm.trim()) return true;
+
+    const term = searchTerm.toLowerCase().trim();
+
+    const projectName =
+      projects.find((p) => p.id === task.projectId)?.name?.toLowerCase() || "";
+
+    const assignedName =
+      users.find((u) => u.id === task.assignedTo)?.name?.toLowerCase() || "";
+
+    const creatorName =
+      users.find((u) => u.id === task.createdBy)?.name?.toLowerCase() || "";
+
+    return (
+      task.title.toLowerCase().includes(term) ||
+      (task.description || "").toLowerCase().includes(term) ||
+      projectName.includes(term) ||
+      assignedName.includes(term) ||
+      creatorName.includes(term)
+    );
+  });
+
+  const canCreateTask =
+    currentUser.role === "admin" || currentUser.role === "supervisor";
+
+  const canEditTask = (task: Task) =>
+    currentUser.role === "admin" ||
+    task.createdBy === currentUser.id ||
+    (currentUser.role === "supervisor" &&
+      projects.some(
+        (p) => p.id === task.projectId && p.supervisorId === currentUser.id
+      ));
+
+  const getStatusColor = (status: Task["status"]) => {
+    switch (status) {
+      case "completed":
+        return "default";
+      case "in-progress":
+        return "secondary";
+      case "pending":
+        return "outline";
+      case "blocked":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const getPriorityColor = (priority: Task["priority"]) => {
+    switch (priority) {
+      case "urgent":
+        return "destructive";
+      case "high":
+        return "destructive";
+      case "medium":
+        return "secondary";
+      case "low":
+        return "outline";
+      default:
+        return "outline";
+    }
+  };
+
+  // ─── CREATE TASK ───────────────────────────────────────────────
   const handleCreate = async () => {
     setCreateAttempted(true);
     const missingFields = getMissingFields();
@@ -284,9 +371,7 @@ export function TaskManager({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // UPDATE TASK
-  // ────────────────────────────────────────────────
+  // ─── UPDATE TASK ───────────────────────────────────────────────
   const handleUpdate = async () => {
     if (!selectedTask) return;
     const missingFields = getMissingFields();
@@ -384,9 +469,7 @@ export function TaskManager({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // MARK AS DONE
-  // ────────────────────────────────────────────────
+  // ─── MARK AS DONE ──────────────────────────────────────────────
   const handleMarkAsDone = async (task: Task) => {
     const confirmed = await Swal.fire({
       title: "Mark as Done?",
@@ -457,9 +540,7 @@ export function TaskManager({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // DELETE
-  // ────────────────────────────────────────────────
+  // ─── DELETE TASK ───────────────────────────────────────────────
   const confirmDelete = async (task: Task) => {
     const result = await Swal.fire({
       title: "Delete Task?",
@@ -522,93 +603,54 @@ export function TaskManager({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // Helper functions (unchanged)
-  // ────────────────────────────────────────────────
-  const getStatusColor = (status: Task["status"]) => {
-    switch (status) {
-      case "completed":
-        return "default";
-      case "in-progress":
-        return "secondary";
-      case "pending":
-        return "outline";
-      case "blocked":
-        return "destructive";
-      default:
-        return "outline";
-    }
-  };
-
-  const getPriorityColor = (priority: Task["priority"]) => {
-    switch (priority) {
-      case "urgent":
-        return "destructive";
-      case "high":
-        return "destructive";
-      case "medium":
-        return "secondary";
-      case "low":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
-  const getFilteredTasks = () => {
-    if (currentUser.role === "admin") return tasks;
-    if (currentUser.role === "supervisor") {
-      const supervisorProjects = projects.filter(
-        (p) => p.supervisorId === currentUser.id
-      );
-      return tasks.filter((t) =>
-        supervisorProjects.some((p) => p.id === t.projectId)
-      );
-    }
-    return tasks.filter(
-      (t) => t.assignedTo === currentUser.id || t.createdBy === currentUser.id
-    );
-  };
-
-  const filteredTasks = getFilteredTasks();
-  const canCreateTask =
-    currentUser.role === "admin" || currentUser.role === "supervisor";
-
-  const canEditTask = (task: Task) =>
-    currentUser.role === "admin" ||
-    task.createdBy === currentUser.id ||
-    (currentUser.role === "supervisor" &&
-      projects.some(
-        (p) => p.id === task.projectId && p.supervisorId === currentUser.id
-      ));
-
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
           <h2 className="text-xl sm:text-2xl font-bold">
             <SquareCheckBig className="inline-block mr-2 mb-1 text-blue-700" />
             Task Management
-            </h2>
+          </h2>
           <p className="text-sm text-muted-foreground">
             Create, manage, and track project tasks
           </p>
         </div>
-        {canCreateTask && (
-          <div className="flex justify-center sm:justify-end">
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          {canCreateTask && (
             <Button
               onClick={openCreateModal}
-              className="w-full sm:w-auto text-base sm:text-sm px-4 py-2"
+              className="w-full sm:w-auto"
             >
               <Plus className="h-4 w-4 mr-2" />
               Create Task
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
+      {/* Search Input */}
+          <div className="relative w-full max-w-md">
+            <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 pointer-events-none text-[#e28a33]" />
+            <Input
+              placeholder="Search task..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-10 w-full"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+            <p className="text-sm text-muted-foreground px-2"><span className="text-[#e28a33]">Note: </span>Search by title, description, project, assigned to or status</p>
+          </div>
+
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredTasks.map((task) => (
+        {searchedTasks.map((task) => (
           <Card key={task.id} className="hover:shadow-md transition-shadow">
             <CardHeader className="pb-3">
               <div className="flex justify-between items-start gap-3">
@@ -642,7 +684,7 @@ export function TaskManager({
                 </span>
               </div>
 
-              {task.assignedTo && (
+              {task.assignedTo && task.assignedTo !== "unassigned" && (
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span>
@@ -719,16 +761,25 @@ export function TaskManager({
         ))}
       </div>
 
-      {filteredTasks.length === 0 && (
+      {searchedTasks.length === 0 && (
         <Card>
           <CardContent className="py-12 text-center">
-            <h3 className="text-lg font-medium mb-2">No tasks found</h3>
+            <h3 className="text-lg font-medium mb-2">
+              {searchTerm.trim() ? "No matching tasks found" : "No tasks found"}
+            </h3>
             <p className="text-muted-foreground mb-6">
-              {canCreateTask
+              {searchTerm.trim()
+                ? "Try different search terms or clear the search"
+                : canCreateTask
                 ? "Create your first task to get started."
                 : "No tasks assigned to you yet."}
             </p>
-            {canCreateTask && (
+            {searchTerm.trim() && (
+              <Button variant="outline" onClick={() => setSearchTerm("")}>
+                Clear Search
+              </Button>
+            )}
+            {!searchTerm.trim() && canCreateTask && (
               <Button onClick={openCreateModal}>
                 <Plus className="h-4 w-4 mr-2" />
                 Create Task
@@ -771,7 +822,7 @@ export function TaskManager({
                   )}
                 </div>
 
-                  <div className="space-y-2">
+                <div className="space-y-2">
                   <Label>Description *</Label>
                   <Textarea
                     value={formData.description}
@@ -789,9 +840,20 @@ export function TaskManager({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Status *</Label>
-                    <Select value={formData.status} onValueChange={(v: Task["status"]) => setFormData({ ...formData, status: v })}>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(v: Task["status"]) =>
+                        setFormData({ ...formData, status: v })
+                      }
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder={isCreateMissing("Status") ? "Status Required" : "Select status"} />
+                        <SelectValue
+                          placeholder={
+                            isCreateMissing("Status")
+                              ? "Status Required"
+                              : "Select status"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
@@ -807,9 +869,20 @@ export function TaskManager({
 
                   <div className="space-y-2">
                     <Label>Priority *</Label>
-                    <Select value={formData.priority} onValueChange={(v: Task["priority"]) => setFormData({ ...formData, priority: v })}>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(v: Task["priority"]) =>
+                        setFormData({ ...formData, priority: v })
+                      }
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder={isCreateMissing("Priority") ? "Priority Required" : "Select priority"} />
+                        <SelectValue
+                          placeholder={
+                            isCreateMissing("Priority")
+                              ? "Priority Required"
+                              : "Select priority"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
@@ -894,11 +967,16 @@ export function TaskManager({
                     value={formData.dueDate}
                     min={todayDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, dueDate: normalizeDateValue(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        dueDate: normalizeDateValue(e.target.value),
+                      })
                     }
                   />
                   {createDueDateError && (
-                    <p className="text-xs text-destructive">{createDueDateError}</p>
+                    <p className="text-xs text-destructive">
+                      {createDueDateError}
+                    </p>
                   )}
                 </div>
               </div>
@@ -965,9 +1043,20 @@ export function TaskManager({
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Status *</Label>
-                    <Select value={formData.status} onValueChange={(v: Task["status"]) => setFormData({ ...formData, status: v })}>
+                    <Select
+                      value={formData.status}
+                      onValueChange={(v: Task["status"]) =>
+                        setFormData({ ...formData, status: v })
+                      }
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder={isEditMissing("Status") ? "Status Required" : "Select status"} />
+                        <SelectValue
+                          placeholder={
+                            isEditMissing("Status")
+                              ? "Status Required"
+                              : "Select status"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
@@ -983,9 +1072,20 @@ export function TaskManager({
 
                   <div className="space-y-2">
                     <Label>Priority *</Label>
-                    <Select value={formData.priority} onValueChange={(v: Task["priority"]) => setFormData({ ...formData, priority: v })}>
+                    <Select
+                      value={formData.priority}
+                      onValueChange={(v: Task["priority"]) =>
+                        setFormData({ ...formData, priority: v })
+                      }
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder={isEditMissing("Priority") ? "Priority Required" : "Select priority"} />
+                        <SelectValue
+                          placeholder={
+                            isEditMissing("Priority")
+                              ? "Priority Required"
+                              : "Select priority"
+                          }
+                        />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
@@ -1002,9 +1102,20 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Project *</Label>
-                  <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })}>
+                  <Select
+                    value={formData.projectId}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, projectId: v })
+                    }
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder={isEditMissing("Project") ? "Project Required" : "Select project"} />
+                      <SelectValue
+                        placeholder={
+                          isEditMissing("Project")
+                            ? "Project Required"
+                            : "Select project"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       {projects
@@ -1027,9 +1138,23 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Assign To *</Label>
-                  <Select value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v === "unassigned" ? "unassigned" : v })}>
+                  <Select
+                    value={formData.assignedTo}
+                    onValueChange={(v) =>
+                      setFormData({
+                        ...formData,
+                        assignedTo: v === "unassigned" ? "unassigned" : v,
+                      })
+                    }
+                  >
                     <SelectTrigger>
-                      <SelectValue placeholder={isEditMissing("Assign To") ? "Assign To Required" : "Select team member"} />
+                      <SelectValue
+                        placeholder={
+                          isEditMissing("Assign To")
+                            ? "Assign To Required"
+                            : "Select team member"
+                        }
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
@@ -1057,7 +1182,10 @@ export function TaskManager({
                     value={formData.dueDate}
                     min={todayDate}
                     onChange={(e) =>
-                      setFormData({ ...formData, dueDate: normalizeDateValue(e.target.value) })
+                      setFormData({
+                        ...formData,
+                        dueDate: normalizeDateValue(e.target.value),
+                      })
                     }
                   />
                   {editDueDateError && (

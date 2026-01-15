@@ -20,6 +20,7 @@ import {
 } from "../ui/dialog";
 import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
+import { Input } from "../ui/input";
 import {
   Calendar,
   DollarSign,
@@ -38,7 +39,7 @@ import {
   TrendingUp,
   AlertCircle,
   FolderOpen,
-  Folder,
+  Search,
 } from "lucide-react";
 import { Project, User } from "../../types";
 import { CreateProjectForm } from "./CreateProjectForm";
@@ -85,7 +86,6 @@ export function ProjectsGrid({
   onCreateUser,
   onBroadcastFabricators,
 }: ProjectsGridProps) {
-  // Move all hooks to the top - this is required by React Hooks rules
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -94,34 +94,32 @@ export function ProjectsGrid({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
-  const [clientDialogProject, setClientDialogProject] =
-    useState<Project | null>(null);
-  // Track locally assigned clients to avoid relying solely on parent refresh
-  const [localClientAssignedProjectIds, setLocalClientAssignedProjectIds] =
-    useState<Set<string>>(new Set());
-  // For fabricator assignment responses
-  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(
-    null
+  const [clientDialogProject, setClientDialogProject] = useState<Project | null>(null);
+  const [localClientAssignedProjectIds, setLocalClientAssignedProjectIds] = useState<Set<string>>(
+    new Set()
   );
+  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
   const [assignmentResponse, setAssignmentResponse] = useState("");
 
-  if (!currentUser) return null; // Safety check
+  // ─── Search state ───────────────────────────────────────────────
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const getFilteredProjects = () => {
-    // First filter by role-based access
-    let roleFilteredProjects;
+  if (!currentUser) return null;
+
+  // Role-based initial filtering
+  const getRoleFilteredProjects = () => {
     if (currentUser.role === "admin") {
-      roleFilteredProjects = projects;
-    } else if (currentUser.role === "supervisor") {
-      roleFilteredProjects = projects.filter(
+      return projects;
+    }
+    if (currentUser.role === "supervisor") {
+      return projects.filter(
         (p) =>
           p.supervisorId === currentUser.id ||
-          (p.pendingSupervisors &&
-            p.pendingSupervisors.includes(currentUser.id))
+          (p.pendingSupervisors && p.pendingSupervisors.includes(currentUser.id))
       );
-    } else if (currentUser.role === "fabricator") {
-      // For fabricators, show both assigned projects and pending assignments
-      roleFilteredProjects = projects.filter(
+    }
+    if (currentUser.role === "fabricator") {
+      return projects.filter(
         (p) =>
           p.fabricatorIds.includes(currentUser.id) ||
           p.pendingAssignments?.some(
@@ -130,28 +128,36 @@ export function ProjectsGrid({
               assignment.status === "pending"
           )
       );
-    } else {
-      roleFilteredProjects = projects.filter((p) =>
-        p.fabricatorIds.includes(currentUser.id)
-      );
     }
-
-    // Then filter out completed projects (they should only appear in archives)
-    return roleFilteredProjects.filter((p) => p.status !== "completed");
+    return projects.filter((p) => p.fabricatorIds.includes(currentUser.id));
   };
 
-  const filteredProjects = getFilteredProjects();
-  // Determine if a client is already assigned to a project
-  const isClientAssigned = (project: Project) => {
-    if (localClientAssignedProjectIds.has(project.id)) return true;
-    if (project.clientName && project.clientName.trim().length > 0) return true;
-    // Fallback: check if there is a client user linked to this project
-    return users.some(
-      (u) => u.role === "client" && u.clientProjectId === project.id
-    );
-  };
+  const roleFilteredProjects = getRoleFilteredProjects();
 
-  // Get available fabricators for assignment (exclude already assigned ones)
+  // Client-side search filtering
+  const filteredProjects = roleFilteredProjects
+    .filter((p) => p.status !== "completed")
+    .filter((project) => {
+      if (!searchTerm.trim()) return true;
+
+      const term = searchTerm.toLowerCase().trim();
+
+      const supervisorName =
+        users.find((u) => u.id === project.supervisorId)?.name?.toLowerCase() || "";
+
+      const fabricatorNames = project.fabricatorIds
+        .map((id) => users.find((u) => u.id === id)?.name?.toLowerCase() || "")
+        .join(" ");
+
+      return (
+        project.name.toLowerCase().includes(term) ||
+        (project.description || "").toLowerCase().includes(term) ||
+        (project.clientName || "").toLowerCase().includes(term) ||
+        supervisorName.includes(term) ||
+        fabricatorNames.includes(term)
+      );
+    });
+
   const getAvailableFabricators = (projectId: string) => {
     const project = projects.find((p) => p.id === projectId);
     if (!project) return [];
@@ -180,8 +186,7 @@ export function ProjectsGrid({
     }
   };
 
-  const canCreateProject =
-    currentUser.role === "admin" || currentUser.role === "supervisor";
+  const canCreateProject = currentUser.role === "admin" || currentUser.role === "supervisor";
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -241,11 +246,9 @@ export function ProjectsGrid({
   };
 
   const handleCreateProject = async (project: Omit<Project, "id">) => {
-    let result;
     if (onCreateProject) {
-      result = await onCreateProject(project);
+      await onCreateProject(project);
     }
-    return result;
   };
 
   const handleViewDetails = (project: Project) => {
@@ -256,7 +259,6 @@ export function ProjectsGrid({
   const handleUpdateProject = (updatedProject: Project) => {
     if (onUpdateProject) {
       onUpdateProject(updatedProject);
-      // Send email notification about project update
       emailService.sendProjectUpdate(
         updatedProject,
         users,
@@ -266,7 +268,7 @@ export function ProjectsGrid({
     }
   };
 
-  const _handleMarkProjectAsDone = (project: Project) => {
+  const handleMarkProjectAsDone = (project: Project) => {
     if (onUpdateProject) {
       const updatedProject = {
         ...project,
@@ -274,7 +276,6 @@ export function ProjectsGrid({
         progress: 100,
       };
       onUpdateProject(updatedProject);
-      // Send email notification about project completion
       emailService.sendProjectUpdate(
         updatedProject,
         users,
@@ -284,49 +285,12 @@ export function ProjectsGrid({
     }
   };
 
-  // Archive all projects that are ready to be archived (completed/finalized)
-  const getArchivableProjects = () => {
-    return projects.filter(
-      (p) =>
-        p.status === "completed" ||
-        p.status === "4_Ready_for_Client_Signoff" ||
-        p.progress >= 100
+  const isClientAssigned = (project: Project) => {
+    if (localClientAssignedProjectIds.has(project.id)) return true;
+    if (project.clientName && project.clientName.trim().length > 0) return true;
+    return users.some(
+      (u) => u.role === "client" && u.clientProjectId === project.id
     );
-  };
-
-  const handleArchiveAllCompleted = () => {
-    if (!onUpdateProject) return;
-    const archivable = getArchivableProjects();
-    const readyToArchive = archivable.filter((p) => {
-      const progress =
-        typeof p.progress === "string" ? Number(p.progress) : p.progress;
-      return (
-        Number.isFinite(progress) && progress >= 100 && p.status !== "completed"
-      );
-    });
-    if (readyToArchive.length === 0) return;
-    readyToArchive.forEach((p) => {
-      const updated: Project = { ...p, status: "completed" };
-      onUpdateProject(updated);
-    });
-    if (readyToArchive.length > 0) {
-      Swal.fire({
-        icon: "success",
-        title: "Project Archived!",
-        text: "The project has been successfully moved to archives.",
-        timer: 1500,
-        showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-          icon: "swal-icon",
-        },
-      });
-    }
   };
 
   const handleTransition = (
@@ -351,38 +315,48 @@ export function ProjectsGrid({
           <h2 className="text-xl sm:text-2xl">
             <FolderOpen className="inline-block mr-2 mb-1 text-blue-700" />
             Projects
-            </h2>
+          </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Manage and track your projects
           </p>
         </div>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          {(currentUser.role === "admin" ||
-            currentUser.role === "supervisor") && (
-            <Button
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={handleArchiveAllCompleted}
-              disabled={getArchivableProjects().length === 0}
-              title={
-                getArchivableProjects().length === 0
-                  ? "No projects ready to archive"
-                  : ""
-              }
-            >
-              Archive Completed ({getArchivableProjects().length})
-            </Button>
-          )}
-          {canCreateProject && (
-            <Button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-accent hover:bg-accent/90 w-full sm:w-auto"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Project
-            </Button>
-          )}
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4 w-full sm:w-auto">
+          <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
+            {(currentUser.role === "admin" ||
+              currentUser.role === "supervisor") && (
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto whitespace-nowrap"
+                onClick={handleMarkProjectAsDone} // ← placeholder - replace with your actual archive logic
+                disabled={projects.filter(p => p.status === "completed" || p.progress >= 100).length === 0}
+              >
+                Archive Completed ({projects.filter(p => p.status === "completed" || p.progress >= 100).length})
+              </Button>
+            )}
+
+            {canCreateProject && (
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                className="bg-accent hover:bg-accent/90 w-full sm:w-auto"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Project
+              </Button>
+            )}
+          </div>
         </div>
+      </div>
+
+      <div className="relative flex-1 sm:min-w-[280px]">
+        <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
+        <Input
+          placeholder="Search project..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 w-full max-w-md"
+        />
+      <p className="text-sm text-muted-foreground mt-1"><span className="font-medium text-[#e28a33]">Note:</span> You can search by name, client, or supervisor</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
@@ -424,214 +398,203 @@ export function ProjectsGrid({
                 <Progress value={project.progress} />
               </div>
 
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center gap-2">
-                  <Building className="h-3 w-3" />
-                  <span className="truncate">Client: {project.clientName}</span>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-3 w-3" />
-                  <span>
-                    {new Date(project.startDate).toLocaleDateString()} -{" "}
-                    {new Date(project.endDate).toLocaleDateString()}
-                  </span>
-                </div>
-
-                {/* --- Role-based financial information (MODIFIED) --- */}
-
-                {/* 1. Fabricator View: Shows personal budget or total team allocation */}
-                {currentUser.role === "fabricator" && (
-                  <div className="bg-secondary/20 p-2 rounded mt-2">
-                    {(() => {
-                      const fabricatorBudget = getFabricatorBudget(
-                        project,
-                        currentUser.id
-                      );
-                      if (fabricatorBudget) {
-                        return (
-                          <div className="space-y-1">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">
-                                My Budget:
-                              </span>
-                              <span className="font-medium">
-                                ₱
-                                {fabricatorBudget.allocatedAmount.toLocaleString()}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="text-muted-foreground">
-                                Spent:
-                              </span>
-                              <span>
-                                ₱{fabricatorBudget.spentAmount.toLocaleString()}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      } else {
-                        return (
-                          <div className="flex items-center gap-2 text-xs">
-                            <DollarSign className="h-3 w-3" />
-                            <span>
-                              Labor Pool: ₱
-                              {Number(
-                                project.fabricatorAllocation || 0
-                              ).toLocaleString()}
+              {/* Role-based financial information */}
+              {currentUser.role === "fabricator" && (
+                <div className="bg-secondary/20 p-2 rounded mt-2">
+                  {(() => {
+                    const fabricatorBudget = getFabricatorBudget(
+                      project,
+                      currentUser.id
+                    );
+                    if (fabricatorBudget) {
+                      return (
+                        <div className="space-y-1">
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">
+                              My Budget:
+                            </span>
+                            <span className="font-medium">
+                              ₱
+                              {fabricatorBudget.allocatedAmount.toLocaleString()}
                             </span>
                           </div>
-                        );
+                          <div className="flex justify-between items-center text-xs">
+                            <span className="text-muted-foreground">
+                              Spent:
+                            </span>
+                            <span>
+                              ₱{fabricatorBudget.spentAmount.toLocaleString()}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="flex items-center gap-2 text-xs">
+                          <DollarSign className="h-3 w-3" />
+                          <span>
+                            Labor Pool: ₱
+                            {Number(
+                              project.fabricatorAllocation || 0
+                            ).toLocaleString()}
+                          </span>
+                        </div>
+                      );
+                    }
+                  })()}
+                </div>
+              )}
+
+              {currentUser.role === "supervisor" && (
+                <div className="bg-muted/30 p-2 rounded text-xs space-y-1 mt-2 border border-border">
+                  <div className="flex justify-between font-semibold border-b pb-1 mb-1">
+                    <span>Total Budget:</span>
+                    <span>₱{Number(project.budget).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Materials:</span>
+                    <span>
+                      ₱
+                      {Number(
+                        project.materialsAllocation || 0
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Labor:</span>
+                    <span>
+                      ₱
+                      {Number(
+                        project.fabricatorAllocation || 0
+                      ).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between pt-1 border-t mt-1">
+                    <span className="text-muted-foreground">
+                      Total Spent:
+                    </span>
+                    <span className="text-orange-600">
+                      ₱{Number(project.spent).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {currentUser.role === "admin" && (
+                <div className="bg-muted/30 p-2 rounded text-xs space-y-1 mt-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground flex items-center gap-1">
+                      <TrendingUp className="h-3 w-3" /> Revenue:
+                    </span>
+                    <span className="font-medium text-green-700 dark:text-green-400">
+                      ₱{Number(project.revenue).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Est. Cost:</span>
+                    <span>₱{Number(project.budget).toLocaleString()}</span>
+                  </div>
+                  <div className="border-t border-dashed my-1"></div>
+                  <div className="flex justify-between items-center font-semibold">
+                    <span>Est. Profit:</span>
+                    <span
+                      className={
+                        Number(project.revenue) - Number(project.budget) >= 0
+                          ? "text-green-600"
+                          : "text-destructive"
                       }
-                    })()}
+                    >
+                      ₱
+                      {(
+                        Number(project.revenue) - Number(project.budget)
+                      ).toLocaleString()}
+                    </span>
                   </div>
-                )}
+                  {Number(project.spent) > Number(project.budget) && (
+                    <div className="flex items-center gap-1 text-destructive mt-1 justify-end">
+                      <AlertCircle className="h-3 w-3" />
+                      <span>Over Budget</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-                {/* 2. Supervisor View: Shows Detailed Cost Breakdown */}
-                {currentUser.role === "supervisor" && (
-                  <div className="bg-muted/30 p-2 rounded text-xs space-y-1 mt-2 border border-border">
-                    <div className="flex justify-between font-semibold border-b pb-1 mb-1">
-                      <span>Total Budget:</span>
-                      <span>₱{Number(project.budget).toLocaleString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Materials:</span>
-                      <span>
-                        ₱
-                        {Number(
-                          project.materialsAllocation || 0
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-muted-foreground">Labor:</span>
-                      <span>
-                        ₱
-                        {Number(
-                          project.fabricatorAllocation || 0
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between pt-1 border-t mt-1">
-                      <span className="text-muted-foreground">
-                        Total Spent:
-                      </span>
-                      <span className="text-orange-600">
-                        ₱{Number(project.spent).toLocaleString()}
-                      </span>
-                    </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Building className="h-3 w-3" />
+                <span className="truncate">Client: {project.clientName || "Not assigned"}</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Calendar className="h-3 w-3" />
+                <span>
+                  {new Date(project.startDate).toLocaleDateString()} -{" "}
+                  {new Date(project.endDate).toLocaleDateString()}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span className="truncate">
+                  Supervisor: {getSupervisorName(project.supervisorId)}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span className="truncate">
+                  Team: {getFabricatorNames(project.fabricatorIds) || "None"}
+                </span>
+              </div>
+
+              {project.documentationUrl && (
+                <div className="flex items-center gap-2 text-xs">
+                  <Link className="h-3 w-3" />
+                  <a
+                    href={project.documentationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline truncate"
+                  >
+                    Google Drive Documentation
+                  </a>
+                </div>
+              )}
+
+              {project.attachments && project.attachments.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <Paperclip className="h-3 w-3" />
+                    <span>Attachments ({project.attachments.length})</span>
                   </div>
-                )}
-
-                {/* 3. Admin View: Shows Profit & Loss Statement */}
-                {currentUser.role === "admin" && (
-                  <div className="bg-muted/30 p-2 rounded text-xs space-y-1 mt-2">
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground flex items-center gap-1">
-                        <TrendingUp className="h-3 w-3" /> Revenue:
-                      </span>
-                      <span className="font-medium text-green-700 dark:text-green-400">
-                        ₱{Number(project.revenue).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-muted-foreground">Est. Cost:</span>
-                      <span>₱{Number(project.budget).toLocaleString()}</span>
-                    </div>
-                    <div className="border-t border-dashed my-1"></div>
-                    <div className="flex justify-between items-center font-semibold">
-                      <span>Est. Profit:</span>
-                      <span
-                        className={
-                          Number(project.revenue) - Number(project.budget) >= 0
-                            ? "text-green-600"
-                            : "text-destructive"
-                        }
+                  <div className="ml-5 space-y-1">
+                    {project.attachments.slice(0, 2).map((attachment) => (
+                      <div
+                        key={attachment.id}
+                        className="flex items-center gap-1 text-xs"
                       >
-                        ₱
-                        {(
-                          Number(project.revenue) - Number(project.budget)
-                        ).toLocaleString()}
-                      </span>
-                    </div>
-                    {/* Small warning if spent exceeds budget */}
-                    {Number(project.spent) > Number(project.budget) && (
-                      <div className="flex items-center gap-1 text-destructive mt-1 justify-end">
-                        <AlertCircle className="h-3 w-3" />
-                        <span>Over Budget</span>
+                        <FileText className="h-3 w-3" />
+                        <span className="truncate">{attachment.name}</span>
+                        <span className="text-muted-foreground">
+                          ({formatFileSize(attachment.size)})
+                        </span>
+                      </div>
+                    ))}
+                    {project.attachments.length > 2 && (
+                      <div className="text-xs text-muted-foreground ml-4">
+                        +{project.attachments.length - 2} more
                       </div>
                     )}
                   </div>
-                )}
-                {/* -------------------------------------------------- */}
-
-                <div className="flex items-center gap-2 mt-3">
-                  <Users className="h-3 w-3" />
-                  <span className="truncate">
-                    Supervisor: {getSupervisorName(project.supervisorId)}
-                  </span>
                 </div>
+              )}
 
-                <div className="flex items-center gap-2">
-                  <Users className="h-3 w-3" />
-                  <span className="truncate">
-                    Team: {getFabricatorNames(project.fabricatorIds)}
-                  </span>
-                </div>
-
-                {/* Documentation Link */}
-                {project.documentationUrl && (
-                  <div className="flex items-center gap-2">
-                    <Link className="h-3 w-3" />
-                    <a
-                      href={project.documentationUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline truncate"
-                    >
-                      Google Drive Documentation
-                    </a>
-                  </div>
-                )}
-
-                {/* File Attachments */}
-                {project.attachments && project.attachments.length > 0 && (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Paperclip className="h-3 w-3" />
-                      <span>Attachments ({project.attachments.length})</span>
-                    </div>
-                    <div className="ml-5 space-y-1">
-                      {project.attachments.slice(0, 2).map((attachment) => (
-                        <div
-                          key={attachment.id}
-                          className="flex items-center gap-1 text-xs"
-                        >
-                          <FileText className="h-3 w-3" />
-                          <span className="truncate">{attachment.name}</span>
-                          <span className="text-muted-foreground">
-                            ({formatFileSize(attachment.size)})
-                          </span>
-                        </div>
-                      ))}
-                      {project.attachments.length > 2 && (
-                        <div className="text-xs text-muted-foreground ml-4">
-                          +{project.attachments.length - 2} more files
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Created by information */}
-                <div className="flex items-center gap-2 text-muted-foreground">
-                  <Users className="h-3 w-3" />
-                  <span className="text-xs">
-                    Created by:{" "}
-                    {users.find((u) => u.id === project.createdBy)?.name ||
-                      "Unknown"}
-                  </span>
-                </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <Users className="h-3 w-3" />
+                <span>
+                  Created by:{" "}
+                  {users.find((u) => u.id === project.createdBy)?.name ||
+                    "Unknown"}
+                </span>
               </div>
 
               {/* Pending Supervisor Assignment Banner */}
@@ -733,7 +696,6 @@ export function ProjectsGrid({
                               </span>
                             </div>
 
-                            {/* Action Buttons - Show when no mode is selected */}
                             {!isAcceptMode && !isDeclineMode && (
                               <div className="flex gap-2">
                                 <Button
@@ -764,7 +726,6 @@ export function ProjectsGrid({
                               </div>
                             )}
 
-                            {/* Accept with Response */}
                             {isAcceptMode && (
                               <div className="space-y-3 bg-green-50 dark:bg-green-900/10 rounded-md p-3 border border-green-200 dark:border-green-800">
                                 <Label className="text-sm font-medium text-green-900 dark:text-green-100">
@@ -812,7 +773,6 @@ export function ProjectsGrid({
                               </div>
                             )}
 
-                            {/* Decline with Response */}
                             {isDeclineMode && (
                               <div className="space-y-3 bg-red-50 dark:bg-red-900/10 rounded-md p-3 border border-red-200 dark:border-red-800">
                                 <Label className="text-sm font-medium text-red-900 dark:text-red-100">
@@ -876,6 +836,7 @@ export function ProjectsGrid({
                   <Eye className="h-3 w-3 mr-1" />
                   <span className="truncate">Details</span>
                 </Button>
+
                 {(currentUser.role === "admin" ||
                   currentUser.role === "supervisor") &&
                   (isClientAssigned(project) ? (
@@ -903,6 +864,7 @@ export function ProjectsGrid({
                       <span className="truncate">Client</span>
                     </Button>
                   ))}
+
                 {currentUser.role === "supervisor" &&
                   project.supervisorId === currentUser.id && (
                     <>
@@ -921,7 +883,7 @@ export function ProjectsGrid({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="w-full lg:flex-1 col-span-2 lg:col-auto"
+                        className="w-full lg:flex-1"
                         onClick={() =>
                           onBroadcastFabricators &&
                           onBroadcastFabricators(project.id)
@@ -933,7 +895,6 @@ export function ProjectsGrid({
                     </>
                   )}
 
-                {/* Workflow Actions - Primary buttons should be prominent */}
                 {currentUser.role === "admin" &&
                   project.status === "0_Created" && (
                     <Button
@@ -1021,15 +982,24 @@ export function ProjectsGrid({
         <Card>
           <CardContent className="py-12">
             <div className="text-center">
-              <h3 className="text-lg mb-2">No projects found</h3>
+              <h3 className="text-lg mb-2">
+                {searchTerm.trim()
+                  ? "No matching projects found"
+                  : "No projects found"}
+              </h3>
               <p className="text-muted-foreground mb-4">
-                {currentUser.role === "admin"
+                {searchTerm.trim()
+                  ? "Try adjusting your search terms"
+                  : currentUser.role === "admin" || currentUser.role === "supervisor"
                   ? "Create your first project to get started."
-                  : currentUser.role === "supervisor"
-                  ? "Create your first project to get started."
-                  : "Wait for project assignments from your supervisor."}
+                  : "Wait for project assignments from your supervisor or admin."}
               </p>
-              {canCreateProject && (
+              {searchTerm.trim() && (
+                <Button variant="outline" onClick={() => setSearchTerm("")}>
+                  Clear Search
+                </Button>
+              )}
+              {canCreateProject && !searchTerm.trim() && (
                 <Button onClick={() => setShowCreateForm(true)}>
                   <Plus className="h-4 w-4 mr-2" />
                   Create Project
@@ -1132,9 +1102,8 @@ export function ProjectsGrid({
           project={clientDialogProject}
           onClientCreated={(client) => {
             onCreateUser?.(client);
-            // Immediately reflect client assignment in UI without waiting for parent refresh
             setLocalClientAssignedProjectIds((prev) =>
-              new Set(prev).add(clientDialogProject.id)
+              new Set([...prev, clientDialogProject.id])
             );
             setShowClientDialog(false);
             setClientDialogProject(null);

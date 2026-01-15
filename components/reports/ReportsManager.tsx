@@ -26,6 +26,8 @@ import {
   Download,
   Eye,
   BarChart3,
+  Search,
+  X,
 } from "lucide-react";
 import { Project, User as UserType, Task } from "../../types";
 import { apiService } from "../../utils/apiService";
@@ -78,6 +80,9 @@ export function ReportsManager({
   const [showViewForm, setShowViewForm] = useState(false);
 
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
     title: "",
@@ -138,9 +143,7 @@ export function ReportsManager({
     });
   };
 
-  // ────────────────────────────────────────────────
-  // CREATE
-  // ────────────────────────────────────────────────
+  // ─── CREATE REPORT ─────────────────────────────────────────────
   const handleCreate = async () => {
     const title = formData.title.trim();
     if (!title || isCreating) return;
@@ -208,9 +211,7 @@ export function ReportsManager({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // UPDATE / EDIT
-  // ────────────────────────────────────────────────
+  // ─── UPDATE REPORT ─────────────────────────────────────────────
   const handleUpdate = async () => {
     if (!selectedReport || !formData.title.trim()) return;
 
@@ -290,9 +291,7 @@ export function ReportsManager({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // DELETE
-  // ────────────────────────────────────────────────
+  // ─── DELETE REPORT ─────────────────────────────────────────────
   const handleDelete = async (report: Report) => {
     const result = await Swal.fire({
       title: "Delete report?",
@@ -346,6 +345,7 @@ export function ReportsManager({
     }
   };
 
+  // ─── EXPORT REPORT ─────────────────────────────────────────────
   const handleExport = async (report: Report) => {
     const supervisors = users.filter((user) => user.role === "supervisor");
 
@@ -364,7 +364,6 @@ export function ReportsManager({
       return options;
     }, {} as Record<string, string>);
 
-    // Optional: Add confirmation before showing supervisor selection
     const confirmResult = await Swal.fire({
       title: "Export Report?",
       html: `You are about to make <strong>"${report.title}"</strong> visible to a supervisor.<br/>Continue?`,
@@ -377,7 +376,6 @@ export function ReportsManager({
 
     if (!confirmResult.isConfirmed) return;
 
-    // Show supervisor selection
     const selectResult = await Swal.fire({
       title: "Export to supervisor",
       input: "select",
@@ -387,9 +385,7 @@ export function ReportsManager({
       confirmButtonText: "Export",
       cancelButtonText: "Cancel",
       inputValidator: (value) => {
-        if (!value) {
-          return "Please select a supervisor";
-        }
+        if (!value) return "Please select a supervisor";
         return null;
       },
       customClass: swalCustomClasses,
@@ -397,7 +393,6 @@ export function ReportsManager({
 
     if (!selectResult.isConfirmed || !selectResult.value) return;
 
-    // ─── Loading starts here ───
     const loadingSwal = showLoading();
     const startTime = Date.now();
 
@@ -408,7 +403,6 @@ export function ReportsManager({
       );
       if (response.error) throw new Error(response.error);
 
-      // Minimum loading time
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_LOADING_TIME) {
         await delay(MIN_LOADING_TIME - elapsed);
@@ -493,7 +487,8 @@ export function ReportsManager({
   const canEditReport = (report: Report) =>
     currentUser.role === "admin" || report.created_by === currentUser.id;
 
-  const getFilteredReports = () => {
+  // ─── Role-based filtering ──────────────────────────────────────
+  const getRoleFilteredReports = () => {
     if (currentUser.role === "admin") return reports;
     if (currentUser.role === "supervisor") {
       return reports.filter(
@@ -502,15 +497,40 @@ export function ReportsManager({
           r.status === "published" ||
           (r.project_id &&
             projects.some(
-              (p) => p.id === r.project_id && p.supervisor_id === currentUser.id
+              (p) => p.id === r.project_id && p.supervisorId === currentUser.id
             )) ||
           (r.shared_with && r.shared_with.includes(currentUser.id))
       );
     }
+    // fabricator or client view — only published
     return reports.filter((r) => r.status === "published");
   };
 
-  const filteredReports = getFilteredReports();
+  const roleFiltered = getRoleFilteredReports();
+
+  // ─── Client-side search filtering ──────────────────────────────
+  const searchedReports = roleFiltered.filter((report) => {
+    if (!searchTerm.trim()) return true;
+
+    const term = searchTerm.toLowerCase().trim();
+
+    const projectName =
+      report.project_id
+        ? projects.find((p) => p.id === report.project_id)?.name?.toLowerCase() ||
+          ""
+        : "";
+
+    const creatorName =
+      users.find((u) => u.id === report.created_by)?.name?.toLowerCase() || "";
+
+    return (
+      report.title.toLowerCase().includes(term) ||
+      (report.description || "").toLowerCase().includes(term) ||
+      projectName.includes(term) ||
+      creatorName.includes(term) ||
+      report.type.toLowerCase().includes(term)
+    );
+  });
 
   return (
     <div className="space-y-6 relative">
@@ -519,20 +539,43 @@ export function ReportsManager({
           <h2 className="text-xl sm:text-2xl font-bold">
             <BarChart3 className="inline-block mr-2 mb-1 text-blue-700" />
             Reports
-            </h2>
+          </h2>
           <p className="text-sm text-muted-foreground">
             Create and manage project reports
           </p>
         </div>
-        {canCreateReport && (
-          <Button
-            onClick={() => setShowCreateForm(true)}
-            className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm md:text-base"
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          {canCreateReport && (
+            <Button
+              onClick={() => setShowCreateForm(true)}
+              className="w-full sm:w-auto px-4 py-2 text-xs sm:text-sm md:text-base"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              <span className="inline">Create Report</span>
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {/* Search bar */}
+      <div className="relative w-full max-w-md">
+        <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 pointer-events-none text-[#e28a33]" />
+        <Input
+          placeholder="Search reports..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="pl-10 pr-10 w-full"
+        />
+        {searchTerm && (
+          <button
+            onClick={() => setSearchTerm("")}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            <span className="inline">Create Report</span>
-          </Button>
+            <X className="h-4 w-4" />
+          </button>
         )}
+        <p className="text-sm text-muted-foreground px-2"><span className="text-[#e28a33]">Note:</span> Search by report title, description, project name, creator name, or report type</p>
       </div>
 
       {loading ? (
@@ -555,7 +598,7 @@ export function ReportsManager({
 
           <TabsContent value="all" className="space-y-4">
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {filteredReports.map((report) => (
+              {searchedReports.map((report) => (
                 <Card
                   key={report.id}
                   className="hover:shadow-md transition-shadow"
@@ -688,29 +731,46 @@ export function ReportsManager({
         </Tabs>
       )}
 
-      {filteredReports.length === 0 && !loading && !error && (
+      {searchedReports.length === 0 && !loading && !error && (
         <Card>
           <CardContent className="py-12 text-center">
-            <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium">No reports found</h3>
-            <p className="text-sm text-muted-foreground mt-2">
-              {canCreateReport
-                ? "Create your first report to start tracking analytics."
-                : "No published reports are available yet."}
-            </p>
-            {canCreateReport && (
-              <Button onClick={() => setShowCreateForm(true)} className="mt-4">
-                <Plus className="mr-2 h-4 w-4" />
-                Create Report
-              </Button>
-            )}
+            <div className="mx-auto max-w-md">
+              {searchTerm.trim() ? (
+                <>
+                  <Search className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">
+                    No matching reports found
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-6">
+                    No reports match your search "{searchTerm}"
+                  </p>
+                  <Button variant="outline" onClick={() => setSearchTerm("")}>
+                    Clear Search
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <FileText className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium">No reports found</h3>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {canCreateReport
+                      ? "Create your first report to start tracking analytics."
+                      : "No published reports are available yet."}
+                  </p>
+                  {canCreateReport && (
+                    <Button onClick={() => setShowCreateForm(true)} className="mt-4">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Report
+                    </Button>
+                  )}
+                </>
+              )}
+            </div>
           </CardContent>
         </Card>
       )}
 
-      {/* ────────────────────────────────────────────────
-          CREATE FORM (replaces Dialog)
-      ──────────────────────────────────────────────── */}
+      {/* CREATE FORM */}
       {showCreateForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -826,7 +886,7 @@ export function ReportsManager({
                           .filter(
                             (p) =>
                               currentUser.role === "admin" ||
-                              p.supervisor_id === currentUser.id
+                              p.supervisorId === currentUser.id
                           )
                           .map((project) => (
                             <SelectItem key={project.id} value={project.id}>
@@ -858,9 +918,7 @@ export function ReportsManager({
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────
-          EDIT FORM (replaces Dialog)
-      ──────────────────────────────────────────────── */}
+      {/* EDIT FORM */}
       {showEditForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -979,7 +1037,7 @@ export function ReportsManager({
                           .filter(
                             (p) =>
                               currentUser.role === "admin" ||
-                              p.supervisor_id === currentUser.id
+                              p.supervisorId === currentUser.id
                           )
                           .map((project) => (
                             <SelectItem key={project.id} value={project.id}>
@@ -1015,9 +1073,7 @@ export function ReportsManager({
         </div>
       )}
 
-      {/* ────────────────────────────────────────────────
-          VIEW FORM (replaces Dialog)
-      ──────────────────────────────────────────────── */}
+      {/* VIEW FORM */}
       {showViewForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="bg-background border rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
