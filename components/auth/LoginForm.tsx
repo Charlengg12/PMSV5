@@ -125,14 +125,14 @@ export function LoginForm({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-[#103055] relative overflow-hidden">
       {/* Decorative background blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
       </div>
 
-      <Card className="w-full max-w-md relative z-10 shadow-xl border-0 bg-white/80 backdrop-blur-sm">
+      <Card className="w-full max-w-md relative z-10 shadow-xl border-0 bg-white backdrop-blur-sm">
         <CardHeader className="text-center space-y-4 pb-8">
           <div className="flex items-center justify-center mb-4">
             <CompanyLogo size="xl" showText={true} className="font-[Archivo_Black]" />
