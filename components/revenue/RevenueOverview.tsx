@@ -3,7 +3,7 @@ import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { DollarSign, Building } from "lucide-react";
+import { PhilippinePeso, Building } from "lucide-react";
 import { Project, User } from "../../types";
 
 interface RevenueOverviewProps {
@@ -202,7 +202,7 @@ export function RevenueOverview({
         <Card className="bg-accent/10 border-accent">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-accent" />
+              <PhilippinePeso className="h-5 w-5 text-accent" />
               Total Allocated Revenue
             </CardTitle>
           </CardHeader>
@@ -256,7 +256,7 @@ export function RevenueOverview({
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
                           Total Project Value
                         </span>
@@ -324,7 +324,7 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Revenue</CardTitle>
-              <DollarSign className="h-10 w-4 text-muted-foreground" />
+              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl">
@@ -340,7 +340,7 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Budget</CardTitle>
-              <DollarSign className="h-10 w-4 text-muted-foreground" />
+              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl">
@@ -354,7 +354,7 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Spent</CardTitle>
-              <DollarSign className="h-10 w-4 text-muted-foreground" />
+              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl">
