@@ -1380,8 +1380,27 @@ function handle_create_task(PDO $pdo): void
     $body = sanitize_recursive(json_input());
     $taskId = 'task-' . time();
 
-    if (empty($body['projectId']) || empty($body['title'])) {
-        json_response(['error' => 'projectId and title are required'], 400);
+    $title = trim((string) ($body['title'] ?? ''));
+    $description = trim((string) ($body['description'] ?? ''));
+    $status = trim((string) ($body['status'] ?? ''));
+    $priority = trim((string) ($body['priority'] ?? ''));
+    $projectId = trim((string) ($body['projectId'] ?? ''));
+    $assignedTo = trim((string) ($body['assignedTo'] ?? ''));
+    $dueDate = trim((string) ($body['dueDate'] ?? ''));
+    $createdBy = trim((string) ($body['createdBy'] ?? ''));
+
+    $missing = [];
+    if ($projectId === '') $missing[] = 'projectId';
+    if ($title === '') $missing[] = 'title';
+    if ($description === '') $missing[] = 'description';
+    if ($status === '') $missing[] = 'status';
+    if ($priority === '') $missing[] = 'priority';
+    if ($assignedTo === '' || $assignedTo === 'unassigned') $missing[] = 'assignedTo';
+    if ($dueDate === '') $missing[] = 'dueDate';
+    if ($createdBy === '') $missing[] = 'createdBy';
+
+    if ($missing) {
+        json_response(['error' => 'Missing required fields: ' . implode(', ', $missing)], 400);
     }
 
     $stmt = $pdo->prepare(
@@ -1391,14 +1410,14 @@ function handle_create_task(PDO $pdo): void
 
     $stmt->execute([
         ':id' => $taskId,
-        ':project_id' => $body['projectId'],
-        ':title' => $body['title'],
-        ':description' => $body['description'] ?? null,
-        ':status' => $body['status'] ?? 'pending',
-        ':priority' => $body['priority'] ?? 'medium',
-        ':assigned_to' => $body['assignedTo'] ?? null,
-        ':created_by' => $body['createdBy'] ?? null,
-        ':due_date' => $body['dueDate'] ?? null,
+        ':project_id' => $projectId,
+        ':title' => $title,
+        ':description' => $description,
+        ':status' => $status,
+        ':priority' => $priority,
+        ':assigned_to' => $assignedTo,
+        ':created_by' => $createdBy,
+        ':due_date' => $dueDate,
         ':estimated_hours' => $body['estimatedHours'] ?? 0,
         ':actual_hours' => $body['actualHours'] ?? 0,
     ]);

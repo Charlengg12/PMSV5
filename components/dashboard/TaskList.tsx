@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -12,15 +13,21 @@ interface TaskListProps {
 }
 
 export function TaskList({ tasks, projects, currentUser, onUpdateTaskStatus }: TaskListProps) {
+  const [displayTasks, setDisplayTasks] = useState<Task[]>(tasks);
+
+  useEffect(() => {
+    setDisplayTasks(tasks);
+  }, [tasks]);
+
   const getFilteredTasks = () => {
     if (currentUser.role === 'admin') {
-      return tasks;
+      return displayTasks;
     }
     if (currentUser.role === 'supervisor') {
       const supervisorProjects = projects.filter(p => p.supervisorId === currentUser.id);
-      return tasks.filter(t => supervisorProjects.some(p => p.id === t.projectId));
+      return displayTasks.filter(t => supervisorProjects.some(p => p.id === t.projectId));
     }
-    return tasks.filter(t => t.assignedTo === currentUser.id);
+    return displayTasks.filter(t => t.assignedTo === currentUser.id);
   };
 
   const filteredTasks = getFilteredTasks().slice(0, 8);
@@ -95,6 +102,15 @@ export function TaskList({ tasks, projects, currentUser, onUpdateTaskStatus }: T
     }
   };
 
+  const handleStatusUpdate = (taskId: string, status: Task['status']) => {
+    setDisplayTasks((prevTasks) =>
+      prevTasks.map((task) =>
+        task.id === taskId ? { ...task, status, updatedAt: new Date().toISOString() } : task
+      )
+    );
+    onUpdateTaskStatus?.(taskId, status);
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -131,7 +147,7 @@ export function TaskList({ tasks, projects, currentUser, onUpdateTaskStatus }: T
                       size="sm"
                       variant="outline"
                       onClick={() => {
-                        onUpdateTaskStatus(task.id, getNextStatus(task.status));
+                        handleStatusUpdate(task.id, getNextStatus(task.status));
                       }}
                     >
                       {task.status === 'pending' && 'Start'}
@@ -144,7 +160,7 @@ export function TaskList({ tasks, projects, currentUser, onUpdateTaskStatus }: T
                       size="sm"
                       variant="default"
                       className="bg-green-600 hover:bg-green-700"
-                      onClick={() => onUpdateTaskStatus(task.id, 'completed')}
+                      onClick={() => handleStatusUpdate(task.id, 'completed')}
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Done
