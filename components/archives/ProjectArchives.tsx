@@ -186,15 +186,18 @@ export function ProjectArchives({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-xl sm:text-2xl">
-            <Archive className="h-5 w-5 sm:h-6 sm:w-6" />
-            Project Archives
+            <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
+            Archive
           </h2>
           <p className="text-sm text-muted-foreground">
             Completed projects with documentation and cost analysis
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Badge variant="secondary" className="h-9 px-3 text-sm w-full sm:w-auto text-center">
+          <Badge
+            variant="secondary"
+            className="h-9 px-3 text-sm w-full sm:w-auto text-center"
+          >
             {filteredProjects.length} Archived Projects
           </Badge>
           {(currentUser.role === "admin" ||

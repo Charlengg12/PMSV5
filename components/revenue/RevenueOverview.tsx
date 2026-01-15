@@ -3,7 +3,7 @@ import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { DollarSign, Building } from "lucide-react";
+import { PhilippinePeso, Building } from "lucide-react";
 import { Project, User } from "../../types";
 
 interface RevenueOverviewProps {
@@ -23,6 +23,20 @@ const swalCustomClasses = {
 };
 
 const MIN_LOADING_TIME = 2000; // 2 seconds minimum for loading state
+
+const formatCompactAmount = (value: number) => {
+  if (!Number.isFinite(value)) return "0";
+  const absValue = Math.abs(value);
+  const formatScaled = (denominator: number, suffix: string) => {
+    const scaled = Math.trunc((value / denominator) * 10) / 10;
+    const formatted = scaled.toFixed(1).replace(/\.0$/, "");
+    return `${formatted} ${suffix}`;
+  };
+  if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
+  if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
+  if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
+  return Math.trunc(value).toLocaleString();
+};
 
 export function RevenueOverview({
   projects,
@@ -191,14 +205,14 @@ export function RevenueOverview({
         <Card className="bg-accent/10 border-accent">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <DollarSign className="h-5 w-5 text-accent" />
+              <PhilippinePeso className="h-5 w-5 text-accent" />
               Total Allocated Revenue
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl text-accent">
               {peso}
-              {totalAllocatedRevenue.toLocaleString()}
+              {formatCompactAmount(totalAllocatedRevenue)}
             </div>
             <p className="text-sm text-muted-foreground mt-2">
               From {filteredProjects.length} active project
@@ -245,7 +259,7 @@ export function RevenueOverview({
 
                     <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm text-muted-foreground">
                           Total Project Value
                         </span>
@@ -298,19 +312,27 @@ export function RevenueOverview({
 
   return (
     <div className="space-y-6">
-      <h2>Revenue & Financial Overview</h2>
+      <div className="text-left">
+        <h2 className="text-xl sm:text-2xl font-bold">
+          <PhilippinePeso className="inline-block mr-2 mb-1 text-blue-700" />
+          Revenue
+          </h2>
+        <p className="text-sm text-muted-foreground">
+          Overview of project financials
+        </p>
+      </div>
 
       {canViewProjectRevenue && (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Revenue</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl">
                 {peso}
-                {totalProjectRevenue.toLocaleString()}
+                {formatCompactAmount(totalProjectRevenue)}
               </div>
               <p className="text-xs text-muted-foreground">
                 From {filteredProjects.length} projects
@@ -321,12 +343,12 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Budget</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl">
                 {peso}
-                {totalProjectBudget.toLocaleString()}
+                {formatCompactAmount(totalProjectBudget)}
               </div>
               <p className="text-xs text-muted-foreground">Total allocated budget</p>
             </CardContent>
@@ -335,12 +357,12 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Spent</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl">
                 {peso}
-                {totalProjectSpent.toLocaleString()}
+                {formatCompactAmount(totalProjectSpent)}
               </div>
               <p className="text-xs text-muted-foreground">
                 {totalProjectBudget > 0
@@ -352,19 +374,19 @@ export function RevenueOverview({
 
           {currentUser.role === "admin" && (
             <Card className="h-full">
-              <CardHeader className="flex flex-row items-start justify-between pb-2">
-                <div>
+              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between pb-2">
+                <div className="flex-1 min-w-0">
                   <CardTitle className="text-sm">Company Profit</CardTitle>
                   <div className="mt-8">
                     <p className="text-2xl text-green-500">
                       {peso}
-                      {filteredProfit.toLocaleString()}
+                      {formatCompactAmount(filteredProfit)}
                     </p>
                     <p className="text-xs text-muted-foreground">Total Profit</p>
                   </div>
                 </div>
 
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 shrink-0">
                   <select
                     className="h-9 w-20 rounded-md border border-input bg-background px-2 text-xs"
                     value={profitYear}

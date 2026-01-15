@@ -246,7 +246,7 @@ export function SupervisorSignupForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto modal">
         <CardHeader className="text-center">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

@@ -37,6 +37,8 @@ import {
   Eye,
   TrendingUp,
   AlertCircle,
+  FolderOpen,
+  Folder,
 } from "lucide-react";
 import { Project, User } from "../../types";
 import { CreateProjectForm } from "./CreateProjectForm";
@@ -346,7 +348,10 @@ export function ProjectsGrid({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl">Projects</h2>
+          <h2 className="text-xl sm:text-2xl">
+            <FolderOpen className="inline-block mr-2 mb-1 text-blue-700" />
+            Projects
+            </h2>
           <p className="text-sm text-muted-foreground mt-1">
             Manage and track your projects
           </p>

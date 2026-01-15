@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { FolderOpen, CheckSquare, Users, DollarSign, X } from 'lucide-react';
+import { FolderOpen, CheckSquare, Users, PhilippinePeso, X } from 'lucide-react';
 import { Project, Task, User as UserType } from '../../types';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { AnnouncementBoard } from './AnnouncementBoard';
@@ -14,6 +14,21 @@ interface DashboardStatsProps {
 
 // Color palette for the pie chart slices
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+const peso = "\u20B1";
+
+const formatCompactAmount = (value: number) => {
+  if (!Number.isFinite(value)) return "0";
+  const absValue = Math.abs(value);
+  const formatScaled = (denominator: number, suffix: string) => {
+    const scaled = Math.trunc((value / denominator) * 10) / 10;
+    const formatted = scaled.toFixed(1).replace(/\.0$/, "");
+    return `${formatted} ${suffix}`;
+  };
+  if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
+  if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
+  if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
+  return Math.trunc(value).toLocaleString();
+};
 
 const navigateToView = (view: string) => {
   window.location.hash = view;
@@ -69,8 +84,8 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       const totalRevenue = filteredProjects.reduce((sum, p) => sum + p.revenue, 0);
       return {
         title: 'Total Revenue',
-        value: `₱${totalRevenue.toLocaleString()}`,
-        description: `₱${totalBudget.toLocaleString()} budgeted`,
+        value: `${peso}${formatCompactAmount(totalRevenue)}`,
+        description: `${peso}${formatCompactAmount(totalBudget)} budgeted`,
         canView: true
       };
     }
@@ -80,8 +95,8 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
       const totalSpent = filteredProjects.reduce((sum, p) => sum + p.spent, 0);
       return {
         title: 'Project Budget',
-        value: `₱${totalBudget.toLocaleString()}`,
-        description: `₱${totalSpent.toLocaleString()} spent`,
+        value: `${peso}${formatCompactAmount(totalBudget)}`,
+        description: `${peso}${formatCompactAmount(totalSpent)} spent`,
         canView: true
       };
     }
@@ -90,7 +105,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
     const totalProjectValue = filteredProjects.reduce((sum, p) => sum + p.revenue, 0);
     return {
       title: 'Assigned Value',
-      value: `₱${totalProjectValue.toLocaleString()}`,
+      value: `${peso}${formatCompactAmount(totalProjectValue)}`,
       description: `${filteredProjects.length} assigned projects`,
       canView: true
     };
@@ -123,7 +138,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
     {
       title: revenueData.title,
       value: revenueData.value,
-      icon: DollarSign,
+      icon: PhilippinePeso,
       description: revenueData.description,
       onClick: () => {
         if (currentUser.role === 'fabricator') {
@@ -174,7 +189,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
             
             <div className="flex items-center justify-between p-4 border-b bg-muted/30 shrink-0">
               <h3 className="font-semibold text-lg flex items-center gap-2">
-                <DollarSign className="w-5 h-5 text-green-600" />
+                <PhilippinePeso className="w-5 h-5 text-green-600" />
                 Assigned Projects Distribution
               </h3>
               <button
@@ -209,7 +224,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
                           ))}
                         </Pie>
                         <Tooltip 
-                          formatter={(value: number) => `₱${value.toLocaleString()}`}
+                          formatter={(value: number) => `${peso}${value.toLocaleString()}`}
                           contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}
                         />
                         <Legend verticalAlign="bottom" height={36}/>
@@ -238,7 +253,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
                             </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-slate-700">₱{project.revenue.toLocaleString()}</p>
+                          <p className="font-bold text-slate-700">{peso}{project.revenue.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
