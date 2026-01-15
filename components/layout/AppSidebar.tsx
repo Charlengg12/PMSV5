@@ -205,7 +205,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   return (
     <>
       {showLogoutSpinner && <CustomLogoutSpinner />}
-      <Sidebar className="border-r-0" collapsible="icon">
+      <Sidebar className="border-r-0 h-screen min-h-screen" collapsible="icon">
         <SidebarContent className="gap-0 bg-sidebar no-scrollbar">
           <div className="border-b border-sidebar-border px-4 py-3">
             <CompanyLogo
