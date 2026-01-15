@@ -76,15 +76,86 @@ export function TaskManager({
   // Helper to enforce minimum loading time
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+  const normalizeDateValue = (value: string) => {
+    if (!value) return "";
+    const [year = "", month = "", day = ""] = value.split("-");
+    const safeYear = year.replace(/\D/g, "").slice(0, 4);
+    const safeMonth = month.replace(/\D/g, "").slice(0, 2);
+    const safeDay = day.replace(/\D/g, "").slice(0, 2);
+    const normalizedMonth = safeMonth.length === 1 ? `0${safeMonth}` : safeMonth;
+    const normalizedDay = safeDay.length === 1 ? `0${safeDay}` : safeDay;
+    return `${safeYear}-${normalizedMonth}-${normalizedDay}`;
+  };
+
+  const isValidDateValue = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    if (month < 1 || month > 12) return false;
+    if (day < 1 || day > 31) return false;
+    const d = new Date(year, month - 1, day);
+    return (
+      d.getFullYear() === year &&
+      d.getMonth() === month - 1 &&
+      d.getDate() === day
+    );
+  };
+
+  const getTodayDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const isOnOrAfterToday = (value: string) => {
+    if (!isValidDateValue(value)) return false;
+    const [year, month, day] = value.split("-").map(Number);
+    const inputDate = new Date(year, month - 1, day);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return inputDate >= today;
+  };
+
+  const getMissingFields = () => {
+    const missing: string[] = [];
+    if (!formData.title.trim()) missing.push("Task Title");
+    if (!formData.description.trim()) missing.push("Description");
+    if (!formData.status) missing.push("Status");
+    if (!formData.priority) missing.push("Priority");
+    if (!formData.projectId) missing.push("Project");
+    if (!formData.assignedTo || formData.assignedTo === "unassigned") {
+      missing.push("Assign To");
+    }
+    if (!isOnOrAfterToday(formData.dueDate)) missing.push("Due Date");
+    return missing;
+  };
+
+  const editMissingFields = showEditModal ? getMissingFields() : [];
+  const todayDate = getTodayDateString();
+  const editDueDateError = showEditModal
+    ? !formData.dueDate
+      ? "Due Date Required"
+      : !isValidDateValue(formData.dueDate)
+        ? "Due Date Invalid"
+        : !isOnOrAfterToday(formData.dueDate)
+          ? "Due Date must be today or later"
+          : ""
+    : "";
+  const isEditComplete = editMissingFields.length === 0;
+  const isEditMissing = (field: string) => editMissingFields.includes(field);
+
+
   // ────────────────────────────────────────────────
   // CREATE TASK
   // ────────────────────────────────────────────────
   const handleCreate = async () => {
-    if (!formData.title.trim() || !formData.projectId) {
+    const missingFields = getMissingFields();
+    if (missingFields.length > 0) {
       Swal.fire({
         icon: "warning",
         title: "Incomplete",
-        text: "Title and Project are required.",
+        text: `All fields should be filled. Missing: ${missingFields.join(", ")}.`,
         customClass: swalCustomClasses,
       });
       return;
@@ -117,12 +188,12 @@ export function TaskManager({
     try {
       const { data, error } = await apiService.createTask({
         title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
+        description: formData.description.trim(),
         status: formData.status,
         priority: formData.priority,
         projectId: formData.projectId,
-        assignedTo: formData.assignedTo === "unassigned" ? undefined : formData.assignedTo,
-        dueDate: formData.dueDate || undefined,
+        assignedTo: formData.assignedTo,
+        dueDate: formData.dueDate,
         createdBy: currentUser.id,
       });
 
@@ -134,7 +205,16 @@ export function TaskManager({
       loadingSwal.close();
 
       if (data && !error) {
-        onCreateTask({ ...data });
+        onCreateTask({
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          status: formData.status,
+          priority: formData.priority,
+          projectId: formData.projectId,
+          assignedTo: formData.assignedTo,
+          dueDate: formData.dueDate,
+          createdBy: currentUser.id,
+        });
         Swal.fire({
           icon: "success",
           title: "Task Created!",
@@ -173,11 +253,12 @@ export function TaskManager({
   // ────────────────────────────────────────────────
   const handleUpdate = async () => {
     if (!selectedTask) return;
-    if (!formData.title.trim() || !formData.projectId) {
+    const missingFields = getMissingFields();
+    if (missingFields.length > 0) {
       Swal.fire({
         icon: "warning",
-        title: "Required Fields",
-        text: "Title and Project are required.",
+        title: "Incomplete",
+        text: `All fields should be filled. Missing: ${missingFields.join(", ")}.`,
         customClass: swalCustomClasses,
       });
       return;
@@ -210,12 +291,12 @@ export function TaskManager({
     try {
       const { data, error } = await apiService.updateTask(selectedTask.id, {
         title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
+        description: formData.description.trim(),
         status: formData.status,
         priority: formData.priority,
         projectId: formData.projectId,
-        assignedTo: formData.assignedTo === "unassigned" ? "" : formData.assignedTo,
-        dueDate: formData.dueDate || undefined,
+        assignedTo: formData.assignedTo,
+        dueDate: formData.dueDate,
       });
 
       const elapsed = Date.now() - startTime;
@@ -226,7 +307,15 @@ export function TaskManager({
       loadingSwal.close();
 
       if (data && !error) {
-        onUpdateTask(selectedTask.id, data);
+        onUpdateTask(selectedTask.id, {
+          title: formData.title.trim(),
+          description: formData.description.trim(),
+          status: formData.status,
+          priority: formData.priority,
+          projectId: formData.projectId,
+          assignedTo: formData.assignedTo,
+          dueDate: formData.dueDate,
+        });
         Swal.fire({
           icon: "success",
           title: "Updated",
@@ -596,8 +685,8 @@ export function TaskManager({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>Description</Label>
+                  <div className="space-y-2">
+                    <Label>Description *</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -608,7 +697,7 @@ export function TaskManager({
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Status</Label>
+                    <Label>Status *</Label>
                     <Select value={formData.status} onValueChange={(v: Task["status"]) => setFormData({ ...formData, status: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -621,7 +710,7 @@ export function TaskManager({
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Priority</Label>
+                    <Label>Priority *</Label>
                     <Select value={formData.priority} onValueChange={(v: Task["priority"]) => setFormData({ ...formData, priority: v })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -649,7 +738,7 @@ export function TaskManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Assign To</Label>
+                  <Label>Assign To *</Label>
                   <Select
                     value={formData.assignedTo}
                     onValueChange={(v) => setFormData({ ...formData, assignedTo: v === "unassigned" ? "unassigned" : v })}
@@ -669,11 +758,14 @@ export function TaskManager({
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Due Date</Label>
+                  <Label>Due Date *</Label>
                   <Input
                     type="date"
                     value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    min={todayDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dueDate: normalizeDateValue(e.target.value) })
+                    }
                   />
                 </div>
               </div>
@@ -682,7 +774,7 @@ export function TaskManager({
                 <Button variant="outline" onClick={() => setShowCreateModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleCreate} disabled={!formData.title.trim() || !formData.projectId}>
+                <Button onClick={handleCreate}>
                   Create Task
                 </Button>
               </div>
@@ -714,22 +806,30 @@ export function TaskManager({
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                   />
+                  {isEditMissing("Task Title") && (
+                    <p className="text-xs text-destructive">Task Title Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Description</Label>
+                  <Label>Description *</Label>
                   <Textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
                   />
+                  {isEditMissing("Description") && (
+                    <p className="text-xs text-destructive">Description Required</p>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Status</Label>
+                    <Label>Status *</Label>
                     <Select value={formData.status} onValueChange={(v: Task["status"]) => setFormData({ ...formData, status: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isEditMissing("Status") ? "Status Required" : "Select status"} />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
                         <SelectItem value="in-progress">In Progress</SelectItem>
@@ -737,12 +837,17 @@ export function TaskManager({
                         <SelectItem value="blocked">Blocked</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isEditMissing("Status") && (
+                      <p className="text-xs text-destructive">Status Required</p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
-                    <Label>Priority</Label>
+                    <Label>Priority *</Label>
                     <Select value={formData.priority} onValueChange={(v: Task["priority"]) => setFormData({ ...formData, priority: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectTrigger>
+                        <SelectValue placeholder={isEditMissing("Priority") ? "Priority Required" : "Select priority"} />
+                      </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
                         <SelectItem value="medium">Medium</SelectItem>
@@ -750,25 +855,35 @@ export function TaskManager({
                         <SelectItem value="urgent">Urgent</SelectItem>
                       </SelectContent>
                     </Select>
+                    {isEditMissing("Priority") && (
+                      <p className="text-xs text-destructive">Priority Required</p>
+                    )}
                   </div>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Project *</Label>
                   <Select value={formData.projectId} onValueChange={(v) => setFormData({ ...formData, projectId: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isEditMissing("Project") ? "Project Required" : "Select project"} />
+                    </SelectTrigger>
                     <SelectContent>
                       {projects
                         .filter(p => currentUser.role === "admin" || p.supervisorId === currentUser.id)
                         .map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  {isEditMissing("Project") && (
+                    <p className="text-xs text-destructive">Project Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Assign To</Label>
+                  <Label>Assign To *</Label>
                   <Select value={formData.assignedTo} onValueChange={(v) => setFormData({ ...formData, assignedTo: v === "unassigned" ? "unassigned" : v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger>
+                      <SelectValue placeholder={isEditMissing("Assign To") ? "Assign To Required" : "Select team member"} />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="unassigned">Unassigned</SelectItem>
                       {users
@@ -780,15 +895,24 @@ export function TaskManager({
                         ))}
                     </SelectContent>
                   </Select>
+                  {isEditMissing("Assign To") && (
+                    <p className="text-xs text-destructive">Assign To Required</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Due Date</Label>
+                  <Label>Due Date *</Label>
                   <Input
                     type="date"
                     value={formData.dueDate}
-                    onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                    min={todayDate}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dueDate: normalizeDateValue(e.target.value) })
+                    }
                   />
+                  {editDueDateError && (
+                    <p className="text-xs text-destructive">{editDueDateError}</p>
+                  )}
                 </div>
               </div>
 
@@ -796,7 +920,7 @@ export function TaskManager({
                 <Button variant="outline" onClick={() => setShowEditModal(false)}>
                   Cancel
                 </Button>
-                <Button onClick={handleUpdate} disabled={!formData.title.trim() || !formData.projectId}>
+                <Button onClick={handleUpdate} disabled={!isEditComplete}>
                   Update Task
                 </Button>
               </div>
