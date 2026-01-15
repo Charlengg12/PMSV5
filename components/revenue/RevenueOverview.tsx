@@ -298,7 +298,15 @@ export function RevenueOverview({
 
   return (
     <div className="space-y-6">
-      <h2>Revenue & Financial Overview</h2>
+      <div className="text-left">
+        <h2 className="text-xl sm:text-2xl font-bold">
+          <DollarSign className="inline-block mr-2 mb-1 text-blue-700" />
+          Revenue
+          </h2>
+        <p className="text-sm text-muted-foreground">
+          Overview of project financials
+        </p>
+      </div>
 
       {canViewProjectRevenue && (
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">

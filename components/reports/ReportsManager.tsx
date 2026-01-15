@@ -25,6 +25,7 @@ import {
   FileText,
   Download,
   Eye,
+  BarChart3,
 } from "lucide-react";
 import { Project, User as UserType, Task } from "../../types";
 import { apiService } from "../../utils/apiService";
@@ -514,12 +515,13 @@ export function ReportsManager({
   return (
     <div className="space-y-6 relative">
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
-        <div>
-          <h2 className="text-lg xs:text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
-            Reports & Analytics
-          </h2>
-          <p className="text-xs sm:text-sm md:text-base text-muted-foreground">
-            Generate and manage comprehensive project reports
+        <div className="text-left">
+          <h2 className="text-xl sm:text-2xl font-bold">
+            <BarChart3 className="inline-block mr-2 mb-1 text-blue-700" />
+            Reports
+            </h2>
+          <p className="text-sm text-muted-foreground">
+            Create and manage project reports
           </p>
         </div>
         {canCreateReport && (
@@ -711,7 +713,7 @@ export function ReportsManager({
       ──────────────────────────────────────────────── */}
       {showCreateForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Create New Report</h2>

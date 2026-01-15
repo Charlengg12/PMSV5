@@ -619,7 +619,7 @@ export function UserManagement({
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             {/* add user icon */}
-            <UserIcon className="h-6 w-6 inline mr-2" />
+            <UserIcon className="h-6 w-6 inline mr-2 text-blue-700" />
             User Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -924,7 +924,7 @@ export function UserManagement({
       {/* Password Verification Modal */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
+          <div className="modal bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2.5">
@@ -995,7 +995,7 @@ export function UserManagement({
       {/* Inactive Users Modal */}
       {showInactiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background border rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="modal bg-background border rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold flex items-center gap-2.5">
@@ -1115,7 +1115,7 @@ export function UserManagement({
       {/* Edit User Modal */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="modal bg-background border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Edit User</h2>

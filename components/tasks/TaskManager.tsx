@@ -22,6 +22,7 @@ import {
   User,
   Building,
   CheckCircle,
+  SquareCheckBig,
 } from "lucide-react";
 import { Task, Project, User as UserType } from "../../types";
 
@@ -585,7 +586,10 @@ export function TaskManager({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-left">
-          <h2 className="text-xl sm:text-2xl font-bold">Task Management</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">
+            <SquareCheckBig className="inline-block mr-2 mb-1 text-blue-700" />
+            Task Management
+            </h2>
           <p className="text-sm text-muted-foreground">
             Create, manage, and track project tasks
           </p>
@@ -737,7 +741,7 @@ export function TaskManager({
       {/* Create Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border">
+          <div className="modal bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border">
             <div className="p-6 space-y-5">
               <div className="flex justify-between items-center">
                 <div>
@@ -915,7 +919,7 @@ export function TaskManager({
       {/* Edit Modal */}
       {showEditModal && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border">
+          <div className="modal bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border">
             <div className="p-6 space-y-5">
               <div className="flex justify-between items-center">
                 <div>

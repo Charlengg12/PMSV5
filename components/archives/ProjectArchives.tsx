@@ -186,8 +186,8 @@ export function ProjectArchives({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="flex items-center gap-2 text-xl sm:text-2xl">
-            <Archive className="h-5 w-5 sm:h-6 sm:w-6" />
-            Project Archives
+            <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
+            Archive
           </h2>
           <p className="text-sm text-muted-foreground">
             Completed projects with documentation and cost analysis

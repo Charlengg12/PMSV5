@@ -210,7 +210,7 @@ export function ClientCreationDialog({
       onClick={handleClose} // close on backdrop click
     >
       <div
-        className="relative w-full max-w-md mx-4 bg-background rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        className="relative w-full max-w-md mx-4 bg-background rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 modal"
         onClick={(e) => e.stopPropagation()} // prevent closing when clicking inside
       >
         {createdClient ? (

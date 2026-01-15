@@ -135,8 +135,19 @@ table tr:hover {
     background: fixed;
 }
 .modal{
-    animation: fadeIn 0.3s ease-in-out;
+    animation: slidefromtop 0.3s ease-in-out;
 }
+@keyframes slidefromtop {
+    from {
+        transform: translateY(-100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
 @keyframes fadeIn {
     from {
         opacity: 0;
