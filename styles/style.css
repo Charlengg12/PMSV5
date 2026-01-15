@@ -156,7 +156,7 @@ table tr:hover {
         opacity: 1;
     }
 }
-.loader div {
+/* .loader div {
     animation: rotate 1.5s linear infinite;
 }
 .loader div:nth-child(2) {
@@ -164,4 +164,4 @@ table tr:hover {
 }
 .loader div:nth-child(3) {
     animation-delay: .6s;
-}
+} */

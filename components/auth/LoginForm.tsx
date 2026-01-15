@@ -39,7 +39,7 @@ export function LoginForm({
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
-    setError(""); // Clear error on type
+    setError(""); // Clear error when typing
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,35 +48,30 @@ export function LoginForm({
     setError("");
 
     try {
-      // Attempt real API login
       const response = await apiService.login(
         formData.identifier,
         formData.password
       );
 
       if (response.data?.user) {
-        // Success - store token if present
         if (response.data.token) {
           apiService.setToken(response.data.token);
         }
 
         const userData = mapUserDataFromBackend(response.data.user);
 
-        // Show success animation → wait 2s → login
         setShowLoginAnimation(true);
         setTimeout(() => {
           setShowLoginAnimation(false);
           onLogin(userData);
-        }, 2000);
+        }, 1800); // slightly shorter feel
         return;
       }
 
-      // No user data from API → fall through to demo check
       throw new Error("No user data returned from API");
     } catch (err) {
-      // Demo mode fallback
+      // ──────────────── Demo fallback ────────────────
       let demoUser: User | null = null;
-
       const identifierLower = formData.identifier.toLowerCase();
       const password = formData.password;
 
@@ -117,11 +112,10 @@ export function LoginForm({
         setTimeout(() => {
           setShowLoginAnimation(false);
           onLogin(demoUser);
-        }, 2000);
+        }, 1800);
         return;
       }
 
-      // Real login failure
       setError(
         err instanceof Error ? err.message : "Invalid credentials or server error"
       );
@@ -131,21 +125,17 @@ export function LoginForm({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-primary relative overflow-hidden">
-      {/* Background decorative blobs */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
+    <div className="min-h-screen flex items-center justify-center bg-[#103055] relative overflow-hidden">
+      {/* Decorative background blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-96 h-96 bg-blue-500/5 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl"></div>
       </div>
 
-      <Card className="w-full max-w-md relative z-10 shadow-2xl border-0">
+      <Card className="w-full max-w-md relative z-10 shadow-xl border-0 bg-white backdrop-blur-sm">
         <CardHeader className="text-center space-y-4 pb-8">
           <div className="flex items-center justify-center mb-4">
-            <CompanyLogo
-              size="xl"
-              showText={true}
-              className="font-[Archivo_Black]"
-            />
+            <CompanyLogo size="xl" showText={true} className="font-[Archivo_Black]" />
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-2">
@@ -163,9 +153,7 @@ export function LoginForm({
         <CardContent className="space-y-6">
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="identifier">
-                Employee ID / Secure ID / Email
-              </Label>
+              <Label htmlFor="identifier">Employee ID / Secure ID / Email</Label>
               <Input
                 id="identifier"
                 type="text"
@@ -200,11 +188,7 @@ export function LoginForm({
                   onClick={() => setShowPassword(!showPassword)}
                   disabled={isLoading || showLoginAnimation}
                 >
-                  {showPassword ? (
-                    <EyeOff className="h-4 w-4" />
-                  ) : (
-                    <Eye className="h-4 w-4" />
-                  )}
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -249,9 +233,7 @@ export function LoginForm({
               <Separator />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-background px-2 text-muted-foreground">
-                New Fabricator?
-              </span>
+              <span className="bg-background px-2 text-muted-foreground">New Fabricator?</span>
             </div>
           </div>
 
@@ -267,16 +249,21 @@ export function LoginForm({
         </CardContent>
       </Card>
 
-      {/* Success animation overlay - only shown after valid login */}
+      {/* ──── Login Success Overlay ───── */}
       {showLoginAnimation && (
-        <div className="fixed inset-0 bg-white/60 backdrop-blur-sm flex flex-col items-center justify-center z-50">
-          <div className="loader flex items-center justify-center gap-5 mb-12">
-            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-pulse"></div>
-            <div className="w-14 h-14 bg-[#e28a33] rounded-lg animate-pulse delay-150"></div>
-            <div className="w-14 h-14 bg-[#103055] rounded-lg animate-pulse delay-300"></div>
+        <div className="fixed inset-0 bg-white/70 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-opacity duration-300">
+          <div className="flex items-center gap-4 mb-8">
+            <div className="w-16 h-16 rounded-xl bg-primary animate-spin"></div>
+            <div className="w-16 h-16 rounded-xl bg-accent animate-spin [animation-delay:150ms]"></div>
+            <div className="w-16 h-16 rounded-xl bg-primary animate-spin [animation-delay:300ms]"></div>
           </div>
-          <div className="text-lg font-medium text-primary">
-            Logging in, please wait...
+
+          <div className="text-xl font-semibold text-primary tracking-wide">
+            Logging you in...
+          </div>
+
+          <div className="mt-4 text-sm text-muted-foreground">
+            Please wait a moment
           </div>
         </div>
       )}
