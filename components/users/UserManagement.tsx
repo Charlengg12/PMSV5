@@ -613,7 +613,7 @@ export function UserManagement({
   }, [users]);
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between w-full">
         <div>
@@ -722,7 +722,7 @@ export function UserManagement({
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   {canManageUsers && (
-                    <TableHead className="w-12 text-center">
+                    <TableHead className="w-12 text-center p-0">
                       <Checkbox
                         checked={
                           displayedUsers.length > 0 &&
@@ -788,7 +788,7 @@ export function UserManagement({
                       className="hover:bg-muted/60 transition-colors"
                     >
                       {canManageUsers && (
-                        <TableCell className="text-center">
+                        <TableCell className="text-center p-0">
                           <Checkbox
                             checked={selectedUserIds.includes(user.id)}
                             disabled={user.id === currentUser.id}

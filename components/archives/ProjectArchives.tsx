@@ -194,7 +194,10 @@ export function ProjectArchives({
           </p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Badge variant="secondary" className="h-9 px-3 text-sm w-full sm:w-auto text-center">
+          <Badge
+            variant="secondary"
+            className="h-9 px-3 text-sm w-full sm:w-auto text-center"
+          >
             {filteredProjects.length} Archived Projects
           </Badge>
           {(currentUser.role === "admin" ||
