@@ -195,7 +195,9 @@ export function UserManagement({
     let hasError = false;
 
     if (!emailRegex.test(editingUser.email ?? "")) {
-      setEditEmailError("Please enter a valid Gmail address (example@gmail.com)");
+      setEditEmailError(
+        "Please enter a valid Gmail address (example@gmail.com)"
+      );
       hasError = true;
     } else {
       setEditEmailError("");
@@ -611,21 +613,21 @@ export function UserManagement({
   }, [users]);
 
   return (
-    <div className="space-y-6 px-2 sm:px-4 lg:px-6 pb-10">
+    <div className="space-y-6 pb-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between w-full">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
             {/* add user icon */}
             <UserIcon className="h-6 w-6 inline mr-2" />
             User Management
-            </h1>
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage system users, roles and permissions
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-row gap-3 sm:gap-4 w-full sm:w-auto sm:justify-end">
           {canManageUsers && (
             <>
               <Button
@@ -654,7 +656,9 @@ export function UserManagement({
       <Card className="border shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle className="text-lg font-semibold">System Users</CardTitle>
+            <CardTitle className="text-lg font-semibold">
+              System Users
+            </CardTitle>
 
             <Button
               variant={showSecureIds ? "destructive" : "outline"}
@@ -679,7 +683,10 @@ export function UserManagement({
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-muted/40 border-muted-foreground/30"
               />
-              <p className="mt-1 text-xs text-muted-foreground"><span className="font-medium text-[#ef4444]">Note:</span> Search is case-insensitive and supports partial matches.</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                <span className="font-medium text-[#ef4444]">Note:</span> Search
+                is case-insensitive and supports partial matches.
+              </p>
             </div>
 
             <div className="min-w-[200px]">
@@ -719,20 +726,31 @@ export function UserManagement({
                       <Checkbox
                         checked={
                           displayedUsers.length > 0 &&
-                          displayedUsers.every((u) => selectedUserIds.includes(u.id))
+                          displayedUsers.every((u) =>
+                            selectedUserIds.includes(u.id)
+                          )
                         }
                         indeterminate={
-                          displayedUsers.some((u) => selectedUserIds.includes(u.id)) &&
-                          !displayedUsers.every((u) => selectedUserIds.includes(u.id))
+                          displayedUsers.some((u) =>
+                            selectedUserIds.includes(u.id)
+                          ) &&
+                          !displayedUsers.every((u) =>
+                            selectedUserIds.includes(u.id)
+                          )
                         }
                         onCheckedChange={(checked) => {
                           if (checked) {
                             setSelectedUserIds((prev) => [
-                              ...new Set([...prev, ...displayedUsers.map((u) => u.id)]),
+                              ...new Set([
+                                ...prev,
+                                ...displayedUsers.map((u) => u.id),
+                              ]),
                             ]);
                           } else {
                             setSelectedUserIds((prev) =>
-                              prev.filter((id) => !displayedUsers.some((u) => u.id === id))
+                              prev.filter(
+                                (id) => !displayedUsers.some((u) => u.id === id)
+                              )
                             );
                           }
                         }}
@@ -743,22 +761,32 @@ export function UserManagement({
                   <TableHead className="min-w-[110px]">Role</TableHead>
                   <TableHead className="min-w-[140px]">School</TableHead>
                   <TableHead className="min-w-[160px]">Contact</TableHead>
-                  {showSecureIds && <TableHead className="min-w-[160px]">Secure ID</TableHead>}
+                  {showSecureIds && (
+                    <TableHead className="min-w-[160px]">Secure ID</TableHead>
+                  )}
                   <TableHead className="min-w-[120px]">Employee #</TableHead>
-                  {canManageUsers && <TableHead className="w-28 text-right">Actions</TableHead>}
+                  {canManageUsers && (
+                    <TableHead className="w-28 text-right">Actions</TableHead>
+                  )}
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {displayedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={100} className="h-48 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={100}
+                      className="h-48 text-center text-muted-foreground"
+                    >
                       No users found matching your filters
                     </TableCell>
                   </TableRow>
                 ) : (
                   displayedUsers.map((user) => (
-                    <TableRow key={user.id} className="hover:bg-muted/60 transition-colors">
+                    <TableRow
+                      key={user.id}
+                      className="hover:bg-muted/60 transition-colors"
+                    >
                       {canManageUsers && (
                         <TableCell className="text-center">
                           <Checkbox
@@ -788,7 +816,9 @@ export function UserManagement({
                           variant={getRoleBadgeVariant(user.role)}
                           className="font-medium capitalize"
                         >
-                          <span className="md:hidden mr-1.5">{getRoleIcon(user.role)}</span>
+                          <span className="md:hidden mr-1.5">
+                            {getRoleIcon(user.role)}
+                          </span>
                           <span className="hidden md:inline">{user.role}</span>
                         </Badge>
                       </TableCell>
@@ -800,7 +830,10 @@ export function UserManagement({
                       <TableCell className="text-sm">
                         {user.phone && (
                           <div className="flex items-center gap-1.5">
-                            <Phone size={14} className="shrink-0 text-muted-foreground" />
+                            <Phone
+                              size={14}
+                              className="shrink-0 text-muted-foreground"
+                            />
                             {user.phone}
                           </div>
                         )}
@@ -927,12 +960,17 @@ export function UserManagement({
                   className={verifyError ? "border-destructive" : ""}
                 />
                 {verifyError && (
-                  <p className="text-sm text-destructive mt-1.5">{verifyError}</p>
+                  <p className="text-sm text-destructive mt-1.5">
+                    {verifyError}
+                  </p>
                 )}
               </div>
 
               <div className="flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setShowPasswordModal(false)}>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowPasswordModal(false)}
+                >
                   Cancel
                 </Button>
                 <Button
@@ -992,13 +1030,23 @@ export function UserManagement({
                 <Table>
                   <TableHeader className="sticky top-0 bg-background z-10 border-b">
                     <TableRow>
-                      <TableHead className="min-w-[200px]">Name & Email</TableHead>
+                      <TableHead className="min-w-[200px]">
+                        Name & Email
+                      </TableHead>
                       <TableHead className="min-w-[110px]">Role</TableHead>
                       <TableHead className="min-w-[140px]">School</TableHead>
                       <TableHead className="min-w-[160px]">Contact</TableHead>
-                      {showSecureIds && <TableHead className="min-w-[160px]">Secure ID</TableHead>}
-                      <TableHead className="min-w-[120px]">Employee #</TableHead>
-                      <TableHead className="min-w-[140px] text-right">Action</TableHead>
+                      {showSecureIds && (
+                        <TableHead className="min-w-[160px]">
+                          Secure ID
+                        </TableHead>
+                      )}
+                      <TableHead className="min-w-[120px]">
+                        Employee #
+                      </TableHead>
+                      <TableHead className="min-w-[140px] text-right">
+                        Action
+                      </TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1115,7 +1163,9 @@ export function UserManagement({
                     onChange={(e) => {
                       let val = e.target.value.replace(/[^\d+]/g, "");
                       if (val.includes("+")) val = "+" + val.replace(/\+/g, "");
-                      val = val.startsWith("+") ? val.slice(0, 13) : val.slice(0, 11);
+                      val = val.startsWith("+")
+                        ? val.slice(0, 13)
+                        : val.slice(0, 11);
                       setEditingUser({ ...editingUser, phone: val });
                       setEditPhoneError("");
                     }}
@@ -1132,7 +1182,9 @@ export function UserManagement({
                     value={editingUser.gcashNumber || ""}
                     maxLength={11}
                     onChange={(e) => {
-                      const val = e.target.value.replace(/[^\d]/g, "").slice(0, 11);
+                      const val = e.target.value
+                        .replace(/[^\d]/g, "")
+                        .slice(0, 11);
                       setEditingUser({ ...editingUser, gcashNumber: val });
                       setEditGcashError("");
                     }}
@@ -1236,9 +1288,12 @@ export function UserManagement({
         <Card className="mt-10 border-dashed bg-muted/30">
           <CardContent className="py-12 text-center">
             <Shield className="h-12 w-12 mx-auto text-muted-foreground/70 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Administrator Access Required</h3>
+            <h3 className="text-lg font-medium mb-2">
+              Administrator Access Required
+            </h3>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Only admins can manage users, view inactive accounts, add supervisors, edit details or reveal secure IDs.
+              Only admins can manage users, view inactive accounts, add
+              supervisors, edit details or reveal secure IDs.
             </p>
           </CardContent>
         </Card>
