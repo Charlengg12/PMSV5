@@ -116,9 +116,9 @@ export function ActivityLogs() {
   const getActionLabel = (action: string): string => {
     const upper = action.toUpperCase();
     if (upper.includes("DEACTIVATE") || upper.includes("DELETE"))
-      return "Deactivate";
-    if (upper.includes("CREATE") || upper.includes("ADD")) return "Create";
-    if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Update";
+      return "Delete";
+    if (upper.includes("CREATE") || upper.includes("ADD")) return "Add";
+    if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Edit";
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return "Login";
 
     return action
@@ -221,10 +221,10 @@ export function ActivityLogs() {
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none min-w-[180px] cursor-pointer"
             >
               <option value="">All Activities</option>
+              <option value="add">Add</option>
+              <option value="edit">Edit</option>
+              <option value="delete">Delete</option>
               <option value="login">Login</option>
-              <option value="create">Create</option>
-              <option value="update">Update</option>
-              <option value="deactivate">Deactivate</option>
             </select>
           </div>
         </div>
