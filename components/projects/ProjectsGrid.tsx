@@ -136,7 +136,7 @@ export function ProjectsGrid({
 
   // Client-side search filtering
   const filteredProjects = roleFilteredProjects
-    .filter((p) => p.status !== "completed")
+    .filter((p) => p.status !== "completed" && p.progress < 100)
     .filter((project) => {
       if (!searchTerm.trim()) return true;
 
