@@ -97,9 +97,27 @@ export function ProjectDetails({
     (currentUser.role === "fabricator" &&
       project.fabricatorIds.includes(currentUser.id));
 
-  const getSupervisorName = (supervisorId: string) => {
-    const supervisor = users.find((u) => u.id === supervisorId);
-    return supervisor?.name || "Unknown Supervisor";
+  const getSupervisorDisplay = (target: Project) => {
+    if (target.supervisorId) {
+      const supervisor = users.find((u) => u.id === target.supervisorId);
+      return {
+        name: supervisor?.name || "Unknown Supervisor",
+        helper: "Project Supervisor",
+      };
+    }
+
+    const pendingCount = target.pendingSupervisors?.length ?? 0;
+    if (pendingCount > 0) {
+      return {
+        name: "Pending supervisor acceptance",
+        helper: `Awaiting response from ${pendingCount} supervisor${pendingCount === 1 ? "" : "s"}`,
+      };
+    }
+
+    return {
+      name: "Not assigned",
+      helper: "Supervisor not yet assigned",
+    };
   };
 
   const formatFileSize = (bytes: number) => {
@@ -672,6 +690,7 @@ export function ProjectDetails({
                         }
                         className="w-full border rounded p-2"
                       >
+                        <option value="">Not assigned</option>
                         {users
                           .filter((user) => user.role === "supervisor")
                           .map((user) => (
@@ -687,10 +706,10 @@ export function ProjectDetails({
                         </div>
                         <div>
                           <p className="font-medium">
-                            {getSupervisorName(editedProject.supervisorId)}
+                            {getSupervisorDisplay(editedProject).name}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Project Supervisor
+                            {getSupervisorDisplay(editedProject).helper}
                           </p>
                         </div>
                       </div>
