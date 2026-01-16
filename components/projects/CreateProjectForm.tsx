@@ -440,6 +440,7 @@ export function CreateProjectForm({
                           }
                         }}
                         initialFocus
+                        
                       />
                     </PopoverContent>
                   </Popover>
