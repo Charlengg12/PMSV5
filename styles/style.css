@@ -128,7 +128,7 @@ table thead {
     background-color: #084080c4;
 }
 table thead th {
-    color: white;
+    /* color: white; */
     padding: 20px;
 }
 table tr:hover {
