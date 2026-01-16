@@ -177,7 +177,7 @@ export function ProjectArchives({
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: "Confirm",
       customClass: {
         container: "swal-container !z-[10000]",
         popup: "swal-popup",
