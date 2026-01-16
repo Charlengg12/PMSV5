@@ -325,14 +325,18 @@ export function ProjectsGrid({
           <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
             {(currentUser.role === "admin" ||
               currentUser.role === "supervisor") && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto whitespace-nowrap"
-                onClick={handleMarkProjectAsDone} // ← placeholder - replace with your actual archive logic
-                disabled={projects.filter(p => p.status === "completed" || p.progress >= 100).length === 0}
-              >
-                Archive Completed ({projects.filter(p => p.status === "completed" || p.progress >= 100).length})
-              </Button>
+              // <Button
+              //   variant="outline"
+              //   className="w-full sm:w-auto whitespace-nowrap hover:none"
+              //   onClick={handleMarkProjectAsDone} // ← placeholder - replace with your actual archive logic
+              //   disabled={projects.filter(p => p.status === "completed" || p.progress >= 100).length === 0}
+              // >
+              //   Archive Completed ({projects.filter(p => p.status === "completed" || p.progress >= 100).length})
+              // </Button>
+              <div className="w-full sm:w-auto whitespace-nowrap text-sm text-green-600 flex items-center gap-1">
+                Total Completed:{" "}
+                {projects.filter(p => p.status === "completed" || p.progress >= 100).length}
+              </div>
             )}
 
             {canCreateProject && (
