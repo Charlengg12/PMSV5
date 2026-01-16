@@ -802,6 +802,30 @@ function ensure_projects_schema(PDO $pdo): array
     return $columns;
 }
 
+function ensure_materials_schema(PDO $pdo): array
+{
+    $columns = get_table_columns($pdo, 'materials');
+    $addColumns = [
+        'added_by' => "ALTER TABLE materials ADD COLUMN added_by VARCHAR(255) DEFAULT NULL",
+        'status' => "ALTER TABLE materials ADD COLUMN status ENUM('ordered','delivered','in-use','depleted') DEFAULT 'ordered'",
+        'supplier' => "ALTER TABLE materials ADD COLUMN supplier VARCHAR(255) DEFAULT NULL",
+        'category' => "ALTER TABLE materials ADD COLUMN category VARCHAR(255) DEFAULT NULL"
+    ];
+
+    foreach ($addColumns as $name => $sql) {
+        if (!isset($columns[$name])) {
+            try {
+                $pdo->exec($sql);
+                $columns[$name] = ['Field' => $name];
+            } catch (PDOException $e) {
+                // Ignore schema updates if the environment doesn't allow ALTER TABLE.
+            }
+        }
+    }
+
+    return $columns;
+}
+
 function normalize_project_status(string $status, array $columns): string
 {
     $status = trim($status);
@@ -1557,30 +1581,72 @@ function handle_create_material(PDO $pdo): void
 {
     require_login();
     $body = sanitize_recursive(json_input());
+    $columns = ensure_materials_schema($pdo);
     $materialId = 'mat-' . time();
 
-    if (empty($body['projectId']) || empty($body['name']) || !isset($body['quantity'])) {
-        json_response(['error' => 'projectId, name, and quantity are required'], 400);
+    $name = trim($body['name'] ?? '');
+    if ($name === '' || !isset($body['quantity'])) {
+        json_response(['error' => 'name and quantity are required'], 400);
     }
 
-    $stmt = $pdo->prepare(
-        'INSERT INTO materials (id, project_id, name, description, quantity, unit, cost_per_unit, total_cost)
-         VALUES (:id, :project_id, :name, :description, :quantity, :unit, :cost_per_unit, :total_cost)'
-    );
+    $projectIdRaw = $body['projectId'] ?? $body['project_id'] ?? null;
+    $projectId = is_string($projectIdRaw) ? trim($projectIdRaw) : '';
+    if ($projectId === '' || in_array(strtolower($projectId), ['general', 'none'], true)) {
+        $projectId = 'general';
+    }
 
-    $stmt->execute([
-        ':id' => $materialId,
-        ':project_id' => $body['projectId'],
-        ':name' => $body['name'],
-        ':description' => $body['description'] ?? null,
-        ':quantity' => $body['quantity'],
-        ':unit' => $body['unit'] ?? null,
-        ':cost_per_unit' => $body['costPerUnit'] ?? null,
-        ':total_cost' => $body['totalCost'] ?? null,
-    ]);
+    $costPerUnit = $body['costPerUnit'] ?? $body['cost_per_unit'] ?? $body['cost'] ?? null;
+    $totalCost = $body['totalCost'] ?? $body['total_cost'] ?? null;
+    if ($totalCost === null && $costPerUnit !== null && isset($body['quantity'])) {
+        $totalCost = (float) $body['quantity'] * (float) $costPerUnit;
+    }
+
+    $payload = [
+        'id' => $materialId,
+        'project_id' => $projectId,
+        'name' => $name,
+        'description' => $body['description'] ?? null,
+        'quantity' => $body['quantity'],
+        'unit' => $body['unit'] ?? null,
+        'cost_per_unit' => $costPerUnit,
+        'total_cost' => $totalCost,
+        'added_by' => $_SESSION['user_id'] ?? ($body['addedBy'] ?? $body['added_by'] ?? null),
+        'status' => $body['status'] ?? 'ordered',
+        'supplier' => $body['supplier'] ?? null,
+        'category' => $body['category'] ?? null
+    ];
+
+    $filtered = [];
+    foreach ($payload as $field => $value) {
+        if (isset($columns[$field])) {
+            $filtered[$field] = $value;
+        }
+    }
+
+    if (empty($filtered)) {
+        json_response(['error' => 'No valid material fields to insert'], 400);
+    }
+
+    $fields = array_keys($filtered);
+    $placeholders = array_map(function ($field) {
+        return ':' . $field;
+    }, $fields);
+
+    $sql = 'INSERT INTO materials (' . implode(', ', $fields) . ') VALUES (' . implode(', ', $placeholders) . ')';
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $params = [];
+        foreach ($filtered as $field => $value) {
+            $params[':' . $field] = $value;
+        }
+        $stmt->execute($params);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
 
     // LOGGING
-    log_activity($pdo, $_SESSION['user_id'], 'ADD_MATERIAL', "Added material: " . $body['name']);
+    log_activity($pdo, $_SESSION['user_id'], 'ADD_MATERIAL', "Added material: " . $name);
 
     $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $materialId]);

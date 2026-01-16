@@ -2,6 +2,12 @@
 
 A comprehensive, scalable project management system designed for fabricators, supervisors, and administrators. Built with React, TypeScript, Node.js, Express, and MySQL.
 
+---
+---
+## **>> VIEW THE LATES RELEASE OF THIS REPOSITORY TO QUICKLY START LOCAL DEVELOPMENT <<**
+---
+---
+
 ## 🚀 Quick Start
 
 ### Option 1: Docker Deployment (Recommended)
