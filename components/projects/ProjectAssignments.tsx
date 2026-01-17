@@ -1,14 +1,10 @@
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Textarea } from '../ui/textarea';
-import { Label } from '../ui/label';
 import {
   UserCheck,
   UserX,
   Clock,
-  MessageSquare,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -31,8 +27,6 @@ export function ProjectAssignments({
   onAcceptAssignment,
   onDeclineAssignment
 }: ProjectAssignmentsProps) {
-  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
-  const [response, setResponse] = useState('');
 
   // Get pending assignments for current fabricator
   const pendingAssignments = projects
@@ -63,18 +57,6 @@ export function ProjectAssignments({
         )
         .map(assignment => ({ ...assignment, project })) || []
     );
-
-  const handleAccept = (assignmentId: string) => {
-    onAcceptAssignment(assignmentId, response);
-    setResponse('');
-    setSelectedAssignment(null);
-  };
-
-  const handleDecline = (assignmentId: string) => {
-    onDeclineAssignment(assignmentId, response);
-    setResponse('');
-    setSelectedAssignment(null);
-  };
 
   const getSupervisorName = (supervisorId: string) => {
     const supervisor = users.find(u => u.id === supervisorId);
@@ -164,87 +146,33 @@ export function ProjectAssignments({
                     </Badge>
                   </div>
 
-                  <div className="bg-muted/50 rounded p-3 mb-4">
-                    <div className="flex items-start gap-2">
-                      <MessageSquare className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm mb-1">
-                          <strong>From:</strong> {getSupervisorName(assignment.assignedBy)}
-                        </p>
-                        <p className="text-sm text-muted-foreground mb-1">
-                          <strong>Assigned:</strong> {new Date(assignment.assignedAt).toLocaleString()}
-                        </p>
-                        {assignment.message && (
-                          <div>
-                            <p className="text-sm mb-1"><strong>Message:</strong></p>
-                            <p className="text-sm italic">"{assignment.message}"</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
+                  <div className="bg-muted/50 rounded p-3 mb-4 text-sm text-muted-foreground space-y-1">
+                    <p>
+                      <strong>From:</strong>{" "}
+                      {getSupervisorName(assignment.assignedBy)}
+                    </p>
+                    <p>
+                      <strong>Assigned:</strong>{" "}
+                      {new Date(assignment.assignedAt).toLocaleString()}
+                    </p>
                   </div>
 
-                  {selectedAssignment === assignment.id && (
-                    <div className="space-y-3 mb-4 p-3 border rounded">
-                      <Label htmlFor="response">Your Response (Optional)</Label>
-                      <Textarea
-                        id="response"
-                        value={response}
-                        onChange={(e) => setResponse(e.target.value)}
-                        placeholder="Add any comments or questions about this assignment..."
-                        rows={3}
-                      />
-                    </div>
-                  )}
-
                   <div className="flex gap-2">
-                    {selectedAssignment === assignment.id ? (
-                      <>
-                        <Button
-                          onClick={() => handleAccept(assignment.id)}
-                          size="sm"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Confirm Accept
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          onClick={() => handleDecline(assignment.id)}
-                          size="sm"
-                        >
-                          <XCircle className="h-4 w-4 mr-2" />
-                          Confirm Decline
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          onClick={() => {
-                            setSelectedAssignment(null);
-                            setResponse('');
-                          }}
-                          size="sm"
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          onClick={() => setSelectedAssignment(assignment.id)}
-                          size="sm"
-                        >
-                          <UserCheck className="h-4 w-4 mr-2" />
-                          Accept Assignment
-                        </Button>
-                        <Button
-                          variant="outline"
-                          onClick={() => setSelectedAssignment(assignment.id)}
-                          size="sm"
-                        >
-                          <UserX className="h-4 w-4 mr-2" />
-                          Decline Assignment
-                        </Button>
-                      </>
-                    )}
+                    <Button
+                      onClick={() => onAcceptAssignment(assignment.id)}
+                      size="sm"
+                    >
+                      <UserCheck className="h-4 w-4 mr-2" />
+                      Accept Assignment
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => onDeclineAssignment(assignment.id)}
+                      size="sm"
+                    >
+                      <UserX className="h-4 w-4 mr-2" />
+                      Decline Assignment
+                    </Button>
                   </div>
                 </div>
               ))}
@@ -267,7 +195,7 @@ export function ProjectAssignments({
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h3 className="text-lg mb-2">No assignment history</h3>
               <p className="text-muted-foreground">
-                Your assignment responses will appear here.
+                Assignment history will appear here.
               </p>
             </div>
           ) : (
@@ -302,19 +230,6 @@ export function ProjectAssignments({
                       )}
                     </div>
 
-                    {assignment.message && (
-                      <div className="mt-3 p-2 bg-muted/30 rounded text-sm">
-                        <p className="mb-1"><strong>Supervisor's message:</strong></p>
-                        <p className="italic">"{assignment.message}"</p>
-                      </div>
-                    )}
-
-                    {assignment.response && (
-                      <div className="mt-3 p-2 bg-blue-50 dark:bg-blue-950/20 rounded text-sm">
-                        <p className="mb-1"><strong>Your response:</strong></p>
-                        <p className="italic">"{assignment.response}"</p>
-                      </div>
-                    )}
                   </div>
                 ))}
             </div>

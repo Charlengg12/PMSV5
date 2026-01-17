@@ -60,6 +60,8 @@ interface TeamOverviewProps {
 type TeamMember = {
   user: User;
   assignedProjects: Project[];
+  pendingProjects: Project[];
+  acceptedProjects: Project[];
   assignedTasks: Task[];
   totalHours: number;
   lastActivity: Date | null;
@@ -132,7 +134,12 @@ export function TeamOverview({
     }
     if (currentUser.role === "fabricator") {
       return projects.filter((project) =>
-        project.fabricatorIds.includes(currentUser.id)
+        project.fabricatorIds.includes(currentUser.id) ||
+        project.pendingAssignments?.some(
+          (assignment) =>
+            assignment.fabricatorId === currentUser.id &&
+            assignment.status === "pending"
+        )
       );
     }
     if (currentUser.role === "client" && currentUser.clientProjectId) {
@@ -169,6 +176,11 @@ export function TeamOverview({
       const teamIds = new Set<string>([currentUser.id]);
       scopedProjects.forEach((project) => {
         project.fabricatorIds.forEach((id) => teamIds.add(id));
+        project.pendingAssignments?.forEach((assignment) => {
+          if (assignment.status === "pending") {
+            teamIds.add(assignment.fabricatorId);
+          }
+        });
       });
       users.forEach((user) => {
         if (
@@ -197,18 +209,34 @@ export function TeamOverview({
   const teamMembers = useMemo<TeamMember[]>(() => {
     return scopedUsers.map((user) => {
       let assignedProjects: Project[] = [];
+      let pendingProjects: Project[] = [];
+      let acceptedProjects: Project[] = [];
       if (user.role === "supervisor") {
         assignedProjects = scopedProjects.filter(
           (project) => project.supervisorId === user.id
         );
+        acceptedProjects = assignedProjects;
       } else if (user.role === "fabricator") {
-        assignedProjects = scopedProjects.filter((project) =>
+        acceptedProjects = scopedProjects.filter((project) =>
           project.fabricatorIds.includes(user.id)
         );
+        pendingProjects = scopedProjects.filter((project) =>
+          project.pendingAssignments?.some(
+            (assignment) =>
+              assignment.fabricatorId === user.id &&
+              assignment.status === "pending"
+          )
+        );
+        const combined = new Map<string, Project>();
+        [...acceptedProjects, ...pendingProjects].forEach((project) => {
+          combined.set(project.id, project);
+        });
+        assignedProjects = Array.from(combined.values());
       } else if (user.role === "client" && user.clientProjectId) {
         assignedProjects = scopedProjects.filter(
           (project) => project.id === user.clientProjectId
         );
+        acceptedProjects = assignedProjects;
       }
 
       const assignedTasks = scopedTasks.filter(
@@ -236,6 +264,8 @@ export function TeamOverview({
       return {
         user,
         assignedProjects,
+        pendingProjects,
+        acceptedProjects,
         assignedTasks,
         totalHours,
         lastActivity,
@@ -567,7 +597,19 @@ export function TeamOverview({
                   </TableHeader>
                   <TableBody>
                     {sortedMembers.map((member) => {
-                      const isAssigned = member.assignedProjects.length > 0;
+                      const hasAccepted = member.acceptedProjects.length > 0;
+                      const hasPending = member.pendingProjects.length > 0;
+                      const statusLabel = hasAccepted
+                        ? "Assigned"
+                        : hasPending
+                        ? "Pending"
+                        : "Unassigned";
+                      const statusVariant = hasAccepted
+                        ? "default"
+                        : hasPending
+                        ? "secondary"
+                        : "outline";
+
                       return (
                         <TableRow key={member.user.id} className="hover:bg-muted/40">
                           <TableCell>
@@ -610,9 +652,7 @@ export function TeamOverview({
                           </TableCell>
                           <TableCell>{formatDate(member.lastActivity)}</TableCell>
                           <TableCell>
-                            <Badge variant={isAssigned ? "default" : "outline"}>
-                              {isAssigned ? "Assigned" : "Unassigned"}
-                            </Badge>
+                            <Badge variant={statusVariant}>{statusLabel}</Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
@@ -731,32 +771,25 @@ export function TeamOverview({
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-2">
-                      {selectedMember.assignedProjects.map((project) => (
-                        <Badge key={project.id} variant="outline">
-                          {project.name}
-                        </Badge>
-                      ))}
+                      {selectedMember.assignedProjects.map((project) => {
+                        const isPending = selectedMember.pendingProjects.some(
+                          (pending) => pending.id === project.id
+                        );
+                        return (
+                          <Badge
+                            key={project.id}
+                            variant={isPending ? "secondary" : "outline"}
+                          >
+                            {project.name}
+                            {isPending ? " (Pending)" : ""}
+                          </Badge>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
               </Card>
 
-              <div className="flex flex-wrap gap-2 justify-end">
-                <Button asChild variant="outline">
-                  <a href={`mailto:${selectedMember.user.email}`}>
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </a>
-                </Button>
-                {selectedMember.user.phone && (
-                  <Button asChild variant="outline">
-                    <a href={`tel:${selectedMember.user.phone}`}>
-                      <Phone className="h-4 w-4" />
-                      Call
-                    </a>
-                  </Button>
-                )}
-              </div>
             </>
           )}
         </DialogContent>
