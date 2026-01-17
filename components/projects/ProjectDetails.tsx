@@ -526,19 +526,25 @@ export function ProjectDetails({
                       <div className="flex justify-between text-sm items-center">
                         <span>{editedProject.progress}% Complete</span>
                         {isEditing && (
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={editedProject.progress}
-                            onChange={(e) =>
-                              setEditedProject((prev) => ({
-                                ...prev,
-                                progress: parseInt(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-20 h-8"
-                          />
+                         <Input
+  type="number"
+  min="0"
+  max="100"
+  value={editedProject.progress}
+  onChange={(e) => {
+    let value = parseInt(e.target.value) || 0;
+
+    // Logic to prevent exceeding 100 or going below 0
+    if (value > 100) value = 100;
+    if (value < 0) value = 0;
+
+    setEditedProject((prev) => ({
+      ...prev,
+      progress: value,
+    }));
+  }}
+  className="w-20 h-8"
+/>
                         )}
                       </div>
                       <Progress value={editedProject.progress} />
