@@ -140,6 +140,8 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     setShowModal(false);
     setEditingId(null);
   };
+  
+
 
   // ─── CREATE / UPDATE with confirmation + loading ───────────────────────────
   const handleSubmit = async () => {
@@ -148,6 +150,28 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         icon: "warning",
         title: "Incomplete",
         text: "Title and content are required.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if title is > 50 chars return the sweet alert exceeding limit
+
+    if (title.length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Title Exceeds Limit",
+        text: "Title must be less than 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (content.length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Content must be less than 1000 characters.",
         customClass: swalCustomClasses,
       });
       return;

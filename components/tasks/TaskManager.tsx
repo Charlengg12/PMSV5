@@ -282,6 +282,34 @@ export function TaskManager({
     setCreateAttempted(true);
     const missingFields = getMissingFields();
     if (missingFields.length > 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Form",
+        text: `All fields are required. Missing: ${missingFields.join(", ")}.`,
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if title is > 50 chars return exceeding limit
+    if (formData.title.trim().length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Title Exceeds Limit",
+        text: "Title cannot exceed 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if description is > 200 chars return exceeding limit
+    if (formData.description.trim().length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Description Exceeds Limit",
+        text: "Description cannot exceed 200 characters.",
+        customClass: swalCustomClasses,
+      });
       return;
     }
 
