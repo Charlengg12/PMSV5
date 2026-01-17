@@ -1707,10 +1707,13 @@ function handle_create_client(PDO $pdo): void
 
     $secureId = 'CLI' . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
-
     $userId = 'user-' . time();
 
     try {
+        // 1. Start a database transaction
+        $pdo->beginTransaction();
+
+        // 2. Insert the new User
         $stmt = $pdo->prepare(
             'INSERT INTO users (id, name, email, password_hash, role, school, phone, secure_id, client_project_id, is_active)
              VALUES (:id, :name, :email, :password_hash, :role, :school, :phone, :secure_id, :client_project_id, 1)'
@@ -1728,29 +1731,47 @@ function handle_create_client(PDO $pdo): void
             ':client_project_id' => $projectId,
         ]);
 
+        // 3. UPDATE the Project table with the new Client Name and ID
+        // This is the part missing from your original code
+        $updateProject = $pdo->prepare(
+            'UPDATE projects 
+             SET client_id = :client_id, 
+                 client_name = :client_name 
+             WHERE id = :project_id'
+        );
+
+        $updateProject->execute([
+            ':client_id' => $userId,
+            ':client_name' => $name,
+            ':project_id' => $projectId
+        ]);
+
+        // 4. Commit the transaction (save changes)
+        $pdo->commit();
+
         // LOGGING
         log_activity($pdo, $_SESSION['user_id'], 'CREATE_CLIENT', "Created client: $name for project $projectId");
 
-        // --- NEW CODE START: Send Email ---
-        // We pass the PLAIN password here because once the function ends, we only have the hash.
+        // Send Email
         $emailSent = send_client_credentials_email($email, $name, $password, $projectName, $secureId);
-        // --- NEW CODE END ---
 
         $stmt = $pdo->prepare('SELECT * FROM users WHERE id = :id LIMIT 1');
         $stmt->execute([':id' => $userId]);
         $user = $stmt->fetch();
         unset($user['password_hash']);
 
-        // Optionally add email status to response
         $user['email_sent'] = $emailSent;
 
         json_response(['user' => $user]);
 
     } catch (Exception $e) {
+        // If anything goes wrong, roll back changes so we don't have broken data
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
     }
 }
-
 function handle_verify_password(PDO $pdo): void
 {
     require_login(); 
