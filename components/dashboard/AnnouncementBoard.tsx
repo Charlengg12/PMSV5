@@ -348,18 +348,20 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
   return (
     <>
       <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between pb-2 px-4 sm:px-6">
-          <div className="flex items-center gap-2">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 px-4 sm:px-6">
+          {/* Left Side: Title & Counter */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             <Megaphone className="h-5 w-5 text-primary" />
             <CardTitle className="text-lg">Announcements</CardTitle>
             {!loading && announcements.length > 0 && (
-              <span className="text-xs text-muted-foreground ml-2 bg-muted px-2 py-0.5 rounded-full">
+              <span className="text-xs text-muted-foreground ml-2 bg-muted px-2 py-0.5 flex items-center gap-1 whitespace-nowrap rounded-full">
                 {currentIndex + 1} / {announcements.length}
               </span>
             )}
           </div>
 
-          <div className="flex items-center gap-2">
+          {/* Right Side: Actions (Aligns right on mobile) */}
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             {announcements.length > 1 && (
               <div className="flex items-center border rounded-md mr-2 bg-background shadow-sm">
                 <Button

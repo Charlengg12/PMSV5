@@ -78,12 +78,15 @@ export default function App() {
   const [lastReloadAt, setLastReloadAt] = useState<number>(0);
 
   // Initialize time-based theme
+  const themeStorageKey = currentUser
+    ? `theme-override-${currentUser.role}`
+    : "theme-override-guest";
   const {
     isDark: _isDark,
     isTransitioning,
     setTheme,
     getCurrentTheme,
-  } = useTimeBasedTheme();
+  } = useTimeBasedTheme({ storageKey: themeStorageKey });
 
   // Initialize: restore session and view, then database and data
   useEffect(() => {
