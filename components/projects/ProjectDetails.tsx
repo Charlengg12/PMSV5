@@ -46,7 +46,7 @@ export function ProjectDetails({
   onClose,
 }: ProjectDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState(project);
+  const [editedProject, setEditedProject] = useState<Project>(project);
   const [newFabricatorId, setNewFabricatorId] = useState<string>("");
   const [showAddFabricator, setShowAddFabricator] = useState(false);
   const [backendClientAssigned, setBackendClientAssigned] = useState(false);
@@ -55,6 +55,19 @@ export function ProjectDetails({
     (u) => u.role === "client" && u.clientProjectId === project.id
   );
   const localClientAssigned = !!clientUser;
+
+  // ────────────────────────────────────────────────
+  //  Validation constants
+  // ────────────────────────────────────────────────
+  const requiredFields = [
+    { key: "name", label: "Project Name" },
+    { key: "description", label: "Description" },
+    { key: "status", label: "Status" },
+    { key: "priority", label: "Priority" },
+  ] as const;
+
+  const MAX_NAME_LENGTH = 50;
+  const MAX_DESCRIPTION_LENGTH = 100;
 
   useEffect(() => {
     let active = true;
@@ -141,13 +154,115 @@ export function ProjectDetails({
     }
   };
 
+  const getMissingFields = () => {
+    const missing: string[] = [];
+
+    for (const field of requiredFields) {
+      const value = editedProject[field.key as keyof Project];
+      if (
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && value.trim() === "") ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
+        missing.push(field.label);
+      }
+    }
+
+    return missing;
+  };
+
   const handleSave = async () => {
+    // ─── Character limit checks (separate alerts like in create form) ───
+    if (editedProject.name && editedProject.name.length > MAX_NAME_LENGTH) {
+      Swal.fire({
+        title: "Input Limit Exceeded",
+        text: `Project name cannot exceed ${MAX_NAME_LENGTH} characters.`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    if (
+      editedProject.description &&
+      editedProject.description.length > MAX_DESCRIPTION_LENGTH
+    ) {
+      Swal.fire({
+        title: "Input Limit Exceeded",
+        text: `Description cannot exceed ${MAX_DESCRIPTION_LENGTH} characters.`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    // ─── Required fields check ───
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      Swal.fire({
+        title: "Incomplete Form",
+        html: `Please fill up the following:<br><br><strong>${missing.join(
+          "<br>"
+        )}</strong>`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    // ─── No changes check ───
+    const hasChanges = JSON.stringify(editedProject) !== JSON.stringify(project);
+    if (!hasChanges) {
+      Swal.fire({
+        icon: "info",
+        title: "No changes detected",
+        text: "Nothing to save.",
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+        },
+      });
+      setIsEditing(false);
+      return;
+    }
+
+    // ─── Confirmation ───
     const result = await Swal.fire({
       title: "Save changes?",
       text: "This will update the project details.",
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Confirm",
+      confirmButtonText: "Yes, save",
       cancelButtonText: "Cancel",
       customClass: {
         container: "swal-container",
@@ -156,31 +271,27 @@ export function ProjectDetails({
         htmlContainer: "swal-content",
         confirmButton: "swal-confirm-button",
         cancelButton: "swal-cancel-button",
-        icon: "swal-icon",
       },
     });
 
     if (!result.isConfirmed) return;
 
+    // ─── Saving... ───
     Swal.fire({
       title: "Saving...",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
-      customClass: {
-        container: "swal-container",
-        popup: "swal-popup",
-        title: "swal-title",
-        htmlContainer: "swal-content",
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-        icon: "swal-icon",
-      },
       didOpen: () => {
         Swal.showLoading();
       },
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup",
+      },
     });
 
+    // Simulate save delay (replace with real API call if needed)
     setTimeout(() => {
       onUpdateProject(editedProject);
       setIsEditing(false);
@@ -195,14 +306,9 @@ export function ProjectDetails({
         customClass: {
           container: "swal-container",
           popup: "swal-popup",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-          icon: "swal-icon",
         },
       });
-    }, 1400);
+    }, 1200);
   };
 
   const handleCancel = () => {
@@ -420,19 +526,25 @@ export function ProjectDetails({
                       <div className="flex justify-between text-sm items-center">
                         <span>{editedProject.progress}% Complete</span>
                         {isEditing && (
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={editedProject.progress}
-                            onChange={(e) =>
-                              setEditedProject((prev) => ({
-                                ...prev,
-                                progress: parseInt(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-20 h-8"
-                          />
+                         <Input
+  type="number"
+  min="0"
+  max="100"
+  value={editedProject.progress}
+  onChange={(e) => {
+    let value = parseInt(e.target.value) || 0;
+
+    // Logic to prevent exceeding 100 or going below 0
+    if (value > 100) value = 100;
+    if (value < 0) value = 0;
+
+    setEditedProject((prev) => ({
+      ...prev,
+      progress: value,
+    }));
+  }}
+  className="w-20 h-8"
+/>
                         )}
                       </div>
                       <Progress value={editedProject.progress} />
@@ -744,10 +856,16 @@ export function ProjectDetails({
                                   {index + 1}
                                 </div>
                                 <div className="min-w-0">
-                                  <p className="font-medium truncate" title={fabricator?.name || "Unknown"}>
+                                  <p
+                                    className="font-medium truncate"
+                                    title={fabricator?.name || "Unknown"}
+                                  >
                                     {fabricator?.name || "Unknown Fabricator"}
                                   </p>
-                                  <p className="text-sm text-muted-foreground truncate" title={fabricator?.secureId || "—"}>
+                                  <p
+                                    className="text-sm text-muted-foreground truncate"
+                                    title={fabricator?.secureId || "—"}
+                                  >
                                     {fabricator?.secureId || "—"}
                                   </p>
                                 </div>
@@ -755,7 +873,10 @@ export function ProjectDetails({
                               {hasRevenue &&
                                 (currentUser.role === "admin" ||
                                   currentUser.role === "supervisor") && (
-                                  <Badge variant="outline" className="shrink-0 gap-1">
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 gap-1"
+                                  >
                                     <DollarSign className="h-3 w-3" />₱
                                     {fabricatorBudget.allocatedRevenue.toLocaleString()}{" "}
                                     revenue
@@ -789,7 +910,8 @@ export function ProjectDetails({
                 />
               )}
 
-              {editedProject.attachments && editedProject.attachments.length > 0 ? (
+              {editedProject.attachments &&
+              editedProject.attachments.length > 0 ? (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -805,18 +927,29 @@ export function ProjectDetails({
                           className="flex items-center justify-between p-3 bg-muted rounded gap-3"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                            <FileText
+                              className="h-5 w-5 text-muted-foreground shrink-0"
+                            />
                             <div className="min-w-0">
-                              <p className="font-medium truncate" title={attachment.name}>
+                              <p
+                                className="font-medium truncate"
+                                title={attachment.name}
+                              >
                                 {attachment.name}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {formatFileSize(attachment.size)} • Uploaded{" "}
-                                {new Date(attachment.uploadedAt).toLocaleDateString()}
+                                {new Date(
+                                  attachment.uploadedAt
+                                ).toLocaleDateString()}
                               </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm" className="shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                          >
                             <Download className="h-4 w-4" />
                           </Button>
                         </div>
@@ -827,7 +960,9 @@ export function ProjectDetails({
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <FileText
+                      className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+                    />
                     <h3 className="text-lg mb-2">No files uploaded yet</h3>
                     <p className="text-muted-foreground">
                       {canUploadFiles
@@ -864,17 +999,29 @@ export function ProjectDetails({
                   ) : editedProject.documentationUrl ? (
                     <div className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Link className="h-5 w-5 text-primary shrink-0" />
+                        <Link
+                          className="h-5 w-5 text-primary shrink-0"
+                        />
                         <div className="min-w-0">
-                          <p className="font-medium truncate" title="Project Documentation">
+                          <p
+                            className="font-medium truncate"
+                            title="Project Documentation"
+                          >
                             Project Documentation
                           </p>
-                          <p className="text-sm text-muted-foreground truncate" title="Google Drive folder with complete project documentation">
+                          <p
+                            className="text-sm text-muted-foreground truncate"
+                            title="Google Drive folder with complete project documentation"
+                          >
                             Google Drive folder with complete project documentation
                           </p>
                         </div>
                       </div>
-                      <Button variant="outline" asChild className="shrink-0">
+                      <Button
+                        variant="outline"
+                        asChild
+                        className="shrink-0"
+                      >
                         <a
                           href={editedProject.documentationUrl}
                           target="_blank"
@@ -887,7 +1034,9 @@ export function ProjectDetails({
                     </div>
                   ) : (
                     <div className="text-center py-10">
-                      <Link className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <Link
+                        className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+                      />
                       <h3 className="text-lg mb-2">No documentation link</h3>
                       <p className="text-muted-foreground">
                         No Google Drive documentation has been added yet.

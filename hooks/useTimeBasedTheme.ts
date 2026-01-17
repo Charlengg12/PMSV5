@@ -12,15 +12,20 @@ const defaultConfig: ThemeConfig = {
     transitionDuration: 30 // 30 minutes
 };
 
-export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
-    const themeConfig = { ...defaultConfig, ...config };
+export const useTimeBasedTheme = (
+    config: Partial<ThemeConfig> & { storageKey?: string } = {}
+) => {
+    const { storageKey = "theme-override", ...themeOverrides } = config as Partial<ThemeConfig> & {
+        storageKey?: string;
+    };
+    const themeConfig = { ...defaultConfig, ...themeOverrides };
     const [isDark, setIsDark] = useState(false);
     const [isTransitioning, setIsTransitioning] = useState(false);
 
     useEffect(() => {
         const updateTheme = () => {
             // Check if user has manually set a theme preference
-            const manualOverride = localStorage.getItem('theme-override');
+            const manualOverride = localStorage.getItem(storageKey);
             if (manualOverride && manualOverride !== 'auto') {
                 // User has manually set theme, don't auto-update
                 return;
@@ -88,7 +93,7 @@ export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
 
         // Initialize theme based on current preference
         const initializeTheme = () => {
-            const manualOverride = localStorage.getItem('theme-override');
+            const manualOverride = localStorage.getItem(storageKey);
             if (manualOverride === 'light') {
                 setIsDark(false);
                 document.documentElement.classList.remove('dark');
@@ -111,7 +116,7 @@ export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
         const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
         const handleSystemThemeChange = () => {
             // Only override if user hasn't manually set a preference
-            if (!localStorage.getItem('theme-override')) {
+            if (!localStorage.getItem(storageKey)) {
                 updateTheme();
             }
         };
@@ -122,7 +127,7 @@ export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
             clearInterval(interval);
             mediaQuery.removeEventListener('change', handleSystemThemeChange);
         };
-    }, [themeConfig]);
+    }, [themeConfig, storageKey]);
 
     // Manual theme override
     const setTheme = (theme: 'light' | 'dark' | 'auto') => {
@@ -130,7 +135,7 @@ export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
         const root = document.documentElement;
 
         if (theme === 'auto') {
-            localStorage.removeItem('theme-override');
+            localStorage.removeItem(storageKey);
             console.log('🔄 Switched to auto mode - will follow time-based schedule');
             // Re-run the automatic theme logic
             const now = new Date();
@@ -150,7 +155,7 @@ export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
                 console.log('☀️ Auto mode: Light theme applied');
             }
         } else {
-            localStorage.setItem('theme-override', theme);
+            localStorage.setItem(storageKey, theme);
             const isDarkMode = theme === 'dark';
             setIsDark(isDarkMode);
             setIsTransitioning(false); // Clear transition state for manual override
@@ -167,7 +172,7 @@ export const useTimeBasedTheme = (config: Partial<ThemeConfig> = {}) => {
 
     // Get current theme status
     const getCurrentTheme = () => {
-        const override = localStorage.getItem('theme-override');
+        const override = localStorage.getItem(storageKey);
         if (override) {
             return override as 'light' | 'dark' | 'auto';
         }

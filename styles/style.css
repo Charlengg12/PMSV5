@@ -121,9 +121,9 @@ button[data-slot="checkbox"]:hover{
     transition: none;
 }
 
-table tr:nth-child(even) {
+/* table tr:nth-child(even) {
     background-color: #e7e7e7e2;
-}
+} */
 table thead {
     background-color: #084080c4;
 }
