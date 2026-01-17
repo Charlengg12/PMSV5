@@ -16,15 +16,15 @@ import { Alert, AlertDescription } from "../ui/alert";
 import { Calendar } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Badge } from "../ui/badge";
-import { 
-  X, 
-  Plus, 
-  CalendarIcon, 
-  Building, 
-  DollarSign, 
-  Wallet, 
-  TrendingUp, 
-  Briefcase 
+import {
+  X,
+  Plus,
+  CalendarIcon,
+  Building,
+  DollarSign,
+  Wallet,
+  TrendingUp,
+  Briefcase,
 } from "lucide-react";
 import { format } from "date-fns";
 import { Project, User } from "../../types";
@@ -53,8 +53,7 @@ const sanitizeAllocationInput = (value: string) => {
   if (!/^\d*\.?\d*$/.test(value)) return null;
 
   const [rawInteger, rawDecimal = ""] = value.split(".");
-  const integerPart =
-    rawInteger.slice(0, MAX_ALLOCATION_INTEGER_DIGITS) || "0";
+  const integerPart = rawInteger.slice(0, MAX_ALLOCATION_INTEGER_DIGITS) || "0";
   const decimalPart = rawDecimal.slice(0, MAX_ALLOCATION_DECIMALS);
   const hasDecimal = value.includes(".");
   const endsWithDecimal = value.endsWith(".");
@@ -76,7 +75,7 @@ interface CreateProjectFormProps {
   currentUser: User;
   users: User[];
   onCreateProject: (
-    project: Omit<Project, "id">
+    project: Omit<Project, "id">,
   ) => void | Promise<void> | Promise<Project>;
   onClose: () => void;
 }
@@ -107,6 +106,31 @@ export function CreateProjectForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const calendarWeekdayLabels = [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ];
+  const calendarClassNames = {
+    months: "flex flex-col gap-2",
+    month: "flex flex-col gap-1",
+    caption: "flex justify-center pt-1 relative items-center w-full mb-2",
+    table: "w-full border-collapse",
+    head_row: "grid grid-cols-7",
+    head_cell:
+      "text-white font-semibold text-[0.75rem] leading-none py-0 px-0 flex items-center justify-center tracking-wide",
+    row: "grid grid-cols-7 mt-0.5",
+    cell: "p-0 flex items-center justify-center",
+    day: "size-6 p-0 font-normal aria-selected:opacity-100 flex items-center justify-center",
+    day_selected:
+      "bg-accent text-accent-foreground hover:bg-accent dark:bg-[var(--sidebar-primary)] dark:text-[var(--sidebar-primary-foreground)] dark:hover:bg-[var(--sidebar-primary)]",
+    day_today:
+      "bg-accent text-accent-foreground dark:bg-[var(--sidebar-primary)] dark:text-[var(--sidebar-primary-foreground)] !rounded-none",
+  };
 
   const supervisors = users.filter((u) => u.role === "supervisor");
   const fabricators = users.filter((u) => u.role === "fabricator");
@@ -119,7 +143,7 @@ export function CreateProjectForm({
 
   // 1. Budget (Operational Cost): Sum of expenses only
   const operationalBudget = fabAlloc + matAlloc + supAlloc;
-  
+
   // 2. Revenue (Client Price): Sum of ALL allocations
   const calculatedRevenue = operationalBudget + compAlloc;
 
@@ -132,7 +156,10 @@ export function CreateProjectForm({
 
   // Keep totalProjectPrice in sync for validation purposes
   useEffect(() => {
-    setFormData((prev) => ({ ...prev, totalProjectPrice: calculatedRevenue.toFixed(2) }));
+    setFormData((prev) => ({
+      ...prev,
+      totalProjectPrice: calculatedRevenue.toFixed(2),
+    }));
   }, [
     formData.fabricatorAllocation,
     formData.materialsAllocation,
@@ -196,7 +223,7 @@ export function CreateProjectForm({
       | "materialsAllocation"
       | "supervisorAllocation"
       | "companyAllocation",
-    value: string
+    value: string,
   ) => {
     const sanitized = sanitizeAllocationInput(value);
     if (sanitized === null) return;
@@ -215,23 +242,27 @@ export function CreateProjectForm({
   const handleRemoveFabricator = (fabricatorId: string) => {
     handleInputChange(
       "fabricatorIds",
-      formData.fabricatorIds.filter((id) => id !== fabricatorId)
+      formData.fabricatorIds.filter((id) => id !== fabricatorId),
     );
   };
 
-  const missingFields = () => { {
-    const fields = [];
-    if (!formData.name.trim()) fields.push("Project Name");
-    if (!formData.description.trim()) fields.push("Description");
-    if (!formData.supervisorId && !formData.broadcastToSupervisors) fields.push("Supervisor");
-    if (
-      !formData.supervisorAssignsFabricators &&
-      !formData.broadcastToSupervisors &&
-      formData.fabricatorIds.length === 0
-    ) fields.push("Fabricators");
-    if (formData.endDate <= formData.startDate) fields.push("Valid Dates");
-    return fields;
-  }};
+  const missingFields = () => {
+    {
+      const fields = [];
+      if (!formData.name.trim()) fields.push("Project Name");
+      if (!formData.description.trim()) fields.push("Description");
+      if (!formData.supervisorId && !formData.broadcastToSupervisors)
+        fields.push("Supervisor");
+      if (
+        !formData.supervisorAssignsFabricators &&
+        !formData.broadcastToSupervisors &&
+        formData.fabricatorIds.length === 0
+      )
+        fields.push("Fabricators");
+      if (formData.endDate <= formData.startDate) fields.push("Valid Dates");
+      return fields;
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -239,86 +270,85 @@ export function CreateProjectForm({
     // add input limit check
     if (formData.name.length > 50) {
       Swal.fire({
-        title: 'Input Limit Exceeded', 
-        text: 'Project name cannot exceed 50 characters.',
-        icon: 'warning',
-        confirmButtonText: 'Okay',
+        title: "Input Limit Exceeded",
+        text: "Project name cannot exceed 50 characters.",
+        icon: "warning",
+        confirmButtonText: "Okay",
         customClass: {
-            container: 'swal-container',
-            popup: 'swal-popup',
-            title: 'swal-title',
-            htmlContainer: 'swal-content',
-            confirmButton: 'swal-confirm-button',
-            cancelButton: 'swal-cancel-button',
-            icon: 'swal-icon'
-        }
-      });
-      return;
-      }
-
-      if (formData.description.length > 100) {
-      Swal.fire({
-        title: 'Input Limit Exceeded', 
-        text: 'Project description cannot exceed 100 characters.',
-        icon: 'warning',
-        confirmButtonText: 'Okay',
-        customClass: {
-            container: 'swal-container',
-            popup: 'swal-popup',
-            title: 'swal-title',
-            htmlContainer: 'swal-content',
-            confirmButton: 'swal-confirm-button',
-            cancelButton: 'swal-cancel-button',
-            icon: 'swal-icon'
-        }
-      });
-      return;
-      }
-
-    const missing = missingFields();
-    if (missing.length > 0) {
-      Swal.fire({
-        title: 'Incomplete Form',
-        html: `Please fill up the following:<br><br><strong>${missing.join(
-          "<br>"
-        )}</strong>`,
-        icon: 'warning',
-        confirmButtonText: 'Okay',
-        customClass: {
-            container: 'swal-container',
-            popup: 'swal-popup',
-            title: 'swal-title',
-            htmlContainer: 'swal-content',
-            confirmButton: 'swal-confirm-button',
-            cancelButton: 'swal-cancel-button',
-            icon: 'swal-icon'
-        }
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
       });
       return;
     }
 
+    if (formData.description.length > 100) {
+      Swal.fire({
+        title: "Input Limit Exceeded",
+        text: "Project description cannot exceed 100 characters.",
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    const missing = missingFields();
+    if (missing.length > 0) {
+      Swal.fire({
+        title: "Incomplete Form",
+        html: `Please fill up the following:<br><br><strong>${missing.join(
+          "<br>",
+        )}</strong>`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
 
     if (!validateForm()) {
       return;
     }
 
     const result = await Swal.fire({
-      title: 'Are you sure?',
+      title: "Are you sure?",
       text: "Please confirm if you want to proceed.",
-      icon: 'info',
+      icon: "info",
       showCancelButton: true,
-      cancelButtonText: 'Cancel',
-      confirmButtonText: 'Confirm',
+      cancelButtonText: "Cancel",
+      confirmButtonText: "Confirm",
       allowOutsideClick: false,
       customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          confirmButton: 'swal-confirm-button',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon'
-      }
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
     });
 
     if (!result.isConfirmed) {
@@ -327,27 +357,27 @@ export function CreateProjectForm({
 
     // Show loading state
     Swal.fire({
-      title: 'Processing...',
+      title: "Processing...",
       text: "Please wait, your request is being processed.",
       allowOutsideClick: false,
       customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon'
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
       },
       didOpen: () => {
-          Swal.showLoading();
-      }
+        Swal.showLoading();
+      },
     });
 
     try {
-      // Logic Update: 
+      // Logic Update:
       // Budget = Operational Costs (Fab + Mat + Sup)
       // Revenue = Total Client Price (Budget + Company Alloc)
-      
+
       const shouldSupervisorAssign = formData.supervisorAssignsFabricators;
       const initialStatus: Project["status"] = shouldSupervisorAssign
         ? "0_Created"
@@ -366,20 +396,20 @@ export function CreateProjectForm({
         fabricatorIds: formData.supervisorAssignsFabricators
           ? []
           : formData.fabricatorIds,
-        
+
         // --- UPDATED FINANCIAL MAPPING ---
         budget: operationalBudget, // Operational Cost
         revenue: calculatedRevenue, // Total Revenue
         spent: 0,
         // -------------------------------
-        
+
         documentationUrl: formData.documentationUrl || undefined,
         createdBy: currentUser.id,
         createdAt: new Date().toISOString(),
         fabricatorBudgets: [],
         // @ts-ignore
         broadcastToSupervisors: formData.broadcastToSupervisors,
-        
+
         // Save specific allocations if your backend supports these fields
         // @ts-ignore
         fabricatorAllocation: fabAlloc,
@@ -388,7 +418,7 @@ export function CreateProjectForm({
         // @ts-ignore
         supervisorAllocation: supAlloc,
         // @ts-ignore
-        companyAllocation: compAlloc
+        companyAllocation: compAlloc,
       };
 
       await onCreateProject(newProject);
@@ -402,18 +432,17 @@ export function CreateProjectForm({
         icon: "success",
         timer: 2200,
         customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon'
-      },
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
       });
 
       onClose();
       window.location.hash = "projects";
-
     } catch (err) {
       console.error("Project creation failed:", err);
 
@@ -423,13 +452,13 @@ export function CreateProjectForm({
         icon: "error",
         confirmButtonText: "OK",
         customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon'
-      },
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
       });
     }
   };
@@ -439,21 +468,26 @@ export function CreateProjectForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto modal">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
+        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-center justify-between gap-0 flex-nowrap">
+            <CardTitle className="flex items-center text-base sm:text-lg whitespace-nowrap overflow-visible text-clip">
               <Building className="h-5 w-5" />
               Create New Project
             </CardTitle>
-            <Button variant="ghost" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onClose}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-8 px-4 pb-6 sm:px-6 sm:pb-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -534,7 +568,14 @@ export function CreateProjectForm({
                         {format(formData.startDate, "PPP")}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    {/* FIXED: Added align="start" to anchor popup correctly */}
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0 overflow-hidden"
+                      align="start"
+                      side="bottom"
+                      sideOffset={6}
+                      collisionPadding={12}
+                    >
                       <Calendar
                         mode="single"
                         selected={formData.startDate}
@@ -545,6 +586,17 @@ export function CreateProjectForm({
                           }
                         }}
                         initialFocus
+                        // FIXED: fixedWeeks prevents height jumping
+                        fixedWeeks
+                        // Hide outside days to avoid showing next/prev month
+                        showOutsideDays={false}
+                        weekStartsOn={0}
+                        formatters={{
+                          formatWeekdayName: (date) =>
+                            calendarWeekdayLabels[date.getDay()],
+                        }}
+                        classNames={calendarClassNames}
+                        className="rounded-md border p-2"
                       />
                     </PopoverContent>
                   </Popover>
@@ -565,7 +617,14 @@ export function CreateProjectForm({
                         {format(formData.endDate, "PPP")}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
+                    {/* FIXED: Added align="start" */}
+                    <PopoverContent
+                      className="w-[var(--radix-popover-trigger-width)] p-0 overflow-hidden"
+                      align="start"
+                      side="bottom"
+                      sideOffset={6}
+                      collisionPadding={12}
+                    >
                       <Calendar
                         mode="single"
                         selected={formData.endDate}
@@ -576,7 +635,17 @@ export function CreateProjectForm({
                           }
                         }}
                         initialFocus
-                        
+                        // FIXED: fixedWeeks prevents height jumping
+                        fixedWeeks
+                        // Hide outside days to avoid showing next/prev month
+                        showOutsideDays={false}
+                        weekStartsOn={0}
+                        formatters={{
+                          formatWeekdayName: (date) =>
+                            calendarWeekdayLabels[date.getDay()],
+                        }}
+                        classNames={calendarClassNames}
+                        className="rounded-md border p-2"
                       />
                     </PopoverContent>
                   </Popover>
@@ -628,7 +697,7 @@ export function CreateProjectForm({
                   onChange={(e) => {
                     handleInputChange(
                       "broadcastToSupervisors",
-                      e.target.checked
+                      e.target.checked,
                     );
                     if (e.target.checked) {
                       handleInputChange("supervisorId", "");
@@ -661,7 +730,7 @@ export function CreateProjectForm({
                   onChange={(e) =>
                     handleInputChange(
                       "supervisorAssignsFabricators",
-                      e.target.checked
+                      e.target.checked,
                     )
                   }
                   className="cursor-pointer"
@@ -693,7 +762,7 @@ export function CreateProjectForm({
                       <SelectContent>
                         {fabricators
                           .filter(
-                            (fab) => !formData.fabricatorIds.includes(fab.id)
+                            (fab) => !formData.fabricatorIds.includes(fab.id),
                           )
                           .map((fabricator) => (
                             <SelectItem
@@ -751,7 +820,9 @@ export function CreateProjectForm({
                     >
                       {revenueDisplay}
                     </p>
-                    <span className="text-xs text-muted-foreground">Total Client Price</span>
+                    <span className="text-xs text-muted-foreground">
+                      Total Client Price
+                    </span>
                   </CardContent>
                 </Card>
 
@@ -766,7 +837,9 @@ export function CreateProjectForm({
                     >
                       {budgetDisplay}
                     </p>
-                    <span className="text-xs text-muted-foreground">Operational Expenses</span>
+                    <span className="text-xs text-muted-foreground">
+                      Operational Expenses
+                    </span>
                   </CardContent>
                 </Card>
 
@@ -781,7 +854,9 @@ export function CreateProjectForm({
                     >
                       {profitDisplay}
                     </p>
-                    <span className="text-xs text-muted-foreground">Net Income</span>
+                    <span className="text-xs text-muted-foreground">
+                      Net Income
+                    </span>
                   </CardContent>
                 </Card>
               </div>
@@ -801,7 +876,7 @@ export function CreateProjectForm({
                     onChange={(e) =>
                       handleAllocationChange(
                         "fabricatorAllocation",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     placeholder="0.00"
@@ -824,7 +899,7 @@ export function CreateProjectForm({
                     onChange={(e) =>
                       handleAllocationChange(
                         "materialsAllocation",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     placeholder="0.00"
@@ -847,7 +922,7 @@ export function CreateProjectForm({
                     onChange={(e) =>
                       handleAllocationChange(
                         "supervisorAllocation",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     placeholder="0.00"
@@ -870,7 +945,7 @@ export function CreateProjectForm({
                     onChange={(e) =>
                       handleAllocationChange(
                         "companyAllocation",
-                        e.target.value
+                        e.target.value,
                       )
                     }
                     placeholder="0.00"
@@ -892,7 +967,9 @@ export function CreateProjectForm({
                     placeholder="0.00"
                   />
                   {errors.totalProjectPrice && (
-                    <p className="text-sm text-destructive">{errors.totalProjectPrice}</p>
+                    <p className="text-sm text-destructive">
+                      {errors.totalProjectPrice}
+                    </p>
                   )}
                 </div>
               </div>
@@ -926,7 +1003,7 @@ export function CreateProjectForm({
               </Alert>
             )}
 
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
               <Button
                 type="button"
                 variant="outline"
