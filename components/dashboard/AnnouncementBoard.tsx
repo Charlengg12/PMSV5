@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { createPortal } from "react-dom"; // Import createPortal
 import { apiService } from "../../utils/apiService";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -82,11 +83,15 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
 
   // Carousel Navigation
   const handlePrev = () => {
-    setCurrentIndex((prev) => (prev === 0 ? announcements.length - 1 : prev - 1));
+    setCurrentIndex((prev) =>
+      prev === 0 ? announcements.length - 1 : prev - 1,
+    );
   };
 
   const handleNext = () => {
-    setCurrentIndex((prev) => (prev === announcements.length - 1 ? 0 : prev + 1));
+    setCurrentIndex((prev) =>
+      prev === announcements.length - 1 ? 0 : prev + 1,
+    );
   };
 
   // Role selection logic
@@ -199,7 +204,9 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       // Ensure at least 1.5s has passed
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_DURATION) {
-        await new Promise(resolve => setTimeout(resolve, MIN_DURATION - elapsed));
+        await new Promise((resolve) =>
+          setTimeout(resolve, MIN_DURATION - elapsed),
+        );
       }
 
       loadingSwal.close();
@@ -217,7 +224,9 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     } catch (error) {
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_DURATION) {
-        await new Promise(resolve => setTimeout(resolve, MIN_DURATION - elapsed));
+        await new Promise((resolve) =>
+          setTimeout(resolve, MIN_DURATION - elapsed),
+        );
       }
 
       loadingSwal.close();
@@ -276,7 +285,9 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       // Ensure at least 1.5s has passed
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_DURATION) {
-        await new Promise(resolve => setTimeout(resolve, MIN_DURATION - elapsed));
+        await new Promise((resolve) =>
+          setTimeout(resolve, MIN_DURATION - elapsed),
+        );
       }
 
       loadingSwal.close();
@@ -292,7 +303,9 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     } catch (error) {
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_DURATION) {
-        await new Promise(resolve => setTimeout(resolve, MIN_DURATION - elapsed));
+        await new Promise((resolve) =>
+          setTimeout(resolve, MIN_DURATION - elapsed),
+        );
       }
 
       loadingSwal.close();
@@ -349,11 +362,21 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
           <div className="flex items-center gap-2">
             {announcements.length > 1 && (
               <div className="flex items-center border rounded-md mr-2 bg-background shadow-sm">
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handlePrev}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handlePrev}
+                >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <div className="w-[1px] h-4 bg-border"></div>
-                <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleNext}>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={handleNext}
+                >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -387,7 +410,10 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                   </h4>
                   <div className="text-xs text-muted-foreground mt-1">
                     {currentAnnouncement.author_name} •{" "}
-                    {format(new Date(currentAnnouncement.created_at), "MMM d, yyyy")}
+                    {format(
+                      new Date(currentAnnouncement.created_at),
+                      "MMM d, yyyy",
+                    )}
                   </div>
                 </div>
               </div>
@@ -399,9 +425,12 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
               </div>
 
               <div className="mt-auto pt-2 border-t flex justify-between items-center">
-                <div className="flex-1">{renderTargetBadges(currentAnnouncement.target_role)}</div>
+                <div className="flex-1">
+                  {renderTargetBadges(currentAnnouncement.target_role)}
+                </div>
 
-                {(isAdmin || currentUser.id === currentAnnouncement.created_by) && (
+                {(isAdmin ||
+                  currentUser.id === currentAnnouncement.created_by) && (
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
@@ -429,87 +458,99 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         </CardContent>
       </Card>
 
-      {/* MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-background border rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
-              onClick={closeModal}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+      {/* MODAL WRAPPED IN CREATEPORTAL TO COVER FULL SCREEN */}
+      {showModal &&
+        createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+            <div className="bg-background border rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+                onClick={closeModal}
+              >
+                <X className="h-4 w-4" />
+              </Button>
 
-            <div className="mb-5">
-              <h2 className="text-xl font-semibold">
-                {editingId ? "Edit Announcement" : "New Announcement"}
-              </h2>
-              <p className="text-sm text-muted-foreground">Share updates with your team.</p>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Title</label>
-                <Input
-                  placeholder="e.g. Holiday Schedule"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Content</label>
-                <Textarea
-                  placeholder="Write your message here..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  className="min-h-[120px]"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium flex items-center gap-2">
-                  <Users className="h-4 w-4" /> Visible To
-                </label>
-                <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
-                  <Badge
-                    variant={selectedRoles.includes("all") ? "default" : "outline"}
-                    className="cursor-pointer hover:bg-primary/80 transition-colors px-3 py-1"
-                    onClick={() => toggleRole("all")}
-                  >
-                    Everyone
-                  </Badge>
-                  {AVAILABLE_ROLES.map((role) => (
-                    <Badge
-                      key={role}
-                      variant={selectedRoles.includes(role) ? "default" : "outline"}
-                      className="cursor-pointer hover:bg-primary/80 transition-colors capitalize px-3 py-1"
-                      onClick={() => toggleRole(role)}
-                    >
-                      {role}
-                    </Badge>
-                  ))}
-                </div>
-                <p className="text-[10px] text-muted-foreground">
-                  Select "Everyone" or pick specific roles.
+              <div className="mb-5">
+                <h2 className="text-xl font-semibold">
+                  {editingId ? "Edit Announcement" : "New Announcement"}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Share updates with your team.
                 </p>
               </div>
 
-              <div className="flex justify-end gap-2 pt-2">
-                <Button variant="outline" onClick={closeModal}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSubmit}>
-                  {editingId ? <Save className="h-4 w-4 mr-2" /> : <Send className="h-4 w-4 mr-2" />}
-                  {editingId ? "Update" : "Post Announcement"}
-                </Button>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Title</label>
+                  <Input
+                    placeholder="e.g. Holiday Schedule"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Content</label>
+                  <Textarea
+                    placeholder="Write your message here..."
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="min-h-[120px]"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <Users className="h-4 w-4" /> Visible To
+                  </label>
+                  <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
+                    <Badge
+                      variant={
+                        selectedRoles.includes("all") ? "default" : "outline"
+                      }
+                      className="cursor-pointer hover:bg-primary/80 transition-colors px-3 py-1"
+                      onClick={() => toggleRole("all")}
+                    >
+                      Everyone
+                    </Badge>
+                    {AVAILABLE_ROLES.map((role) => (
+                      <Badge
+                        key={role}
+                        variant={
+                          selectedRoles.includes(role) ? "default" : "outline"
+                        }
+                        className="cursor-pointer hover:bg-primary/80 transition-colors capitalize px-3 py-1"
+                        onClick={() => toggleRole(role)}
+                      >
+                        {role}
+                      </Badge>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    Select "Everyone" or pick specific roles.
+                  </p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={closeModal}>
+                    Cancel
+                  </Button>
+                  <Button onClick={handleSubmit}>
+                    {editingId ? (
+                      <Save className="h-4 w-4 mr-2" />
+                    ) : (
+                      <Send className="h-4 w-4 mr-2" />
+                    )}
+                    {editingId ? "Update" : "Post Announcement"}
+                  </Button>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body,
+        )}
     </>
   );
 }
