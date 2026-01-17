@@ -148,6 +148,42 @@ export function ReportsManager({
     const title = formData.title.trim();
     if (!title || isCreating) return;
 
+    // if title and descrotpion are empty, do not proceed
+
+    if (title.length === 0 || formData.description.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Form",
+        text: "All fields are required.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if title is > 50 characters, do not proceed
+
+    if (title.length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Title cannot exceed 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if description is > 200 characters, do not proceed
+    if (formData.description.length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Description cannot exceed 200 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+
     const result = await Swal.fire({
       title: "Create this report?",
       html: `Title: <strong>${title}</strong><br>Type: <strong>${formData.type}</strong>`,
@@ -215,6 +251,38 @@ export function ReportsManager({
   const handleUpdate = async () => {
     if (!selectedReport || !formData.title.trim()) return;
 
+    const title = formData.title.trim();
+    const description = formData.description.trim();
+
+    if (title.length === 0 || description.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Form",
+        text: "All fields are required.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (title.length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Title cannot exceed 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+    
+    if (description.length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Title cannot exceed 200 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
     const result = await Swal.fire({
       title: "Save changes?",
       html: `Update report: <strong>${formData.title}</strong>`,
