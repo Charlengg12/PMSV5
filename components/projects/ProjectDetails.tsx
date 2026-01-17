@@ -5,10 +5,12 @@ import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import { Calendar as CalendarPicker } from "../ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Separator } from "../ui/separator";
 import {
-  Calendar,
+  Calendar as CalendarIcon,
   DollarSign,
   Users,
   Building,
@@ -24,6 +26,7 @@ import {
   Users as UsersIcon,
   DollarSign as RevenueIcon,
 } from "lucide-react";
+import { addDays, format, setHours } from "date-fns";
 import { Project, User, ProjectAttachment } from "../../types";
 import { ProjectFileUpload } from "./ProjectFileUpload";
 import { FabricatorRevenueManager } from "./FabricatorRevenueManager";
@@ -45,8 +48,49 @@ export function ProjectDetails({
   onUpdateProject,
   onClose,
 }: ProjectDetailsProps) {
+  const normalizeDate = (date: Date) => setHours(date, 12, 0, 0, 0);
+  const parseDateValue = (value?: string) => {
+    if (!value) return undefined;
+    if (value.includes("T")) {
+      return normalizeDate(new Date(value));
+    }
+    return normalizeDate(new Date(`${value}T12:00:00`));
+  };
+  const calendarWeekdayLabels = [
+    "Sun",
+    "Mon",
+    "Tue",
+    "Wed",
+    "Thu",
+    "Fri",
+    "Sat",
+  ];
+  const calendarClassNames = {
+    months: "flex flex-col gap-2",
+    month: "flex flex-col gap-1",
+    caption: "flex justify-center pt-1 relative items-center w-full mb-2",
+    table: "w-full border-collapse",
+    head_row: "grid grid-cols-7",
+    head_cell:
+      "text-white font-semibold text-[0.75rem] leading-none py-0 px-0 flex items-center justify-center tracking-wide",
+    row: "grid grid-cols-7 mt-0.5",
+    cell: "p-0 flex items-center justify-center",
+    day: "size-6 p-0 font-normal aria-selected:opacity-100 flex items-center justify-center",
+    day_selected:
+      "bg-accent text-accent-foreground hover:bg-accent dark:bg-[var(--sidebar-primary)] dark:text-[var(--sidebar-primary-foreground)] dark:hover:bg-[var(--sidebar-primary)]",
+    day_today:
+      "bg-accent text-accent-foreground dark:bg-[var(--sidebar-primary)] dark:text-[var(--sidebar-primary-foreground)] !rounded-none",
+  };
+
   const [isEditing, setIsEditing] = useState(false);
+  const [showStartCalendar, setShowStartCalendar] = useState(false);
+  const [showEndCalendar, setShowEndCalendar] = useState(false);
   const [editedProject, setEditedProject] = useState<Project>(project);
+  const today = normalizeDate(new Date());
+  const minEndDate = addDays(
+    parseDateValue(editedProject.startDate) || today,
+    1,
+  );
   const [newFabricatorId, setNewFabricatorId] = useState<string>("");
   const [showAddFabricator, setShowAddFabricator] = useState(false);
   const [backendClientAssigned, setBackendClientAssigned] = useState(false);
@@ -57,7 +101,7 @@ export function ProjectDetails({
   }));
 
   const clientUser = users.find(
-    (u) => u.role === "client" && u.clientProjectId === project.id
+    (u) => u.role === "client" && u.clientProjectId === project.id,
   );
   const localClientAssigned = !!clientUser;
 
@@ -149,7 +193,12 @@ export function ProjectDetails({
           ? editedProject.revenue.toString()
           : "",
     });
-  }, [isEditing, editedProject.budget, editedProject.spent, editedProject.revenue]);
+  }, [
+    isEditing,
+    editedProject.budget,
+    editedProject.spent,
+    editedProject.revenue,
+  ]);
 
   const canEdit =
     currentUser.role === "admin" ||
@@ -235,7 +284,7 @@ export function ProjectDetails({
 
   const updateFinancialEdit = (
     field: "budget" | "spent" | "revenue",
-    value: string
+    value: string,
   ) => {
     const sanitized = sanitizeFinancialInput(value);
     if (sanitized === null) return;
@@ -291,7 +340,7 @@ export function ProjectDetails({
       Swal.fire({
         title: "Incomplete Form",
         html: `Please fill up the following:<br><br><strong>${missing.join(
-          "<br>"
+          "<br>",
         )}</strong>`,
         icon: "warning",
         confirmButtonText: "Okay",
@@ -429,11 +478,12 @@ export function ProjectDetails({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6">
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto modal">
-        <CardHeader>
-          <div className="flex justify-between items-start gap-4">
-            <div className="flex-1 min-w-0">
+        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
               {isEditing && canEdit ? (
                 <div className="space-y-3">
                   <Input
@@ -459,7 +509,9 @@ export function ProjectDetails({
                       className="border rounded px-2 py-1 text-sm bg-background"
                     >
                       <option value="0_Created">0_Created</option>
-                      <option value="1_Assigned_to_FAB">1_Assigned_to_FAB</option>
+                      <option value="1_Assigned_to_FAB">
+                        1_Assigned_to_FAB
+                      </option>
                       <option value="2_Ready_for_Supervisor_Review">
                         2_Ready_for_Supervisor_Review
                       </option>
@@ -474,7 +526,9 @@ export function ProjectDetails({
                       <option value="review">Review</option>
                       <option value="completed">Completed</option>
                       <option value="on-hold">On Hold</option>
-                      <option value="pending-assignment">Pending Assignment</option>
+                      <option value="pending-assignment">
+                        Pending Assignment
+                      </option>
                     </select>
                     <select
                       value={editedProject.priority}
@@ -513,9 +567,18 @@ export function ProjectDetails({
               )}
             </div>
 
-            <div className="flex gap-2 shrink-0">
+              <Button variant="ghost" onClick={onClose} className="shrink-0">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-2 sm:justify-end">
               {canEdit && !isEditing && (
-                <Button variant="outline" onClick={() => setIsEditing(true)}>
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => setIsEditing(true)}
+                >
                   <Edit className="h-4 w-4 mr-2" />
                   Edit
                 </Button>
@@ -526,27 +589,31 @@ export function ProjectDetails({
                   Client Assigned
                 </Button>
               )}
-
+  
               {isEditing && (
                 <>
-                  <Button variant="default" onClick={handleSave}>
+                  <Button
+                    variant="default"
+                    className="w-full sm:w-auto"
+                    onClick={handleSave}
+                  >
                     <Save className="h-4 w-4 mr-2" />
                     Save
                   </Button>
-                  <Button variant="outline" onClick={handleCancel}>
+                  <Button
+                    variant="outline"
+                    className="w-full sm:w-auto"
+                    onClick={handleCancel}
+                  >
                     Cancel
                   </Button>
                 </>
               )}
-
-              <Button variant="ghost" onClick={onClose}>
-                <X className="h-4 w-4" />
-              </Button>
             </div>
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="px-4 pb-6 sm:px-6 sm:pb-8">
           <Tabs defaultValue="overview" className="w-full">
             <TabsList className="flex w-full overflow-x-auto justify-start md:grid md:grid-cols-5 h-auto p-1 bg-muted/50">
               <TabsTrigger value="overview" className="flex-1 min-w-[80px]">
@@ -565,7 +632,10 @@ export function ProjectDetails({
                 <FileIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Files</span>
               </TabsTrigger>
-              <TabsTrigger value="documentation" className="flex-1 min-w-[80px]">
+              <TabsTrigger
+                value="documentation"
+                className="flex-1 min-w-[80px]"
+              >
                 <LinkIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Docs</span>
               </TabsTrigger>
@@ -594,7 +664,8 @@ export function ProjectDetails({
                         className="mt-1.5 text-sm text-muted-foreground whitespace-pre-wrap break-words line-clamp-4"
                         title={editedProject.description || ""}
                       >
-                        {editedProject.description || "No description provided."}
+                        {editedProject.description ||
+                          "No description provided."}
                       </div>
                     )}
                   </div>
@@ -602,28 +673,28 @@ export function ProjectDetails({
                   <div className="space-y-2">
                     <Label>Progress</Label>
                     <div className="space-y-1">
-                      <div className="flex justify-between text-sm items-center">
+                    <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                         <span>{editedProject.progress}% Complete</span>
                         {isEditing && (
-                         <Input
-  type="number"
-  min="0"
-  max="100"
-  value={editedProject.progress}
-  onChange={(e) => {
-    let value = parseInt(e.target.value) || 0;
+                          <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={editedProject.progress}
+                            onChange={(e) => {
+                              let value = parseInt(e.target.value) || 0;
 
-    // Logic to prevent exceeding 100 or going below 0
-    if (value > 100) value = 100;
-    if (value < 0) value = 0;
+                              // Logic to prevent exceeding 100 or going below 0
+                              if (value > 100) value = 100;
+                              if (value < 0) value = 0;
 
-    setEditedProject((prev) => ({
-      ...prev,
-      progress: value,
-    }));
-  }}
-  className="w-20 h-8"
-/>
+                              setEditedProject((prev) => ({
+                                ...prev,
+                                progress: value,
+                              }));
+                            }}
+                            className="w-20 h-8"
+                          />
                         )}
                       </div>
                       <Progress value={editedProject.progress} />
@@ -632,53 +703,156 @@ export function ProjectDetails({
                 </div>
 
                 <div className="space-y-5">
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <Label className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
+                        <CalendarIcon className="h-4 w-4" />
                         Start Date
                       </Label>
                       {isEditing && canEdit ? (
-                        <Input
-                          type="date"
-                          value={editedProject.startDate || ""}
-                          onChange={(e) =>
-                            setEditedProject((prev) => ({
-                              ...prev,
-                              startDate: e.target.value,
-                            }))
-                          }
-                          className="mt-1.5"
-                        />
+                        <Popover
+                          open={showStartCalendar}
+                          onOpenChange={setShowStartCalendar}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {parseDateValue(editedProject.startDate)
+                                ? format(
+                                    parseDateValue(editedProject.startDate)!,
+                                    "PPP",
+                                  )
+                                : "Select date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-[calc(var(--radix-popover-trigger-width)+96px)] p-0 overflow-hidden"
+                            align="start"
+                            side="bottom"
+                            sideOffset={6}
+                            collisionPadding={12}
+                          >
+                            <CalendarPicker
+                              mode="single"
+                              selected={parseDateValue(editedProject.startDate)}
+                              month={
+                                parseDateValue(editedProject.startDate) || today
+                              }
+                              onSelect={(date) => {
+                                if (!date) return;
+                                const normalizedStart = normalizeDate(date);
+                                setEditedProject((prev) => {
+                                  const prevEnd =
+                                    parseDateValue(prev.endDate) ||
+                                    addDays(normalizedStart, 1);
+                                  const nextEnd =
+                                    prevEnd <= normalizedStart
+                                      ? addDays(normalizedStart, 1)
+                                      : prevEnd;
+                                  return {
+                                    ...prev,
+                                    startDate: format(
+                                      normalizedStart,
+                                      "yyyy-MM-dd",
+                                    ),
+                                    endDate: format(nextEnd, "yyyy-MM-dd"),
+                                  };
+                                });
+                                setShowStartCalendar(false);
+                              }}
+                              initialFocus
+                              fixedWeeks
+                              showOutsideDays={false}
+                              disabled={{ before: today }}
+                              weekStartsOn={0}
+                              formatters={{
+                                formatWeekdayName: (date) =>
+                                  calendarWeekdayLabels[date.getDay()],
+                              }}
+                              classNames={calendarClassNames}
+                              className="rounded-md border p-2"
+                            />
+                          </PopoverContent>
+                        </Popover>
                       ) : (
                         <div className="mt-1.5 text-sm text-muted-foreground">
-                          {editedProject.startDate
-                            ? new Date(editedProject.startDate).toLocaleDateString()
+                          {parseDateValue(editedProject.startDate)
+                            ? format(
+                                parseDateValue(editedProject.startDate)!,
+                                "PPP",
+                              )
                             : "Not set"}
                         </div>
                       )}
                     </div>
                     <div>
                       <Label className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
+                        <CalendarIcon className="h-4 w-4" />
                         End Date
                       </Label>
                       {isEditing && canEdit ? (
-                        <Input
-                          type="date"
-                          value={editedProject.endDate || ""}
-                          onChange={(e) =>
-                            setEditedProject((prev) => ({
-                              ...prev,
-                              endDate: e.target.value,
-                            }))
-                          }
-                          className="mt-1.5"
-                        />
+                        <Popover
+                          open={showEndCalendar}
+                          onOpenChange={setShowEndCalendar}
+                        >
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full justify-start text-left"
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {parseDateValue(editedProject.endDate)
+                                ? format(
+                                    parseDateValue(editedProject.endDate)!,
+                                    "PPP",
+                                  )
+                                : "Select date"}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent
+                            className="w-[calc(var(--radix-popover-trigger-width)+96px)] p-0 overflow-hidden"
+                            align="start"
+                            side="bottom"
+                            sideOffset={6}
+                            collisionPadding={12}
+                          >
+                            <CalendarPicker
+                              mode="single"
+                              selected={parseDateValue(editedProject.endDate)}
+                              month={parseDateValue(editedProject.endDate) || today}
+                              onSelect={(date) => {
+                                if (!date) return;
+                                const normalizedEnd = normalizeDate(date);
+                                setEditedProject((prev) => ({
+                                  ...prev,
+                                  endDate: format(normalizedEnd, "yyyy-MM-dd"),
+                                }));
+                                setShowEndCalendar(false);
+                              }}
+                              initialFocus
+                              fixedWeeks
+                              showOutsideDays={false}
+                              disabled={{ before: minEndDate }}
+                              weekStartsOn={0}
+                              formatters={{
+                                formatWeekdayName: (date) =>
+                                  calendarWeekdayLabels[date.getDay()],
+                              }}
+                              classNames={calendarClassNames}
+                              className="rounded-md border p-2"
+                            />
+                          </PopoverContent>
+                        </Popover>
                       ) : (
                         <div className="mt-1.5 text-sm text-muted-foreground">
-                          {editedProject.endDate
-                            ? new Date(editedProject.endDate).toLocaleDateString()
+                          {parseDateValue(editedProject.endDate)
+                            ? format(
+                                parseDateValue(editedProject.endDate)!,
+                                "PPP",
+                              )
                             : "Not set"}
                         </div>
                       )}
@@ -692,10 +866,16 @@ export function ProjectDetails({
                     </Label>
                     {clientUser ? (
                       <div className="mt-1.5 text-sm text-muted-foreground min-w-0">
-                        <p className="font-medium truncate" title={clientUser.name}>
+                        <p
+                          className="font-medium truncate"
+                          title={clientUser.name}
+                        >
                           {clientUser.name}
                         </p>
-                        <p className="text-xs truncate" title={clientUser.email}>
+                        <p
+                          className="text-xs truncate"
+                          title={clientUser.email}
+                        >
                           {clientUser.email}
                         </p>
                       </div>
@@ -717,7 +897,7 @@ export function ProjectDetails({
                     currentUser.role === "supervisor") && (
                     <>
                       <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-6 px-4 sm:px-6 pb-4">
                           <div className="flex items-center gap-2 mb-1">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Budget</span>
@@ -743,7 +923,7 @@ export function ProjectDetails({
                       </Card>
 
                       <Card>
-                        <CardContent className="pt-6">
+                        <CardContent className="pt-6 px-4 sm:px-6 pb-4">
                           <div className="flex items-center gap-2 mb-1">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Spent</span>
@@ -771,7 +951,7 @@ export function ProjectDetails({
                   )}
 
                   <Card>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-4">
                       <div className="flex items-center gap-2 mb-1">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
@@ -835,7 +1015,7 @@ export function ProjectDetails({
                         .filter(
                           (user) =>
                             user.role === "fabricator" &&
-                            !editedProject.fabricatorIds.includes(user.id)
+                            !editedProject.fabricatorIds.includes(user.id),
                         )
                         .map((user) => (
                           <option key={user.id} value={user.id}>
@@ -919,7 +1099,7 @@ export function ProjectDetails({
                           const fabricator = users.find((u) => u.id === fabId);
                           const fabricatorBudget =
                             project.fabricatorBudgets?.find(
-                              (fb) => fb.fabricatorId === fabId
+                              (fb) => fb.fabricatorId === fabId,
                             );
                           const hasRevenue =
                             fabricatorBudget &&
@@ -1006,9 +1186,7 @@ export function ProjectDetails({
                           className="flex items-center justify-between p-3 bg-muted rounded gap-3"
                         >
                           <div className="flex items-center gap-3 min-w-0">
-                            <FileText
-                              className="h-5 w-5 text-muted-foreground shrink-0"
-                            />
+                            <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                             <div className="min-w-0">
                               <p
                                 className="font-medium truncate"
@@ -1019,7 +1197,7 @@ export function ProjectDetails({
                               <p className="text-xs text-muted-foreground">
                                 {formatFileSize(attachment.size)} • Uploaded{" "}
                                 {new Date(
-                                  attachment.uploadedAt
+                                  attachment.uploadedAt,
                                 ).toLocaleDateString()}
                               </p>
                             </div>
@@ -1039,9 +1217,7 @@ export function ProjectDetails({
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <FileText
-                      className="h-12 w-12 mx-auto text-muted-foreground mb-4"
-                    />
+                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg mb-2">No files uploaded yet</h3>
                     <p className="text-muted-foreground">
                       {canUploadFiles
@@ -1078,9 +1254,7 @@ export function ProjectDetails({
                   ) : editedProject.documentationUrl ? (
                     <div className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
                       <div className="flex items-center gap-3 min-w-0">
-                        <Link
-                          className="h-5 w-5 text-primary shrink-0"
-                        />
+                        <Link className="h-5 w-5 text-primary shrink-0" />
                         <div className="min-w-0">
                           <p
                             className="font-medium truncate"
@@ -1092,15 +1266,12 @@ export function ProjectDetails({
                             className="text-sm text-muted-foreground truncate"
                             title="Google Drive folder with complete project documentation"
                           >
-                            Google Drive folder with complete project documentation
+                            Google Drive folder with complete project
+                            documentation
                           </p>
                         </div>
                       </div>
-                      <Button
-                        variant="outline"
-                        asChild
-                        className="shrink-0"
-                      >
+                      <Button variant="outline" asChild className="shrink-0">
                         <a
                           href={editedProject.documentationUrl}
                           target="_blank"
@@ -1113,9 +1284,7 @@ export function ProjectDetails({
                     </div>
                   ) : (
                     <div className="text-center py-10">
-                      <Link
-                        className="h-12 w-12 mx-auto text-muted-foreground mb-4"
-                      />
+                      <Link className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <h3 className="text-lg mb-2">No documentation link</h3>
                       <p className="text-muted-foreground">
                         No Google Drive documentation has been added yet.
