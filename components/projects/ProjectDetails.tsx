@@ -94,9 +94,27 @@ export function ProjectDetails({
     (currentUser.role === "fabricator" &&
       project.fabricatorIds.includes(currentUser.id));
 
-  const getSupervisorName = (supervisorId: string) => {
-    const supervisor = users.find((u) => u.id === supervisorId);
-    return supervisor?.name || "Unknown Supervisor";
+  const getSupervisorDisplay = (target: Project) => {
+    if (target.supervisorId) {
+      const supervisor = users.find((u) => u.id === target.supervisorId);
+      return {
+        name: supervisor?.name || "Unknown Supervisor",
+        helper: "Project Supervisor",
+      };
+    }
+
+    const pendingCount = target.pendingSupervisors?.length ?? 0;
+    if (pendingCount > 0) {
+      return {
+        name: "Pending supervisor acceptance",
+        helper: `Awaiting response from ${pendingCount} supervisor${pendingCount === 1 ? "" : "s"}`,
+      };
+    }
+
+    return {
+      name: "Not assigned",
+      helper: "Supervisor not yet assigned",
+    };
   };
 
   const formatFileSize = (bytes: number) => {
@@ -670,6 +688,7 @@ export function ProjectDetails({
                         }
                         className="w-full border rounded px-3 py-2 bg-background"
                       >
+                        <option value="">Not assigned</option>
                         {users
                           .filter((user) => user.role === "supervisor")
                           .map((user) => (
@@ -683,12 +702,12 @@ export function ProjectDetails({
                         <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
                           S
                         </div>
-                        <div className="min-w-0">
-                          <p className="font-medium truncate" title={getSupervisorName(editedProject.supervisorId)}>
-                            {getSupervisorName(editedProject.supervisorId)}
+                        <div>
+                          <p className="font-medium">
+                            {getSupervisorDisplay(editedProject).name}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Project Supervisor
+                            {getSupervisorDisplay(editedProject).helper}
                           </p>
                         </div>
                       </div>

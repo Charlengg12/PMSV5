@@ -1,6 +1,12 @@
 <?php
 
-require __DIR__ . '/../vendor/autoload.php';
+$autoloadPath = __DIR__ . '/../vendor/autoload.php';
+if (!file_exists($autoloadPath)) {
+    $autoloadPath = __DIR__ . '/../vendor/vendor/autoload.php';
+}
+if (file_exists($autoloadPath)) {
+    require $autoloadPath;
+}
 
 // Simple PHP API router to replace Node/Express backend
 
@@ -757,7 +763,10 @@ function ensure_projects_schema(PDO $pdo): array
         'company_allocation' => "ALTER TABLE projects ADD COLUMN company_allocation DECIMAL(15,2) DEFAULT NULL",
         'documentation_url' => "ALTER TABLE projects ADD COLUMN documentation_url TEXT NULL",
         'client_name' => "ALTER TABLE projects ADD COLUMN client_name VARCHAR(255) DEFAULT NULL",
-        'created_by' => "ALTER TABLE projects ADD COLUMN created_by VARCHAR(255) DEFAULT NULL"
+        'created_by' => "ALTER TABLE projects ADD COLUMN created_by VARCHAR(255) DEFAULT NULL",
+        'fabricator_ids' => "ALTER TABLE projects ADD COLUMN fabricator_ids JSON DEFAULT NULL",
+        'pending_supervisors' => "ALTER TABLE projects ADD COLUMN pending_supervisors JSON DEFAULT NULL",
+        'pending_assignments' => "ALTER TABLE projects ADD COLUMN pending_assignments JSON DEFAULT NULL"
     ];
 
     foreach ($addColumns as $name => $sql) {

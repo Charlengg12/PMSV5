@@ -220,9 +220,17 @@ export function ProjectsGrid({
     }
   };
 
-  const getSupervisorName = (supervisorId: string) => {
-    const supervisor = users.find((u) => u.id === supervisorId);
-    return supervisor?.name || "Unknown Supervisor";
+  const getSupervisorLabel = (project: Project) => {
+    if (project.supervisorId) {
+      const supervisor = users.find((u) => u.id === project.supervisorId);
+      return supervisor?.name || "Unknown Supervisor";
+    }
+
+    if (project.pendingSupervisors && project.pendingSupervisors.length > 0) {
+      return "Pending supervisor acceptance";
+    }
+
+    return "Not assigned";
   };
 
   const getFabricatorNames = (fabricatorIds: string[]) => {
@@ -539,7 +547,7 @@ export function ProjectsGrid({
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />
                 <span className="truncate">
-                  Supervisor: {getSupervisorName(project.supervisorId)}
+                  Supervisor: {getSupervisorLabel(project)}
                 </span>
               </div>
 
@@ -619,13 +627,13 @@ export function ProjectsGrid({
                         size="sm"
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         onClick={() =>
-                          onAcceptAssignment &&
-                          onAcceptAssignment("", "accepted", project.id)
-                        }
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept Project
-                      </Button>
+                        onAcceptAssignment &&
+                        onAcceptAssignment("", "accepted", project.id)
+                      }
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Accept
+                    </Button>
                       <Button
                         size="sm"
                         variant="outline"
