@@ -159,6 +159,11 @@ export function TeamOverview({
   );
 
   const scopedUsers = useMemo(() => {
+    const ensureCurrentUser = (list: User[]) => {
+      if (list.some((user) => user.id === currentUser.id)) return list;
+      return [...list, currentUser];
+    };
+
     if (currentUser.role === "admin") return users;
     if (currentUser.role === "supervisor") {
       const teamIds = new Set<string>([currentUser.id]);
@@ -174,7 +179,7 @@ export function TeamOverview({
           teamIds.add(user.id);
         }
       });
-      return users.filter((user) => teamIds.has(user.id));
+      return ensureCurrentUser(users.filter((user) => teamIds.has(user.id)));
     }
     if (currentUser.role === "fabricator") {
       const teamIds = new Set<string>([currentUser.id]);
@@ -184,9 +189,9 @@ export function TeamOverview({
         }
         project.fabricatorIds.forEach((id) => teamIds.add(id));
       });
-      return users.filter((user) => teamIds.has(user.id));
+      return ensureCurrentUser(users.filter((user) => teamIds.has(user.id)));
     }
-    return users.filter((user) => user.id === currentUser.id);
+    return ensureCurrentUser(users.filter((user) => user.id === currentUser.id));
   }, [currentUser, scopedProjectIds, scopedProjects, users]);
 
   const teamMembers = useMemo<TeamMember[]>(() => {
