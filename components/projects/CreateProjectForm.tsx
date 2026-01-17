@@ -159,8 +159,84 @@ export function CreateProjectForm({
     );
   };
 
+  const missingFields = () => { {
+    const fields = [];
+    if (!formData.name.trim()) fields.push("Project Name");
+    if (!formData.description.trim()) fields.push("Description");
+    if (!formData.supervisorId && !formData.broadcastToSupervisors) fields.push("Supervisor");
+    if (
+      !formData.supervisorAssignsFabricators &&
+      !formData.broadcastToSupervisors &&
+      formData.fabricatorIds.length === 0
+    ) fields.push("Fabricators");
+    if (formData.endDate <= formData.startDate) fields.push("Valid Dates");
+    return fields;
+  }};
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // add input limit check
+    if (formData.name.length > 50) {
+      Swal.fire({
+        title: 'Input Limit Exceeded', 
+        text: 'Project name cannot exceed 50 characters.',
+        icon: 'warning',
+        confirmButtonText: 'Okay',
+        customClass: {
+            container: 'swal-container',
+            popup: 'swal-popup',
+            title: 'swal-title',
+            htmlContainer: 'swal-content',
+            confirmButton: 'swal-confirm-button',
+            cancelButton: 'swal-cancel-button',
+            icon: 'swal-icon'
+        }
+      });
+      return;
+      }
+
+      if (formData.description.length > 100) {
+      Swal.fire({
+        title: 'Input Limit Exceeded', 
+        text: 'Project description cannot exceed 100 characters.',
+        icon: 'warning',
+        confirmButtonText: 'Okay',
+        customClass: {
+            container: 'swal-container',
+            popup: 'swal-popup',
+            title: 'swal-title',
+            htmlContainer: 'swal-content',
+            confirmButton: 'swal-confirm-button',
+            cancelButton: 'swal-cancel-button',
+            icon: 'swal-icon'
+        }
+      });
+      return;
+      }
+
+    const missing = missingFields();
+    if (missing.length > 0) {
+      Swal.fire({
+        title: 'Incomplete Form',
+        html: `Please fill up the following:<br><br><strong>${missing.join(
+          "<br>"
+        )}</strong>`,
+        icon: 'warning',
+        confirmButtonText: 'Okay',
+        customClass: {
+            container: 'swal-container',
+            popup: 'swal-popup',
+            title: 'swal-title',
+            htmlContainer: 'swal-content',
+            confirmButton: 'swal-confirm-button',
+            cancelButton: 'swal-cancel-button',
+            icon: 'swal-icon'
+        }
+      });
+      return;
+    }
+
 
     if (!validateForm()) {
       return;
