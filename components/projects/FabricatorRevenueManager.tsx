@@ -116,7 +116,7 @@ export function FabricatorRevenueManager({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
         <CardTitle className="flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-accent" />
           Fabricator Revenue Assignment
@@ -125,9 +125,9 @@ export function FabricatorRevenueManager({
           Assign revenue amounts to each fabricator working on this project
         </p>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 px-4 pb-6 sm:px-6">
         {/* Project Revenue Overview */}
-        <div className="grid grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
+        <div className="grid grid-cols-1 gap-4 p-4 bg-muted/50 rounded-lg sm:grid-cols-3">
           <div>
             <p className="text-sm text-muted-foreground mb-1">Total Project Revenue</p>
             <p className="text-xl">
@@ -217,13 +217,13 @@ export function FabricatorRevenueManager({
         )}
 
         {/* Action Buttons */}
-        <div className="flex gap-2 pt-4">
-          <Button onClick={handleSave} className="flex-1">
+        <div className="flex flex-col gap-2 pt-4 sm:flex-row">
+          <Button onClick={handleSave} className="w-full sm:flex-1 whitespace-normal text-center">
             <Save className="h-4 w-4 mr-2" />
             Save Revenue Allocations
           </Button>
           {onClose && (
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
               <X className="h-4 w-4 mr-2" />
               Close
             </Button>
@@ -231,10 +231,11 @@ export function FabricatorRevenueManager({
         </div>
 
         {/* Quick Action Buttons */}
-        <div className="flex gap-2 pt-2 border-t">
+        <div className="flex flex-col gap-2 pt-2 border-t sm:flex-row">
           <Button
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
             onClick={() => {
               const equalShare = (project.revenue / project.fabricatorIds.length).toFixed(2);
               const newAllocations: Record<string, string> = {};
@@ -249,6 +250,7 @@ export function FabricatorRevenueManager({
           <Button
             variant="outline"
             size="sm"
+            className="w-full sm:w-auto"
             onClick={() => {
               const newAllocations: Record<string, string> = {};
               project.fabricatorIds.forEach(fabId => {
