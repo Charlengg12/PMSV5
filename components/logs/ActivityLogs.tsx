@@ -18,6 +18,7 @@ import {
   Edit3,
   Trash2,
   LogIn,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -34,6 +35,8 @@ interface LogEntry {
 const ITEMS_PER_PAGE = 5;
 
 export function ActivityLogs() {
+  // Export confirmation modal state
+  const [showExportModal, setShowExportModal] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
   const [displayedLogs, setDisplayedLogs] = useState<LogEntry[]>([]);
@@ -107,7 +110,7 @@ export function ActivityLogs() {
           }, 400);
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px 100px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px 100px 0px" },
     );
 
     observerRef.current.observe(loadMoreRef.current);
@@ -143,10 +146,16 @@ export function ActivityLogs() {
     contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  // Show modal instead of exporting immediately
   const handleExport = () => {
+    setShowExportModal(true);
+  };
+
+  // Actual export logic
+  const confirmExport = () => {
     const csv = [
       ["Timestamp", "User", "Role", "Action", "Description", "IP Address"],
-      ...displayedLogs.map((log) => [
+      ...filteredLogs.map((log) => [
         format(new Date(log.created_at), "MMM d, yyyy h:mm a"),
         log.user_name,
         log.user_role,
@@ -164,6 +173,7 @@ export function ActivityLogs() {
     a.href = url;
     a.download = `activity-logs-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
+    setShowExportModal(false);
   };
 
   const getActionLabel = (action: string): string => {
@@ -273,7 +283,7 @@ export function ActivityLogs() {
   };
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -307,7 +317,9 @@ export function ActivityLogs() {
         <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">Audit Trail</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Audit Trail
+              </h3>
               <p className="text-sm text-gray-600 mt-0.5">
                 {filteredLogs.length > 0
                   ? `Showing ${displayedLogs.length} of ${filteredLogs.length} activities`
@@ -334,6 +346,46 @@ export function ActivityLogs() {
                 <Download className="h-4 w-4" />
                 Export
               </button>
+              {/* Export Confirmation Modal */}
+              {showExportModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4">
+                  <div className="modal bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md sm:max-w-md max-w-xs sm:w-full overflow-hidden">
+                    <div className="p-4 sm:p-6 border-b">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-lg font-semibold flex items-center gap-2.5">
+                          <Download className="h-5 w-5 text-emerald-600" />
+                          Export Activity Logs
+                        </h3>
+                        <button
+                          className="text-gray-500 hover:text-red-600 rounded-full p-1.5 transition-colors"
+                          onClick={() => setShowExportModal(false)}
+                          aria-label="Close"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1.5">
+                        Are you sure you want to export the currently displayed
+                        activity logs?
+                      </p>
+                    </div>
+                    <div className="p-4 sm:p-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                      <button
+                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setShowExportModal(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-semibold"
+                        onClick={confirmExport}
+                      >
+                        Export
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -352,7 +404,8 @@ export function ActivityLogs() {
           </div>
           <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
             <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
-            Search across all fields: user name, role, action type, description, IP address, and timestamps
+            Search across all fields: user name, role, action type, description,
+            IP address, and timestamps
           </p>
         </div>
 
@@ -475,14 +528,17 @@ export function ActivityLogs() {
                         <td className="whitespace-nowrap px-4 py-4 text-sm">
                           <span
                             className={`inline-flex items-center border-l-4 px-3 py-1 text-xs font-medium ${getActionColor(
-                              log.action
+                              log.action,
                             )}`}
                           >
                             {getActionLabel(log.action)}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600">
-                          <div className="line-clamp-2 max-w-xs" title={log.description}>
+                          <div
+                            className="line-clamp-2 max-w-xs"
+                            title={log.description}
+                          >
                             {log.description}
                           </div>
                         </td>
