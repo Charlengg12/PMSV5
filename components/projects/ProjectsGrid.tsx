@@ -721,7 +721,7 @@ export function ProjectsGrid({
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
-                                  Accept Assignment
+                                  Accept
                                 </Button>
                                 <Button
                                   size="sm"
@@ -733,7 +733,7 @@ export function ProjectsGrid({
                                   }}
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
-                                  Decline Assignment
+                                  Decline
                                 </Button>
                               </div>
                             )}
@@ -741,7 +741,7 @@ export function ProjectsGrid({
                             {isAcceptMode && (
                               <div className="space-y-3 bg-green-50 dark:bg-green-900/10 rounded-md p-3 border border-green-200 dark:border-green-800">
                                 <Label className="text-sm font-medium text-green-900 dark:text-green-100">
-                                  Accept Assignment
+                                  Accept
                                 </Label>
                                 <Textarea
                                   value={assignmentResponse}
@@ -779,7 +779,7 @@ export function ProjectsGrid({
                                     }}
                                   >
                                     <CheckCircle className="h-4 w-4 mr-2" />
-                                    Confirm Accept
+                                    Confirm
                                   </Button>
                                 </div>
                               </div>
@@ -788,7 +788,7 @@ export function ProjectsGrid({
                             {isDeclineMode && (
                               <div className="space-y-3 bg-red-50 dark:bg-red-900/10 rounded-md p-3 border border-red-200 dark:border-red-800">
                                 <Label className="text-sm font-medium text-red-900 dark:text-red-100">
-                                  Decline Assignment
+                                  Decline
                                 </Label>
                                 <Textarea
                                   value={assignmentResponse}
