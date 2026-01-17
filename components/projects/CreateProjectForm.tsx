@@ -122,10 +122,14 @@ export function CreateProjectForm({
     table: "w-full border-collapse",
     head_row: "grid grid-cols-7",
     head_cell:
-      "text-foreground font-semibold text-[0.75rem] leading-none py-0 px-0 flex items-center justify-center tracking-wide",
+      "text-white font-semibold text-[0.75rem] leading-none py-0 px-0 flex items-center justify-center tracking-wide",
     row: "grid grid-cols-7 mt-0.5",
     cell: "p-0 flex items-center justify-center",
     day: "size-6 p-0 font-normal aria-selected:opacity-100 flex items-center justify-center",
+    day_selected:
+      "bg-accent text-accent-foreground hover:bg-accent dark:bg-[var(--sidebar-primary)] dark:text-[var(--sidebar-primary-foreground)] dark:hover:bg-[var(--sidebar-primary)]",
+    day_today:
+      "bg-accent text-accent-foreground dark:bg-[var(--sidebar-primary)] dark:text-[var(--sidebar-primary-foreground)] !rounded-none",
   };
 
   const supervisors = users.filter((u) => u.role === "supervisor");
@@ -464,21 +468,26 @@ export function CreateProjectForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6">
       <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto modal">
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="flex items-center gap-2">
+        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+          <div className="flex items-center justify-between gap-0 flex-nowrap">
+            <CardTitle className="flex items-center text-base sm:text-lg whitespace-nowrap overflow-visible text-clip">
               <Building className="h-5 w-5" />
               Create New Project
             </CardTitle>
-            <Button variant="ghost" onClick={onClose}>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={onClose}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-8">
+        <CardContent className="space-y-8 px-4 pb-6 sm:px-6 sm:pb-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Basic Information */}
             <div className="space-y-4">
@@ -994,7 +1003,7 @@ export function CreateProjectForm({
               </Alert>
             )}
 
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:gap-4">
               <Button
                 type="button"
                 variant="outline"
