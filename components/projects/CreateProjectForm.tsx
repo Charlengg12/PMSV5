@@ -29,6 +29,49 @@ import {
 import { format } from "date-fns";
 import { Project, User } from "../../types";
 
+const MAX_ALLOCATION_VALUE = 999_999_999.99;
+const MAX_ALLOCATION_INTEGER_DIGITS = 9;
+const MAX_ALLOCATION_DECIMALS = 2;
+
+const formatCurrency = (value: number) =>
+  `\u20B1${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+
+const getAmountFontSize = (formatted: string) => {
+  const length = formatted.length;
+  if (length > 20) return "0.8rem";
+  if (length > 18) return "0.9rem";
+  if (length > 16) return "1rem";
+  if (length > 14) return "1.2rem";
+  return "1.5rem";
+};
+
+const sanitizeAllocationInput = (value: string) => {
+  if (value === "") return "";
+  if (!/^\d*\.?\d*$/.test(value)) return null;
+
+  const [rawInteger, rawDecimal = ""] = value.split(".");
+  const integerPart =
+    rawInteger.slice(0, MAX_ALLOCATION_INTEGER_DIGITS) || "0";
+  const decimalPart = rawDecimal.slice(0, MAX_ALLOCATION_DECIMALS);
+  const hasDecimal = value.includes(".");
+  const endsWithDecimal = value.endsWith(".");
+
+  let next = hasDecimal ? `${integerPart}.${decimalPart}` : integerPart;
+  if (endsWithDecimal && decimalPart.length === 0) {
+    next = `${integerPart}.`;
+  }
+
+  const numeric = Number(next);
+  if (Number.isFinite(numeric) && numeric > MAX_ALLOCATION_VALUE) {
+    return MAX_ALLOCATION_VALUE.toFixed(MAX_ALLOCATION_DECIMALS);
+  }
+
+  return next;
+};
+
 interface CreateProjectFormProps {
   currentUser: User;
   users: User[];
@@ -82,6 +125,10 @@ export function CreateProjectForm({
 
   // 3. Profit: The company allocation
   const projectedProfit = compAlloc;
+
+  const revenueDisplay = formatCurrency(calculatedRevenue);
+  const budgetDisplay = formatCurrency(operationalBudget);
+  const profitDisplay = formatCurrency(projectedProfit);
 
   // Keep totalProjectPrice in sync for validation purposes
   useEffect(() => {
@@ -141,6 +188,19 @@ export function CreateProjectForm({
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
     }
+  };
+
+  const handleAllocationChange = (
+    field:
+      | "fabricatorAllocation"
+      | "materialsAllocation"
+      | "supervisorAllocation"
+      | "companyAllocation",
+    value: string
+  ) => {
+    const sanitized = sanitizeAllocationInput(value);
+    if (sanitized === null) return;
+    handleInputChange(field, sanitized);
   };
 
   const handleAddFabricator = (fabricatorId: string) => {
@@ -685,8 +745,11 @@ export function CreateProjectForm({
                     <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-medium mb-1">
                       <Briefcase className="h-4 w-4" /> Revenue
                     </div>
-                    <p className="text-2xl font-bold text-blue-900 dark:text-blue-100">
-                      ₱{calculatedRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <p
+                      className="font-bold text-blue-900 dark:text-blue-100 leading-tight whitespace-nowrap"
+                      style={{ fontSize: getAmountFontSize(revenueDisplay) }}
+                    >
+                      {revenueDisplay}
                     </p>
                     <span className="text-xs text-muted-foreground">Total Client Price</span>
                   </CardContent>
@@ -697,8 +760,11 @@ export function CreateProjectForm({
                     <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300 font-medium mb-1">
                       <Wallet className="h-4 w-4" /> Budget
                     </div>
-                    <p className="text-2xl font-bold text-orange-900 dark:text-orange-100">
-                      ₱{operationalBudget.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <p
+                      className="font-bold text-orange-900 dark:text-orange-100 leading-tight whitespace-nowrap"
+                      style={{ fontSize: getAmountFontSize(budgetDisplay) }}
+                    >
+                      {budgetDisplay}
                     </p>
                     <span className="text-xs text-muted-foreground">Operational Expenses</span>
                   </CardContent>
@@ -709,8 +775,11 @@ export function CreateProjectForm({
                     <div className="flex items-center gap-2 text-green-700 dark:text-green-300 font-medium mb-1">
                       <TrendingUp className="h-4 w-4" /> Profit
                     </div>
-                    <p className="text-2xl font-bold text-green-900 dark:text-green-100">
-                      ₱{projectedProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    <p
+                      className="font-bold text-green-900 dark:text-green-100 leading-tight whitespace-nowrap"
+                      style={{ fontSize: getAmountFontSize(profitDisplay) }}
+                    >
+                      {profitDisplay}
                     </p>
                     <span className="text-xs text-muted-foreground">Net Income</span>
                   </CardContent>
@@ -726,10 +795,14 @@ export function CreateProjectForm({
                     id="fabricatorAllocation"
                     type="number"
                     min="0"
+                    max={MAX_ALLOCATION_VALUE}
                     step="0.01"
                     value={formData.fabricatorAllocation}
                     onChange={(e) =>
-                      handleInputChange("fabricatorAllocation", e.target.value)
+                      handleAllocationChange(
+                        "fabricatorAllocation",
+                        e.target.value
+                      )
                     }
                     placeholder="0.00"
                   />
@@ -745,10 +818,14 @@ export function CreateProjectForm({
                     id="materialsAllocation"
                     type="number"
                     min="0"
+                    max={MAX_ALLOCATION_VALUE}
                     step="0.01"
                     value={formData.materialsAllocation}
                     onChange={(e) =>
-                      handleInputChange("materialsAllocation", e.target.value)
+                      handleAllocationChange(
+                        "materialsAllocation",
+                        e.target.value
+                      )
                     }
                     placeholder="0.00"
                   />
@@ -764,10 +841,14 @@ export function CreateProjectForm({
                     id="supervisorAllocation"
                     type="number"
                     min="0"
+                    max={MAX_ALLOCATION_VALUE}
                     step="0.01"
                     value={formData.supervisorAllocation}
                     onChange={(e) =>
-                      handleInputChange("supervisorAllocation", e.target.value)
+                      handleAllocationChange(
+                        "supervisorAllocation",
+                        e.target.value
+                      )
                     }
                     placeholder="0.00"
                   />
@@ -783,10 +864,14 @@ export function CreateProjectForm({
                     id="companyAllocation"
                     type="number"
                     min="0"
+                    max={MAX_ALLOCATION_VALUE}
                     step="0.01"
                     value={formData.companyAllocation}
                     onChange={(e) =>
-                      handleInputChange("companyAllocation", e.target.value)
+                      handleAllocationChange(
+                        "companyAllocation",
+                        e.target.value
+                      )
                     }
                     placeholder="0.00"
                   />
