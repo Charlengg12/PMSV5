@@ -803,7 +803,7 @@ export function ProjectsGrid({
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="flex-1"
+                                    className="flex-1 dark:text-white"
                                     onClick={() => {
                                       setSelectedAssignment(null);
                                       setAssignmentResponse("");
@@ -814,7 +814,7 @@ export function ProjectsGrid({
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    className="flex-1"
+                                    className="flex-1 dark:text-white"
                                     onClick={() => {
                                       if (onDeclineAssignment) {
                                         onDeclineAssignment(
@@ -872,8 +872,8 @@ export function ProjectsGrid({
                         setShowClientDialog(true);
                       }}
                     >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      <span className="truncate">Client</span>
+                      <UserPlus className="h-3 w-3 mr-1 dark:text-white" />
+                      <span className="truncate dark:text-white">Client</span>
                     </Button>
                   ))}
 
