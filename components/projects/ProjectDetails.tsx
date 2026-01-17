@@ -21,7 +21,6 @@ import {
   X,
   FileText as FileIcon,
   Link as LinkIcon,
-  Archive as ArchiveIcon,
   Users as UsersIcon,
   DollarSign as RevenueIcon,
 } from "lucide-react";
@@ -47,7 +46,7 @@ export function ProjectDetails({
   onClose,
 }: ProjectDetailsProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editedProject, setEditedProject] = useState(project);
+  const [editedProject, setEditedProject] = useState<Project>(project);
   const [newFabricatorId, setNewFabricatorId] = useState<string>("");
   const [showAddFabricator, setShowAddFabricator] = useState(false);
   const [backendClientAssigned, setBackendClientAssigned] = useState(false);
@@ -57,15 +56,26 @@ export function ProjectDetails({
   );
   const localClientAssigned = !!clientUser;
 
+  // ────────────────────────────────────────────────
+  //  Validation constants
+  // ────────────────────────────────────────────────
+  const requiredFields = [
+    { key: "name", label: "Project Name" },
+    { key: "description", label: "Description" },
+    { key: "status", label: "Status" },
+    { key: "priority", label: "Priority" },
+  ] as const;
+
+  const MAX_NAME_LENGTH = 50;
+  const MAX_DESCRIPTION_LENGTH = 100;
+
   useEffect(() => {
     let active = true;
     (async () => {
       try {
         const res = await apiService.getProjects();
         const rows = (res.data || []) as any[];
-        const raw = rows.find(
-          (r: any) => r.id === project.id || r.id === project.id
-        );
+        const raw = rows.find((r: any) => r.id === project.id);
         const assigned = !!(
           raw &&
           (raw.client_id || raw.clientId || raw.client_name || raw.clientName)
@@ -97,9 +107,27 @@ export function ProjectDetails({
     (currentUser.role === "fabricator" &&
       project.fabricatorIds.includes(currentUser.id));
 
-  const getSupervisorName = (supervisorId: string) => {
-    const supervisor = users.find((u) => u.id === supervisorId);
-    return supervisor?.name || "Unknown Supervisor";
+  const getSupervisorDisplay = (target: Project) => {
+    if (target.supervisorId) {
+      const supervisor = users.find((u) => u.id === target.supervisorId);
+      return {
+        name: supervisor?.name || "Unknown Supervisor",
+        helper: "Project Supervisor",
+      };
+    }
+
+    const pendingCount = target.pendingSupervisors?.length ?? 0;
+    if (pendingCount > 0) {
+      return {
+        name: "Pending supervisor acceptance",
+        helper: `Awaiting response from ${pendingCount} supervisor${pendingCount === 1 ? "" : "s"}`,
+      };
+    }
+
+    return {
+      name: "Not assigned",
+      helper: "Supervisor not yet assigned",
+    };
   };
 
   const formatFileSize = (bytes: number) => {
@@ -126,51 +154,144 @@ export function ProjectDetails({
     }
   };
 
-  // ────────────────────────────────────────────────
-  //  SweetAlert2 save confirmation + loading
-  // ────────────────────────────────────────────────
+  const getMissingFields = () => {
+    const missing: string[] = [];
+
+    for (const field of requiredFields) {
+      const value = editedProject[field.key as keyof Project];
+      if (
+        value === undefined ||
+        value === null ||
+        (typeof value === "string" && value.trim() === "") ||
+        (Array.isArray(value) && value.length === 0)
+      ) {
+        missing.push(field.label);
+      }
+    }
+
+    return missing;
+  };
+
   const handleSave = async () => {
+    // ─── Character limit checks (separate alerts like in create form) ───
+    if (editedProject.name && editedProject.name.length > MAX_NAME_LENGTH) {
+      Swal.fire({
+        title: "Input Limit Exceeded",
+        text: `Project name cannot exceed ${MAX_NAME_LENGTH} characters.`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    if (
+      editedProject.description &&
+      editedProject.description.length > MAX_DESCRIPTION_LENGTH
+    ) {
+      Swal.fire({
+        title: "Input Limit Exceeded",
+        text: `Description cannot exceed ${MAX_DESCRIPTION_LENGTH} characters.`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    // ─── Required fields check ───
+    const missing = getMissingFields();
+    if (missing.length > 0) {
+      Swal.fire({
+        title: "Incomplete Form",
+        html: `Please fill up the following:<br><br><strong>${missing.join(
+          "<br>"
+        )}</strong>`,
+        icon: "warning",
+        confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
+        },
+      });
+      return;
+    }
+
+    // ─── No changes check ───
+    const hasChanges = JSON.stringify(editedProject) !== JSON.stringify(project);
+    if (!hasChanges) {
+      Swal.fire({
+        icon: "info",
+        title: "No changes detected",
+        text: "Nothing to save.",
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+        },
+      });
+      setIsEditing(false);
+      return;
+    }
+
+    // ─── Confirmation ───
     const result = await Swal.fire({
       title: "Save changes?",
       text: "This will update the project details.",
       icon: "question",
       showCancelButton: true,
-      confirmButtonText: "Confirm",
+      confirmButtonText: "Yes, save",
       cancelButtonText: "Cancel",
-      customClass:{
+      customClass: {
         container: "swal-container",
         popup: "swal-popup",
         title: "swal-title",
         htmlContainer: "swal-content",
         confirmButton: "swal-confirm-button",
         cancelButton: "swal-cancel-button",
-        icon: "swal-icon",
-      }
+      },
     });
 
     if (!result.isConfirmed) return;
 
-    // Show loading
+    // ─── Saving... ───
     Swal.fire({
       title: "Saving...",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
-      customClass:{
-        container: "swal-container",
-        popup: "swal-popup",
-        title: "swal-title",
-        htmlContainer: "swal-content",
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-        icon: "swal-icon",
-      },
       didOpen: () => {
         Swal.showLoading();
       },
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup",
+      },
     });
 
-    // Simulate save delay (replace with real async if needed)
+    // Simulate save delay (replace with real API call if needed)
     setTimeout(() => {
       onUpdateProject(editedProject);
       setIsEditing(false);
@@ -182,17 +303,12 @@ export function ProjectDetails({
         icon: "success",
         timer: 1800,
         showConfirmButton: false,
-        customClass:{
+        customClass: {
           container: "swal-container",
           popup: "swal-popup",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-          icon: "swal-icon",
-        }
+        },
       });
-    }, 1400); // ≈1.4 seconds – adjust as needed
+    }, 1200);
   };
 
   const handleCancel = () => {
@@ -237,10 +353,10 @@ export function ProjectDetails({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto modal">
         <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex justify-between items-start gap-4">
+            <div className="flex-1 min-w-0">
               {isEditing && canEdit ? (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Input
                     value={editedProject.name}
                     onChange={(e) =>
@@ -250,8 +366,9 @@ export function ProjectDetails({
                       }))
                     }
                     className="text-2xl font-semibold"
+                    placeholder="Project name"
                   />
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap gap-2 items-center">
                     <select
                       value={editedProject.status}
                       onChange={(e) =>
@@ -260,12 +377,10 @@ export function ProjectDetails({
                           status: e.target.value as Project["status"],
                         }))
                       }
-                      className="border rounded px-2 py-1 text-sm"
+                      className="border rounded px-2 py-1 text-sm bg-background"
                     >
                       <option value="0_Created">0_Created</option>
-                      <option value="1_Assigned_to_FAB">
-                        1_Assigned_to_FAB
-                      </option>
+                      <option value="1_Assigned_to_FAB">1_Assigned_to_FAB</option>
                       <option value="2_Ready_for_Supervisor_Review">
                         2_Ready_for_Supervisor_Review
                       </option>
@@ -280,9 +395,7 @@ export function ProjectDetails({
                       <option value="review">Review</option>
                       <option value="completed">Completed</option>
                       <option value="on-hold">On Hold</option>
-                      <option value="pending-assignment">
-                        Pending Assignment
-                      </option>
+                      <option value="pending-assignment">Pending Assignment</option>
                     </select>
                     <select
                       value={editedProject.priority}
@@ -292,7 +405,7 @@ export function ProjectDetails({
                           priority: e.target.value as Project["priority"],
                         }))
                       }
-                      className="border rounded px-2 py-1 text-sm"
+                      className="border rounded px-2 py-1 text-sm bg-background"
                     >
                       <option value="low">Low</option>
                       <option value="medium">Medium</option>
@@ -302,19 +415,26 @@ export function ProjectDetails({
                   </div>
                 </div>
               ) : (
-                <>
-                  <CardTitle className="text-2xl">{editedProject.name}</CardTitle>
-                  <div className="flex items-center gap-2 mt-2">
+                <div className="min-w-0">
+                  <CardTitle
+                    className="text-2xl font-bold truncate"
+                    title={editedProject.name || "Untitled Project"}
+                  >
+                    {editedProject.name || "Untitled Project"}
+                  </CardTitle>
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <Badge variant={getStatusColor(project.status)}>
                       {editedProject.status}
                     </Badge>
-                    <Badge variant="outline">{editedProject.priority} priority</Badge>
+                    <Badge variant="outline">
+                      {editedProject.priority} priority
+                    </Badge>
                   </div>
-                </>
+                </div>
               )}
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 shrink-0">
               {canEdit && !isEditing && (
                 <Button variant="outline" onClick={() => setIsEditing(true)}>
                   <Edit className="h-4 w-4 mr-2" />
@@ -366,59 +486,65 @@ export function ProjectDetails({
                 <FileIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Files</span>
               </TabsTrigger>
-              <TabsTrigger
-                value="documentation"
-                className="flex-1 min-w-[80px]"
-              >
+              <TabsTrigger value="documentation" className="flex-1 min-w-[80px]">
                 <LinkIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Docs</span>
               </TabsTrigger>
             </TabsList>
 
-            {/* Overview Tab */}
-            <TabsContent value="overview" className="space-y-6">
+            <TabsContent value="overview" className="space-y-6 pt-5">
               <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div>
                     <Label htmlFor="description">Description</Label>
                     {isEditing ? (
                       <Input
                         id="description"
-                        value={editedProject.description}
+                        value={editedProject.description || ""}
                         onChange={(e) =>
                           setEditedProject((prev) => ({
                             ...prev,
                             description: e.target.value,
                           }))
                         }
-                        className="mt-1"
+                        className="mt-1.5"
+                        placeholder="Enter project description..."
                       />
                     ) : (
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <div
+                        className="mt-1.5 text-sm text-muted-foreground whitespace-pre-wrap break-words line-clamp-4"
+                        title={editedProject.description || ""}
+                      >
                         {editedProject.description || "No description provided."}
-                      </p>
+                      </div>
                     )}
                   </div>
 
                   <div className="space-y-2">
                     <Label>Progress</Label>
                     <div className="space-y-1">
-                      <div className="flex justify-between text-sm">
+                      <div className="flex justify-between text-sm items-center">
                         <span>{editedProject.progress}% Complete</span>
                         {isEditing && (
-                          <Input
-                            type="number"
-                            min="0"
-                            max="100"
-                            value={editedProject.progress}
-                            onChange={(e) =>
-                              setEditedProject((prev) => ({
-                                ...prev,
-                                progress: parseInt(e.target.value) || 0,
-                              }))
-                            }
-                            className="w-20 h-6"
-                          />
+                         <Input
+  type="number"
+  min="0"
+  max="100"
+  value={editedProject.progress}
+  onChange={(e) => {
+    let value = parseInt(e.target.value) || 0;
+
+    // Logic to prevent exceeding 100 or going below 0
+    if (value > 100) value = 100;
+    if (value < 0) value = 0;
+
+    setEditedProject((prev) => ({
+      ...prev,
+      progress: value,
+    }));
+  }}
+  className="w-20 h-8"
+/>
                         )}
                       </div>
                       <Progress value={editedProject.progress} />
@@ -426,7 +552,7 @@ export function ProjectDetails({
                   </div>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label className="flex items-center gap-2">
@@ -436,21 +562,21 @@ export function ProjectDetails({
                       {isEditing && canEdit ? (
                         <Input
                           type="date"
-                          value={editedProject.startDate}
+                          value={editedProject.startDate || ""}
                           onChange={(e) =>
                             setEditedProject((prev) => ({
                               ...prev,
                               startDate: e.target.value,
                             }))
                           }
-                          className="mt-1"
+                          className="mt-1.5"
                         />
                       ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <div className="mt-1.5 text-sm text-muted-foreground">
                           {editedProject.startDate
                             ? new Date(editedProject.startDate).toLocaleDateString()
                             : "Not set"}
-                        </p>
+                        </div>
                       )}
                     </div>
                     <div>
@@ -461,21 +587,21 @@ export function ProjectDetails({
                       {isEditing && canEdit ? (
                         <Input
                           type="date"
-                          value={editedProject.endDate}
+                          value={editedProject.endDate || ""}
                           onChange={(e) =>
                             setEditedProject((prev) => ({
                               ...prev,
                               endDate: e.target.value,
                             }))
                           }
-                          className="mt-1"
+                          className="mt-1.5"
                         />
                       ) : (
-                        <p className="text-sm text-muted-foreground">
+                        <div className="mt-1.5 text-sm text-muted-foreground">
                           {editedProject.endDate
                             ? new Date(editedProject.endDate).toLocaleDateString()
                             : "Not set"}
-                        </p>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -486,47 +612,51 @@ export function ProjectDetails({
                       Client
                     </Label>
                     {clientUser ? (
-                      <div className="text-sm text-muted-foreground">
-                        <p>{clientUser.name}</p>
-                        <p className="text-xs">{clientUser.email}</p>
+                      <div className="mt-1.5 text-sm text-muted-foreground min-w-0">
+                        <p className="font-medium truncate" title={clientUser.name}>
+                          {clientUser.name}
+                        </p>
+                        <p className="text-xs truncate" title={clientUser.email}>
+                          {clientUser.email}
+                        </p>
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">
+                      <div className="mt-1.5 text-sm text-muted-foreground">
                         No client assigned
-                      </p>
+                      </div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <Separator />
+              <Separator className="my-6" />
 
-              <div className="space-y-4">
-                <h3 className="text-lg">Financial Overview</h3>
+              <div className="space-y-5">
+                <h3 className="text-lg font-medium">Financial Overview</h3>
                 <div className="grid gap-4 md:grid-cols-3">
                   {(currentUser.role === "admin" ||
                     currentUser.role === "supervisor") && (
                     <>
                       <Card>
                         <CardContent className="pt-6">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mb-1">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Budget</span>
                           </div>
                           {isEditing && currentUser.role === "admin" ? (
                             <Input
                               type="number"
-                              value={editedProject.budget}
+                              value={editedProject.budget ?? 0}
                               onChange={(e) =>
                                 setEditedProject((prev) => ({
                                   ...prev,
                                   budget: parseFloat(e.target.value) || 0,
                                 }))
                               }
-                              className="text-2xl font-semibold mt-2"
+                              className="text-2xl font-semibold"
                             />
                           ) : (
-                            <p className="text-2xl">
+                            <p className="text-2xl font-bold">
                               ₱{editedProject.budget?.toLocaleString() || "0"}
                             </p>
                           )}
@@ -535,24 +665,24 @@ export function ProjectDetails({
 
                       <Card>
                         <CardContent className="pt-6">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 mb-1">
                             <DollarSign className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Spent</span>
                           </div>
                           {isEditing && currentUser.role === "admin" ? (
                             <Input
                               type="number"
-                              value={editedProject.spent}
+                              value={editedProject.spent ?? 0}
                               onChange={(e) =>
                                 setEditedProject((prev) => ({
                                   ...prev,
                                   spent: parseFloat(e.target.value) || 0,
                                 }))
                               }
-                              className="text-2xl font-semibold mt-2"
+                              className="text-2xl font-semibold"
                             />
                           ) : (
-                            <p className="text-2xl">
+                            <p className="text-2xl font-bold">
                               ₱{editedProject.spent?.toLocaleString() || "0"}
                             </p>
                           )}
@@ -563,7 +693,7 @@ export function ProjectDetails({
 
                   <Card>
                     <CardContent className="pt-6">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 mb-1">
                         <DollarSign className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
                           {currentUser.role === "fabricator"
@@ -574,17 +704,17 @@ export function ProjectDetails({
                       {isEditing && currentUser.role === "admin" ? (
                         <Input
                           type="number"
-                          value={editedProject.revenue}
+                          value={editedProject.revenue ?? 0}
                           onChange={(e) =>
                             setEditedProject((prev) => ({
                               ...prev,
                               revenue: parseFloat(e.target.value) || 0,
                             }))
                           }
-                          className="text-2xl font-semibold mt-2"
+                          className="text-2xl font-semibold"
                         />
                       ) : (
-                        <p className="text-2xl">
+                        <p className="text-2xl font-bold">
                           ₱{editedProject.revenue?.toLocaleString() || "0"}
                         </p>
                       )}
@@ -594,8 +724,7 @@ export function ProjectDetails({
               </div>
             </TabsContent>
 
-            {/* Team Tab */}
-            <TabsContent value="team" className="space-y-6">
+            <TabsContent value="team" className="space-y-6 pt-5">
               <Card>
                 <CardHeader className="flex justify-between items-center">
                   <CardTitle className="flex items-center gap-2">
@@ -614,15 +743,15 @@ export function ProjectDetails({
                 </CardHeader>
 
                 {canManageFabricators && showAddFabricator && (
-                  <div className="p-4">
+                  <div className="px-6 pb-4">
                     <Label htmlFor="fabricator-select">Select Fabricator</Label>
                     <select
                       id="fabricator-select"
                       value={newFabricatorId}
                       onChange={(e) => setNewFabricatorId(e.target.value)}
-                      className="border rounded p-2 w-full"
+                      className="mt-1.5 border rounded px-3 py-2 w-full bg-background"
                     >
-                      <option value="">--Choose a Fabricator--</option>
+                      <option value="">-- Choose a Fabricator --</option>
                       {users
                         .filter(
                           (user) =>
@@ -656,9 +785,8 @@ export function ProjectDetails({
                 )}
 
                 <CardContent className="space-y-6">
-                  {/* Supervisor */}
-                  <div className="pb-4 border-b">
-                    <Label className="flex items-center gap-2 text-base mb-2">
+                  <div className="pb-5 border-b">
+                    <Label className="flex items-center gap-2 text-base mb-3">
                       Supervisor
                     </Label>
                     {isEditing && currentUser.role === "admin" ? (
@@ -670,8 +798,9 @@ export function ProjectDetails({
                             supervisorId: e.target.value,
                           }))
                         }
-                        className="w-full border rounded p-2"
+                        className="w-full border rounded px-3 py-2 bg-background"
                       >
+                        <option value="">Not assigned</option>
                         {users
                           .filter((user) => user.role === "supervisor")
                           .map((user) => (
@@ -682,22 +811,21 @@ export function ProjectDetails({
                       </select>
                     ) : (
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-                        <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
                           S
                         </div>
                         <div>
                           <p className="font-medium">
-                            {getSupervisorName(editedProject.supervisorId)}
+                            {getSupervisorDisplay(editedProject).name}
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            Project Supervisor
+                            {getSupervisorDisplay(editedProject).helper}
                           </p>
                         </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Fabricators */}
                   <div>
                     <Label className="flex items-center gap-2 text-base mb-3">
                       Fabricators ({editedProject.fabricatorIds.length})
@@ -721,17 +849,23 @@ export function ProjectDetails({
                           return (
                             <div
                               key={fabId}
-                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                              className="flex items-center justify-between p-3 bg-muted/50 rounded-lg gap-3"
                             >
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="w-10 h-10 rounded-full bg-accent text-accent-foreground flex items-center justify-center font-medium shrink-0">
                                   {index + 1}
                                 </div>
-                                <div>
-                                  <p className="font-medium">
+                                <div className="min-w-0">
+                                  <p
+                                    className="font-medium truncate"
+                                    title={fabricator?.name || "Unknown"}
+                                  >
                                     {fabricator?.name || "Unknown Fabricator"}
                                   </p>
-                                  <p className="text-sm text-muted-foreground">
+                                  <p
+                                    className="text-sm text-muted-foreground truncate"
+                                    title={fabricator?.secureId || "—"}
+                                  >
                                     {fabricator?.secureId || "—"}
                                   </p>
                                 </div>
@@ -739,7 +873,10 @@ export function ProjectDetails({
                               {hasRevenue &&
                                 (currentUser.role === "admin" ||
                                   currentUser.role === "supervisor") && (
-                                  <Badge variant="outline" className="gap-1">
+                                  <Badge
+                                    variant="outline"
+                                    className="shrink-0 gap-1"
+                                  >
                                     <DollarSign className="h-3 w-3" />₱
                                     {fabricatorBudget.allocatedRevenue.toLocaleString()}{" "}
                                     revenue
@@ -755,8 +892,7 @@ export function ProjectDetails({
               </Card>
             </TabsContent>
 
-            {/* Revenue Tab */}
-            <TabsContent value="revenue" className="space-y-6">
+            <TabsContent value="revenue" className="pt-5">
               <FabricatorRevenueManager
                 project={project}
                 users={users}
@@ -765,8 +901,7 @@ export function ProjectDetails({
               />
             </TabsContent>
 
-            {/* Files Tab */}
-            <TabsContent value="files" className="space-y-6">
+            <TabsContent value="files" className="space-y-6 pt-5">
               {canUploadFiles && (
                 <ProjectFileUpload
                   projectId={project.id}
@@ -775,7 +910,8 @@ export function ProjectDetails({
                 />
               )}
 
-              {editedProject.attachments && editedProject.attachments.length > 0 ? (
+              {editedProject.attachments &&
+              editedProject.attachments.length > 0 ? (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -788,13 +924,20 @@ export function ProjectDetails({
                       {editedProject.attachments.map((attachment) => (
                         <div
                           key={attachment.id}
-                          className="flex items-center justify-between p-3 bg-muted rounded"
+                          className="flex items-center justify-between p-3 bg-muted rounded gap-3"
                         >
-                          <div className="flex items-center gap-3">
-                            <FileText className="h-4 w-4" />
-                            <div>
-                              <p className="font-medium">{attachment.name}</p>
-                              <p className="text-sm text-muted-foreground">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <FileText
+                              className="h-5 w-5 text-muted-foreground shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p
+                                className="font-medium truncate"
+                                title={attachment.name}
+                              >
+                                {attachment.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
                                 {formatFileSize(attachment.size)} • Uploaded{" "}
                                 {new Date(
                                   attachment.uploadedAt
@@ -802,7 +945,11 @@ export function ProjectDetails({
                               </p>
                             </div>
                           </div>
-                          <Button variant="ghost" size="sm">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="shrink-0"
+                          >
                             <Download className="h-4 w-4" />
                           </Button>
                         </div>
@@ -813,7 +960,9 @@ export function ProjectDetails({
               ) : (
                 <Card>
                   <CardContent className="py-12 text-center">
-                    <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <FileText
+                      className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+                    />
                     <h3 className="text-lg mb-2">No files uploaded yet</h3>
                     <p className="text-muted-foreground">
                       {canUploadFiles
@@ -825,8 +974,7 @@ export function ProjectDetails({
               )}
             </TabsContent>
 
-            {/* Documentation Tab */}
-            <TabsContent value="documentation" className="space-y-6">
+            <TabsContent value="documentation" className="space-y-6 pt-5">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -845,20 +993,35 @@ export function ProjectDetails({
                           handleDocumentationUrlChange(e.target.value)
                         }
                         placeholder="https://drive.google.com/drive/folders/..."
+                        className="mt-1.5"
                       />
                     </div>
                   ) : editedProject.documentationUrl ? (
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Link className="h-5 w-5 text-primary" />
-                        <div>
-                          <p className="font-medium">Project Documentation</p>
-                          <p className="text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Link
+                          className="h-5 w-5 text-primary shrink-0"
+                        />
+                        <div className="min-w-0">
+                          <p
+                            className="font-medium truncate"
+                            title="Project Documentation"
+                          >
+                            Project Documentation
+                          </p>
+                          <p
+                            className="text-sm text-muted-foreground truncate"
+                            title="Google Drive folder with complete project documentation"
+                          >
                             Google Drive folder with complete project documentation
                           </p>
                         </div>
                       </div>
-                      <Button variant="outline" asChild>
+                      <Button
+                        variant="outline"
+                        asChild
+                        className="shrink-0"
+                      >
                         <a
                           href={editedProject.documentationUrl}
                           target="_blank"
@@ -870,8 +1033,10 @@ export function ProjectDetails({
                       </Button>
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <Link className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <div className="text-center py-10">
+                      <Link
+                        className="h-12 w-12 mx-auto text-muted-foreground mb-4"
+                      />
                       <h3 className="text-lg mb-2">No documentation link</h3>
                       <p className="text-muted-foreground">
                         No Google Drive documentation has been added yet.
@@ -889,7 +1054,7 @@ export function ProjectDetails({
                   <p className="text-sm text-muted-foreground">
                     The Google Drive folder should contain:
                   </p>
-                  <ul className="text-sm text-muted-foreground space-y-1 ml-6 list-disc">
+                  <ul className="text-sm text-muted-foreground space-y-1.5 ml-5 list-disc">
                     <li>Project specifications and requirements</li>
                     <li>Technical drawings and blueprints</li>
                     <li>Material lists and supplier information</li>

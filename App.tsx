@@ -78,12 +78,15 @@ export default function App() {
   const [lastReloadAt, setLastReloadAt] = useState<number>(0);
 
   // Initialize time-based theme
+  const themeStorageKey = currentUser
+    ? `theme-override-${currentUser.role}`
+    : "theme-override-guest";
   const {
     isDark: _isDark,
     isTransitioning,
     setTheme,
     getCurrentTheme,
-  } = useTimeBasedTheme();
+  } = useTimeBasedTheme({ storageKey: themeStorageKey });
 
   // Initialize: restore session and view, then database and data
   useEffect(() => {
@@ -602,20 +605,32 @@ export default function App() {
       message,
     };
 
+    const updatedPendingAssignments = [
+      ...(project.pendingAssignments || []),
+      newAssignment,
+    ];
+    const updatedStatus: Project["status"] = "pending-assignment";
+
     setProjects((prevProjects) =>
       prevProjects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              pendingAssignments: [
-                ...(p.pendingAssignments || []),
-                newAssignment,
-              ],
-              status: "pending-assignment" as const,
+              pendingAssignments: updatedPendingAssignments,
+              status: updatedStatus,
             }
           : p
       )
     );
+
+    apiService
+      .updateProject(projectId, {
+        pendingAssignments: updatedPendingAssignments,
+        status: updatedStatus,
+      })
+      .catch((error) => {
+        console.warn("Failed to persist fabricator assignment.", error);
+      });
 
     // Send email notification
     emailService.sendProjectAssignment(

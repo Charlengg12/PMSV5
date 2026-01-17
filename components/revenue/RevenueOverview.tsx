@@ -23,19 +23,59 @@ const swalCustomClasses = {
 };
 
 const MIN_LOADING_TIME = 2000; // 2 seconds minimum for loading state
+const MAX_SPENT_VALUE = 999_999_999.99;
+const MAX_SPENT_INTEGER_DIGITS = 9;
+const MAX_SPENT_DECIMALS = 2;
 
-const formatCompactAmount = (value: number) => {
-  if (!Number.isFinite(value)) return "0";
-  const absValue = Math.abs(value);
+const toNumberValue = (value: unknown) => {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+  if (typeof value === "string") {
+    const normalized = value.replace(/,/g, "").trim();
+    if (normalized === "") return 0;
+    const parsed = Number.parseFloat(normalized);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+const formatCompactAmount = (value: number | string | null | undefined) => {
+  const numericValue = toNumberValue(value);
+  if (!Number.isFinite(numericValue)) return "0";
+  const absValue = Math.abs(numericValue);
   const formatScaled = (denominator: number, suffix: string) => {
-    const scaled = Math.trunc((value / denominator) * 10) / 10;
+    const scaled = Math.trunc((numericValue / denominator) * 10) / 10;
     const formatted = scaled.toFixed(1).replace(/\.0$/, "");
     return `${formatted} ${suffix}`;
   };
   if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
   if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
   if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
-  return Math.trunc(value).toLocaleString();
+  return Math.trunc(numericValue).toLocaleString();
+};
+
+const sanitizeSpentInput = (value: string) => {
+  if (value === "") return "";
+  if (!/^\d*\.?\d*$/.test(value)) return null;
+
+  const [rawInteger, rawDecimal = ""] = value.split(".");
+  const integerPart = rawInteger.slice(0, MAX_SPENT_INTEGER_DIGITS) || "0";
+  const decimalPart = rawDecimal.slice(0, MAX_SPENT_DECIMALS);
+  const hasDecimal = value.includes(".");
+  const endsWithDecimal = value.endsWith(".");
+
+  let next = hasDecimal ? `${integerPart}.${decimalPart}` : integerPart;
+  if (endsWithDecimal && decimalPart.length === 0) {
+    next = `${integerPart}.`;
+  }
+
+  const numeric = Number(next);
+  if (Number.isFinite(numeric) && numeric > MAX_SPENT_VALUE) {
+    return MAX_SPENT_VALUE.toFixed(MAX_SPENT_DECIMALS);
+  }
+
+  return next;
 };
 
 export function RevenueOverview({
@@ -50,11 +90,24 @@ export function RevenueOverview({
   const peso = "\u20B1";
 
   useEffect(() => {
-    const initial: Record<string, string> = {};
-    projects.forEach((project) => {
-      initial[project.id] = project.spent?.toString() || "0";
+    setSpentEdits((prev) => {
+      const next = { ...prev };
+      const projectIds = new Set(projects.map((project) => project.id));
+
+      Object.keys(next).forEach((id) => {
+        if (!projectIds.has(id)) {
+          delete next[id];
+        }
+      });
+
+      projects.forEach((project) => {
+        if (next[project.id] === undefined) {
+          next[project.id] = "";
+        }
+      });
+
+      return next;
     });
-    setSpentEdits(initial);
   }, [projects]);
 
   const getFilteredProjects = () => {
@@ -72,15 +125,15 @@ export function RevenueOverview({
 
   // Calculate totals
   const totalProjectRevenue = filteredProjects.reduce(
-    (sum, p) => sum + p.revenue,
+    (sum, p) => sum + toNumberValue(p.revenue),
     0
   );
   const totalProjectBudget = filteredProjects.reduce(
-    (sum, p) => sum + p.budget,
+    (sum, p) => sum + toNumberValue(p.budget),
     0
   );
   const totalProjectSpent = filteredProjects.reduce(
-    (sum, p) => sum + p.spent,
+    (sum, p) => sum + toNumberValue(p.spent),
     0
   );
   const projectProfit = totalProjectRevenue - totalProjectSpent;
@@ -107,13 +160,22 @@ export function RevenueOverview({
     const monthMatch = profitMonth === "all" || d.getMonth() + 1 === profitMonth;
     const dayMatch = profitDay === "all" || d.getDate() === profitDay;
     if (!yearMatch || !monthMatch || !dayMatch) return sum;
-    return sum + (project.revenue - project.spent);
+    return sum + (toNumberValue(project.revenue) - toNumberValue(project.spent));
   }, 0);
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const handleUpdateSpent = async (project: Project) => {
-    const newSpentStr = spentEdits[project.id] || "0";
+    const newSpentStr = spentEdits[project.id] ?? "";
+    if (newSpentStr.trim() === "") {
+      Swal.fire({
+        icon: "warning",
+        title: "Amount Required",
+        text: "Please enter a spent amount before updating.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
     const newSpent = parseFloat(newSpentStr);
 
     if (isNaN(newSpent) || newSpent < 0) {
@@ -121,6 +183,16 @@ export function RevenueOverview({
         icon: "warning",
         title: "Invalid Amount",
         text: "Please enter a valid non-negative number.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (newSpent > MAX_SPENT_VALUE) {
+      Swal.fire({
+        icon: "warning",
+        title: "Amount Too Large",
+        text: `Spent amount must be less than or equal to ${peso}${MAX_SPENT_VALUE.toLocaleString()}.`,
         customClass: swalCustomClasses,
       });
       return;
@@ -157,6 +229,11 @@ export function RevenueOverview({
         ...project,
         spent: newSpent,
       });
+
+      setSpentEdits((prev) => ({
+        ...prev,
+        [project.id]: "",
+      }));
 
       const elapsed = Date.now() - startTime;
       if (elapsed < MIN_LOADING_TIME) {
@@ -465,12 +542,12 @@ export function RevenueOverview({
                     <div className="text-right space-y-2 sm:space-y-1">
                       <p className="text-sm">
                         Revenue: {peso}
-                        {project.revenue.toLocaleString()}
+                        {formatCompactAmount(project.revenue)}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Spent: {peso}
-                        {project.spent.toLocaleString()} / {peso}
-                        {project.budget.toLocaleString()}
+                        {formatCompactAmount(project.spent)} / {peso}
+                        {formatCompactAmount(project.budget)}
                       </p>
 
                       {canEditSpent && (
@@ -479,13 +556,14 @@ export function RevenueOverview({
                             type="text"
                             value={spentEdits[project.id] || ""}
                             onChange={(e) => {
-                              const value = e.target.value;
-                              if (value === "" || /^\d*\.?\d*$/.test(value)) {
-                                setSpentEdits((prev) => ({
-                                  ...prev,
-                                  [project.id]: value,
-                                }));
-                              }
+                              const sanitized = sanitizeSpentInput(
+                                e.target.value
+                              );
+                              if (sanitized === null) return;
+                              setSpentEdits((prev) => ({
+                                ...prev,
+                                [project.id]: sanitized,
+                              }));
                             }}
                             placeholder="Spent"
                             className="w-28 text-right"
@@ -494,6 +572,7 @@ export function RevenueOverview({
                             size="sm"
                             onClick={() => handleUpdateSpent(project)}
                             disabled={
+                              !spentEdits[project.id]?.trim() ||
                               spentEdits[project.id] === project.spent?.toString()
                             }
                           >
