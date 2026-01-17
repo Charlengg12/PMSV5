@@ -193,18 +193,18 @@ export function ActivityLogs() {
   const getActionColor = (action: string) => {
     const upper = action.toUpperCase();
     if (upper.includes("DELETE") || upper.includes("DEACTIVATE")) {
-      return "border-l-4 border-l-red-500 bg-red-50 text-red-800";
+      return "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950 dark:text-red-200 text-red-800";
     }
     if (upper.includes("CREATE") || upper.includes("ADD")) {
-      return "border-l-4 border-l-emerald-500 bg-emerald-50 text-emerald-800";
+      return "border-l-4 border-l-emerald-500 bg-emerald-50 dark:bg-emerald-950 dark:text-emerald-200 text-emerald-800";
     }
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) {
-      return "border-l-4 border-l-blue-500 bg-blue-50 text-blue-800";
+      return "border-l-4 border-l-blue-500 bg-blue-50 dark:bg-blue-950 dark:text-blue-200 text-blue-800";
     }
     if (upper.includes("UPDATE") || upper.includes("EDIT")) {
-      return "border-l-4 border-l-amber-500 bg-amber-50 text-amber-800";
+      return "border-l-4 border-l-amber-500 bg-amber-50 dark:bg-amber-950 dark:text-amber-200 text-amber-800";
     }
-    return "border-l-4 border-l-gray-500 bg-gray-50 text-gray-800";
+    return "border-l-4 border-l-gray-500 bg-gray-50 dark:bg-gray-900 dark:text-gray-200 text-gray-800";
   };
 
   const getActionIcon = (action: string) => {
@@ -223,16 +223,16 @@ export function ActivityLogs() {
   const getRoleIcon = (role: string) => {
     const r = role.toLowerCase().trim();
     if (r.includes("admin"))
-      return <Shield className="h-3.5 w-3.5 text-indigo-600" />;
+      return <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />;
     if (r.includes("supervisor") || r.includes("moderator"))
-      return <UserCheck className="h-3.5 w-3.5 text-emerald-600" />;
+      return <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />;
     if (r.includes("manager") || r.includes("lead"))
-      return <UserCog className="h-3.5 w-3.5 text-purple-600" />;
+      return <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />;
     if (r === "user" || r === "member" || r.includes("regular"))
-      return <User className="h-3.5 w-3.5 text-blue-600" />;
+      return <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />;
     if (r.includes("guest") || r.includes("visitor"))
-      return <HelpCircle className="h-3.5 w-3.5 text-gray-500" />;
-    return <Crown className="h-3.5 w-3.5 text-amber-600" />;
+      return <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />;
+    return <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />;
   };
 
   const applyFilters = () => {
@@ -283,21 +283,21 @@ export function ActivityLogs() {
   };
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header Section */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg blur opacity-20"></div>
-            <div className="relative bg-white rounded-lg p-3">
-              <Activity className="h-6 w-6 text-blue-600" />
+            <div className="relative bg-white dark:bg-gray-800 rounded-lg p-3">
+              <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
           <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
               Activity Logs
             </h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Track and monitor all system activities
             </p>
           </div>
@@ -305,22 +305,22 @@ export function ActivityLogs() {
         <button
           onClick={handleRefresh}
           disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
         >
           <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </button>
       </div>
 
-      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
         {/* Filters & Actions Bar */}
-        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Audit Trail
               </h3>
-              <p className="text-sm text-gray-600 mt-0.5">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
                 {filteredLogs.length > 0
                   ? `Showing ${displayedLogs.length} of ${filteredLogs.length} activities`
                   : "No activities found"}
@@ -330,7 +330,7 @@ export function ActivityLogs() {
               <select
                 value={selectedAction}
                 onChange={handleActionChange}
-                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none cursor-pointer"
+                className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all outline-none cursor-pointer"
               >
                 <option value="">All Activities</option>
                 <option value="add">Add</option>
@@ -341,43 +341,43 @@ export function ActivityLogs() {
               <button
                 onClick={handleExport}
                 disabled={displayedLogs.length === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-colors disabled:opacity-50 font-medium text-sm"
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-800 transition-colors disabled:opacity-50 font-medium text-sm"
               >
                 <Download className="h-4 w-4" />
                 Export
               </button>
               {/* Export Confirmation Modal */}
               {showExportModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4">
-                  <div className="modal bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md sm:max-w-md max-w-xs sm:w-full overflow-hidden">
-                    <div className="p-4 sm:p-6 border-b">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-2 sm:p-4">
+                  <div className="modal bg-white dark:bg-gray-800 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl w-full max-w-md sm:max-w-md max-w-xs sm:w-full overflow-hidden">
+                    <div className="p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-lg font-semibold flex items-center gap-2.5">
-                          <Download className="h-5 w-5 text-emerald-600" />
+                        <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2.5">
+                          <Download className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                           Export Activity Logs
                         </h3>
                         <button
-                          className="text-gray-500 hover:text-red-600 rounded-full p-1.5 transition-colors"
+                          className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-full p-1.5 transition-colors"
                           onClick={() => setShowExportModal(false)}
                           aria-label="Close"
                         >
                           <X className="h-5 w-5" />
                         </button>
                       </div>
-                      <p className="text-sm text-muted-foreground mt-1.5">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5">
                         Are you sure you want to export the currently displayed
                         activity logs?
                       </p>
                     </div>
                     <div className="p-4 sm:p-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                       <button
-                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                        className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
                         onClick={() => setShowExportModal(false)}
                       >
                         Cancel
                       </button>
                       <button
-                        className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-semibold"
+                        className="px-4 py-2 rounded-lg bg-emerald-600 dark:bg-emerald-700 text-white hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-colors font-semibold"
                         onClick={confirmExport}
                       >
                         Export
@@ -391,18 +391,18 @@ export function ActivityLogs() {
         </div>
 
         {/* Search Bar */}
-        <div className="border-b border-gray-100 px-6 py-4 bg-white">
+        <div className="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-white dark:bg-gray-800">
           <div className="relative w-full max-w-md">
             <input
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
               placeholder="Search by user, action, or description..."
-              className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
+              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all outline-none"
             />
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
           </div>
-          <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
+          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
             <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
             Search across all fields: user name, role, action type, description,
             IP address, and timestamps
@@ -412,35 +412,35 @@ export function ActivityLogs() {
         {/* Content Area */}
         <div
           ref={contentRef}
-          className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto"
+          className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto bg-white dark:bg-gray-800"
         >
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
               <div className="relative mb-4">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
               </div>
-              <p className="text-lg font-medium">Loading activity history...</p>
+              <p className="text-lg font-medium dark:text-white">Loading activity history...</p>
               <p className="text-sm mt-2">Please wait</p>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 text-red-600">
-              <div className="bg-red-100 rounded-full p-4 mb-4">
+            <div className="flex flex-col items-center justify-center py-20 text-red-600 dark:text-red-400">
+              <div className="bg-red-100 dark:bg-red-900 rounded-full p-4 mb-4">
                 <AlertTriangle className="h-8 w-8" />
               </div>
-              <p className="text-lg font-medium">{error}</p>
+              <p className="text-lg font-medium dark:text-white">{error}</p>
               <button
                 onClick={handleRefresh}
-                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                className="mt-4 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm font-medium"
               >
                 Try Again
               </button>
             </div>
           ) : displayedLogs.length === 0 && page === 1 ? (
-            <div className="py-20 text-center text-gray-500">
-              <div className="bg-gray-100 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto mb-4">
-                <Activity className="h-8 w-8 text-gray-400" />
+            <div className="py-20 text-center text-gray-500 dark:text-gray-400">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Activity className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
-              <p className="text-lg font-medium">
+              <p className="text-lg font-medium dark:text-white">
                 {searchTerm || selectedAction
                   ? "No matching activities found"
                   : "No activity logs found"}
@@ -454,55 +454,53 @@ export function ActivityLogs() {
           ) : (
             <>
               <div className="overflow-x-auto -mx-6 px-6">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 text-black">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="sticky top-0">
                     <tr>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                       >
                         Timestamp
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                       >
                         User
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                       >
                         Action
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                       >
                         Description
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
                       >
                         IP Address
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 bg-white">
-                    {displayedLogs.map((log, idx) => (
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                    {displayedLogs.map((log) => (
                       <tr
                         key={log.id}
-                        className={`hover:bg-gradient-to-r hover:from-blue-50 to-transparent transition-colors ${
-                          idx % 2 === 0 ? "bg-white" : "bg-gray-50"
-                        }`}
+                        className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
                       >
                         <td className="px-4 py-4">
                           <div className="flex flex-col">
-                            <div className="font-medium text-gray-900 text-sm">
+                            <div className="font-medium text-gray-900 dark:text-white text-sm">
                               {format(new Date(log.created_at), "MMM d, yyyy")}
                             </div>
-                            <div className="mt-1 text-xs text-gray-500">
+                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
                               {format(new Date(log.created_at), "h:mm a")}
                             </div>
                           </div>
@@ -515,10 +513,10 @@ export function ActivityLogs() {
                               </div>
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900 text-sm">
+                              <div className="font-medium text-gray-900 dark:text-white text-sm">
                                 {log.user_name}
                               </div>
-                              <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 capitalize">
+                              <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 capitalize">
                                 {getRoleIcon(log.user_role)}
                                 <span>{log.user_role}</span>
                               </div>
@@ -534,7 +532,7 @@ export function ActivityLogs() {
                             {getActionLabel(log.action)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
+                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <div
                             className="line-clamp-2 max-w-xs"
                             title={log.description}
@@ -542,7 +540,7 @@ export function ActivityLogs() {
                             {log.description}
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-mono text-gray-600">
+                        <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-mono text-gray-600 dark:text-gray-400">
                           {log.ip_address}
                         </td>
                       </tr>
@@ -554,7 +552,7 @@ export function ActivityLogs() {
               {hasMore && (
                 <div ref={loadMoreRef} className="py-10 flex justify-center">
                   {loadingMore ? (
-                    <div className="flex items-center gap-2.5 text-gray-600">
+                    <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
                       <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
                       <span>Loading more activities...</span>
                     </div>
@@ -565,8 +563,8 @@ export function ActivityLogs() {
               )}
 
               {!hasMore && displayedLogs.length > 0 && (
-                <div className="py-8 text-center text-sm text-gray-500 font-medium">
-                  <span className="inline-block px-4 py-2 bg-gray-100 rounded-lg">
+                <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">
+                  <span className="inline-block px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
                     You've reached the end
                   </span>
                 </div>
@@ -580,7 +578,7 @@ export function ActivityLogs() {
       {showScrollTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-110 transition-all z-50"
+          className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-110 transition-all z-50"
           aria-label="Scroll to top"
         >
           <ChevronUp className="h-5 w-5" />
