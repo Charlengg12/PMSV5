@@ -627,13 +627,13 @@ export function ProjectsGrid({
                         size="sm"
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         onClick={() =>
-                          onAcceptAssignment &&
-                          onAcceptAssignment("", "accepted", project.id)
-                        }
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept Project
-                      </Button>
+                        onAcceptAssignment &&
+                        onAcceptAssignment("", "accepted", project.id)
+                      }
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Accept
+                    </Button>
                       <Button
                         size="sm"
                         variant="outline"

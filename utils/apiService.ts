@@ -176,6 +176,21 @@ class ApiService {
         });
     }
 
+    async respondToAssignment(
+        projectId: string,
+        response: 'accepted' | 'declined',
+        assignmentId?: string
+    ): Promise<ApiResponse<any>> {
+        const payload: Record<string, string> = { projectId, response };
+        if (assignmentId) {
+            payload.assignmentId = assignmentId;
+        }
+        return this.request('/projects/respond-assignment', {
+            method: 'POST',
+            body: JSON.stringify(payload),
+        });
+    }
+
     // Task methods
     async getTasks(): Promise<ApiResponse<any[]>> {
         return this.request('/tasks');
