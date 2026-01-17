@@ -484,88 +484,88 @@ export function ProjectDetails({
           <div className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-              {isEditing && canEdit ? (
-                <div className="space-y-3">
-                  <Input
-                    value={editedProject.name}
-                    onChange={(e) =>
-                      setEditedProject((prev) => ({
-                        ...prev,
-                        name: e.target.value,
-                      }))
-                    }
-                    className="text-2xl font-semibold"
-                    placeholder="Project name"
-                  />
-                  <div className="flex flex-wrap gap-2 items-center">
-                    <select
-                      value={editedProject.status}
+                {isEditing && canEdit ? (
+                  <div className="space-y-3">
+                    <Input
+                      value={editedProject.name}
                       onChange={(e) =>
                         setEditedProject((prev) => ({
                           ...prev,
-                          status: e.target.value as Project["status"],
+                          name: e.target.value,
                         }))
                       }
-                      className="border rounded px-2 py-1 text-sm bg-background"
-                    >
-                      <option value="0_Created">0_Created</option>
-                      <option value="1_Assigned_to_FAB">
-                        1_Assigned_to_FAB
-                      </option>
-                      <option value="2_Ready_for_Supervisor_Review">
-                        2_Ready_for_Supervisor_Review
-                      </option>
-                      <option value="3_Ready_for_Admin_Review">
-                        3_Ready_for_Admin_Review
-                      </option>
-                      <option value="4_Ready_for_Client_Signoff">
-                        4_Ready_for_Client_Signoff
-                      </option>
-                      <option value="planning">Planning</option>
-                      <option value="in-progress">In Progress</option>
-                      <option value="review">Review</option>
-                      <option value="completed">Completed</option>
-                      <option value="on-hold">On Hold</option>
-                      <option value="pending-assignment">
-                        Pending Assignment
-                      </option>
-                    </select>
-                    <select
-                      value={editedProject.priority}
-                      onChange={(e) =>
-                        setEditedProject((prev) => ({
-                          ...prev,
-                          priority: e.target.value as Project["priority"],
-                        }))
-                      }
-                      className="border rounded px-2 py-1 text-sm bg-background"
-                    >
-                      <option value="low">Low</option>
-                      <option value="medium">Medium</option>
-                      <option value="high">High</option>
-                      <option value="urgent">Urgent</option>
-                    </select>
+                      className="text-2xl font-semibold"
+                      placeholder="Project name"
+                    />
+                    <div className="flex flex-wrap gap-2 items-center">
+                      <select
+                        value={editedProject.status}
+                        onChange={(e) =>
+                          setEditedProject((prev) => ({
+                            ...prev,
+                            status: e.target.value as Project["status"],
+                          }))
+                        }
+                        className="border rounded px-2 py-1 text-sm bg-background"
+                      >
+                        <option value="0_Created">0_Created</option>
+                        <option value="1_Assigned_to_FAB">
+                          1_Assigned_to_FAB
+                        </option>
+                        <option value="2_Ready_for_Supervisor_Review">
+                          2_Ready_for_Supervisor_Review
+                        </option>
+                        <option value="3_Ready_for_Admin_Review">
+                          3_Ready_for_Admin_Review
+                        </option>
+                        <option value="4_Ready_for_Client_Signoff">
+                          4_Ready_for_Client_Signoff
+                        </option>
+                        <option value="planning">Planning</option>
+                        <option value="in-progress">In Progress</option>
+                        <option value="review">Review</option>
+                        <option value="completed">Completed</option>
+                        <option value="on-hold">On Hold</option>
+                        <option value="pending-assignment">
+                          Pending Assignment
+                        </option>
+                      </select>
+                      <select
+                        value={editedProject.priority}
+                        onChange={(e) =>
+                          setEditedProject((prev) => ({
+                            ...prev,
+                            priority: e.target.value as Project["priority"],
+                          }))
+                        }
+                        className="border rounded px-2 py-1 text-sm bg-background"
+                      >
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="urgent">Urgent</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                <div className="min-w-0">
-                  <CardTitle
-                    className="text-2xl font-bold truncate"
-                    title={editedProject.name || "Untitled Project"}
-                  >
-                    {editedProject.name || "Untitled Project"}
-                  </CardTitle>
-                  <div className="flex items-center gap-2 mt-2 flex-wrap">
-                    <Badge variant={getStatusColor(project.status)}>
-                      {editedProject.status}
-                    </Badge>
-                    <Badge variant="outline">
-                      {editedProject.priority} priority
-                    </Badge>
+                ) : (
+                  <div className="min-w-0">
+                    <CardTitle
+                      className="text-2xl font-bold truncate"
+                      title={editedProject.name || "Untitled Project"}
+                    >
+                      {editedProject.name || "Untitled Project"}
+                    </CardTitle>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <Badge variant={getStatusColor(project.status)}>
+                        {editedProject.status}
+                      </Badge>
+                      <Badge variant="outline">
+                        {editedProject.priority} priority
+                      </Badge>
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
               <Button variant="ghost" onClick={onClose} className="shrink-0">
                 <X className="h-4 w-4" />
@@ -589,7 +589,7 @@ export function ProjectDetails({
                   Client Assigned
                 </Button>
               )}
-  
+
               {isEditing && (
                 <>
                   <Button
@@ -673,7 +673,7 @@ export function ProjectDetails({
                   <div className="space-y-2">
                     <Label>Progress</Label>
                     <div className="space-y-1">
-                    <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-between">
                         <span>{editedProject.progress}% Complete</span>
                         {isEditing && (
                           <Input
@@ -729,7 +729,7 @@ export function ProjectDetails({
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent
-                            className="w-[calc(var(--radix-popover-trigger-width)+96px)] p-0 overflow-hidden"
+                            className="w-[min(100vw-2rem,var(--radix-popover-trigger-width))] sm:w-[calc(var(--radix-popover-trigger-width)+96px)] p-0 overflow-hidden"
                             align="start"
                             side="bottom"
                             sideOffset={6}
@@ -813,7 +813,7 @@ export function ProjectDetails({
                             </Button>
                           </PopoverTrigger>
                           <PopoverContent
-                            className="w-[calc(var(--radix-popover-trigger-width)+96px)] p-0 overflow-hidden"
+                            className="w-[min(100vw-2rem,var(--radix-popover-trigger-width))] sm:w-[calc(var(--radix-popover-trigger-width)+96px)] p-0 overflow-hidden"
                             align="start"
                             side="bottom"
                             sideOffset={6}
@@ -822,7 +822,9 @@ export function ProjectDetails({
                             <CalendarPicker
                               mode="single"
                               selected={parseDateValue(editedProject.endDate)}
-                              month={parseDateValue(editedProject.endDate) || today}
+                              month={
+                                parseDateValue(editedProject.endDate) || today
+                              }
                               onSelect={(date) => {
                                 if (!date) return;
                                 const normalizedEnd = normalizeDate(date);
@@ -985,7 +987,7 @@ export function ProjectDetails({
 
             <TabsContent value="team" className="space-y-6 pt-5">
               <Card>
-                <CardHeader className="flex justify-between items-center">
+                <CardHeader className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
                   <CardTitle className="flex items-center gap-2">
                     <Users className="h-5 w-5" />
                     Project Team
@@ -1002,7 +1004,7 @@ export function ProjectDetails({
                 </CardHeader>
 
                 {canManageFabricators && showAddFabricator && (
-                  <div className="px-6 pb-4">
+                  <div className="px-4 pb-4 sm:px-6">
                     <Label htmlFor="fabricator-select">Select Fabricator</Label>
                     <select
                       id="fabricator-select"
@@ -1023,7 +1025,7 @@ export function ProjectDetails({
                           </option>
                         ))}
                     </select>
-                    <div className="mt-3 flex gap-2">
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Button
                         onClick={handleAddFabricator}
                         disabled={!newFabricatorId}
@@ -1043,7 +1045,7 @@ export function ProjectDetails({
                   </div>
                 )}
 
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 px-4 pb-6 sm:px-6">
                   <div className="pb-5 border-b">
                     <Label className="flex items-center gap-2 text-base mb-3">
                       Supervisor
@@ -1172,13 +1174,13 @@ export function ProjectDetails({
               {editedProject.attachments &&
               editedProject.attachments.length > 0 ? (
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="h-5 w-5" />
                       Project Files ({editedProject.attachments.length})
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="px-4 pb-6 sm:px-6">
                     <div className="space-y-2">
                       {editedProject.attachments.map((attachment) => (
                         <div
@@ -1216,7 +1218,7 @@ export function ProjectDetails({
                 </Card>
               ) : (
                 <Card>
-                  <CardContent className="py-12 text-center">
+                  <CardContent className="px-4 py-10 text-center sm:px-6 sm:py-12">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg mb-2">No files uploaded yet</h3>
                     <p className="text-muted-foreground">
@@ -1231,13 +1233,13 @@ export function ProjectDetails({
 
             <TabsContent value="documentation" className="space-y-6 pt-5">
               <Card>
-                <CardHeader>
+                <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
                   <CardTitle className="flex items-center gap-2">
                     <Link className="h-5 w-5" />
                     Google Drive Documentation
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 px-4 pb-6 sm:px-6">
                   {isEditing ? (
                     <div className="space-y-2">
                       <Label htmlFor="docs-url">Documentation URL</Label>
@@ -1252,7 +1254,7 @@ export function ProjectDetails({
                       />
                     </div>
                   ) : editedProject.documentationUrl ? (
-                    <div className="flex items-center justify-between p-4 bg-muted rounded-lg gap-4">
+                    <div className="flex flex-col gap-3 p-4 bg-muted rounded-lg sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                       <div className="flex items-center gap-3 min-w-0">
                         <Link className="h-5 w-5 text-primary shrink-0" />
                         <div className="min-w-0">
@@ -1271,7 +1273,11 @@ export function ProjectDetails({
                           </p>
                         </div>
                       </div>
-                      <Button variant="outline" asChild className="shrink-0">
+                      <Button
+                        variant="outline"
+                        asChild
+                        className="w-full sm:w-auto shrink-0"
+                      >
                         <a
                           href={editedProject.documentationUrl}
                           target="_blank"
@@ -1283,7 +1289,7 @@ export function ProjectDetails({
                       </Button>
                     </div>
                   ) : (
-                    <div className="text-center py-10">
+                    <div className="text-center py-8 sm:py-10">
                       <Link className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                       <h3 className="text-lg mb-2">No documentation link</h3>
                       <p className="text-muted-foreground">
@@ -1295,10 +1301,10 @@ export function ProjectDetails({
               </Card>
 
               <Card>
-                <CardHeader>
+                <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
                   <CardTitle>Documentation Guidelines</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
+                <CardContent className="space-y-3 px-4 pb-6 sm:px-6">
                   <p className="text-sm text-muted-foreground">
                     The Google Drive folder should contain:
                   </p>
