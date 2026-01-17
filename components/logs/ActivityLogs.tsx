@@ -11,6 +11,14 @@ import {
   UserCog,
   Crown,
   HelpCircle,
+  RefreshCw,
+  Download,
+  ChevronUp,
+  Plus,
+  Edit3,
+  Trash2,
+  LogIn,
+  X,
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -27,6 +35,8 @@ interface LogEntry {
 const ITEMS_PER_PAGE = 5;
 
 export function ActivityLogs() {
+  // Export confirmation modal state
+  const [showExportModal, setShowExportModal] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
   const [displayedLogs, setDisplayedLogs] = useState<LogEntry[]>([]);
@@ -37,13 +47,27 @@ export function ActivityLogs() {
   const [selectedAction, setSelectedAction] = useState("");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
 
   // Fetch all logs once on mount
   useEffect(() => {
     fetchLogs();
+  }, []);
+
+  // Scroll listener for scroll-to-top button
+  useEffect(() => {
+    const handleScroll = () => {
+      if (contentRef.current) {
+        setShowScrollTop(contentRef.current.scrollTop > 300);
+      }
+    };
+    const ref = contentRef.current;
+    ref?.addEventListener("scroll", handleScroll);
+    return () => ref?.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Re-apply filters whenever source data or filter inputs change
@@ -86,7 +110,7 @@ export function ActivityLogs() {
           }, 400);
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px 100px 0px" }
+      { threshold: 0.1, rootMargin: "0px 0px 100px 0px" },
     );
 
     observerRef.current.observe(loadMoreRef.current);
@@ -113,12 +137,51 @@ export function ActivityLogs() {
     }
   };
 
+  const handleRefresh = async () => {
+    setLoading(true);
+    await fetchLogs();
+  };
+
+  const scrollToTop = () => {
+    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  // Show modal instead of exporting immediately
+  const handleExport = () => {
+    setShowExportModal(true);
+  };
+
+  // Actual export logic
+  const confirmExport = () => {
+    const csv = [
+      ["Timestamp", "User", "Role", "Action", "Description", "IP Address"],
+      ...filteredLogs.map((log) => [
+        format(new Date(log.created_at), "MMM d, yyyy h:mm a"),
+        log.user_name,
+        log.user_role,
+        getActionLabel(log.action),
+        log.description,
+        log.ip_address,
+      ]),
+    ]
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `activity-logs-${format(new Date(), "yyyy-MM-dd")}.csv`;
+    a.click();
+    setShowExportModal(false);
+  };
+
   const getActionLabel = (action: string): string => {
     const upper = action.toUpperCase();
     if (upper.includes("DEACTIVATE") || upper.includes("DELETE"))
-      return "Deactivate";
-    if (upper.includes("CREATE") || upper.includes("ADD")) return "Create";
-    if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Update";
+      return "Delete";
+    if (upper.includes("CREATE") || upper.includes("ADD")) return "Add";
+    if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Edit";
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return "Login";
 
     return action
@@ -130,18 +193,31 @@ export function ActivityLogs() {
   const getActionColor = (action: string) => {
     const upper = action.toUpperCase();
     if (upper.includes("DELETE") || upper.includes("DEACTIVATE")) {
-      return "bg-red-100 text-red-800 border-red-300";
+      return "border-l-4 border-l-red-500 bg-red-50 text-red-800";
     }
     if (upper.includes("CREATE") || upper.includes("ADD")) {
-      return "bg-blue-100 text-blue-800 border-blue-300";
+      return "border-l-4 border-l-emerald-500 bg-emerald-50 text-emerald-800";
     }
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) {
-      return "bg-gray-100 text-gray-800 border-gray-300";
+      return "border-l-4 border-l-blue-500 bg-blue-50 text-blue-800";
     }
     if (upper.includes("UPDATE") || upper.includes("EDIT")) {
-      return "bg-amber-100 text-amber-800 border-amber-300";
+      return "border-l-4 border-l-amber-500 bg-amber-50 text-amber-800";
     }
-    return "bg-gray-100 text-gray-800 border-gray-300";
+    return "border-l-4 border-l-gray-500 bg-gray-50 text-gray-800";
+  };
+
+  const getActionIcon = (action: string) => {
+    const upper = action.toUpperCase();
+    if (upper.includes("DELETE") || upper.includes("DEACTIVATE"))
+      return <Trash2 className="h-3 w-3" />;
+    if (upper.includes("CREATE") || upper.includes("ADD"))
+      return <Plus className="h-3 w-3" />;
+    if (upper.includes("LOGIN") || upper.includes("SIGN_IN"))
+      return <LogIn className="h-3 w-3" />;
+    if (upper.includes("UPDATE") || upper.includes("EDIT"))
+      return <Edit3 className="h-3 w-3" />;
+    return <Activity className="h-3 w-3" />;
   };
 
   const getRoleIcon = (role: string) => {
@@ -197,149 +273,276 @@ export function ActivityLogs() {
     setSelectedAction(e.target.value);
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Activity className="h-7 w-7 text-blue-600" />
-        <h2 className="text-2xl font-bold tracking-tight">
-          System Activity Logs
-        </h2>
-      </div>
+  const getUserInitials = (name: string): string => {
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
-      <div className="rounded-lg border bg-white shadow-sm">
-        <div className="px-6 py-4 flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b">
-          <div>
-            <h3 className="text-lg font-semibold">Audit Trail</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Monitor all user actions within the system.
-            </p>
+  return (
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg blur opacity-20"></div>
+            <div className="relative bg-white rounded-lg p-3">
+              <Activity className="h-6 w-6 text-blue-600" />
+            </div>
           </div>
           <div>
-            <select
-              value={selectedAction}
-              onChange={handleActionChange}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none min-w-[180px] cursor-pointer"
-            >
-              <option value="">All Activities</option>
-              <option value="login">Login</option>
-              <option value="create">Create</option>
-              <option value="update">Update</option>
-              <option value="deactivate">Deactivate</option>
-            </select>
+            <h2 className="text-3xl font-bold tracking-tight text-gray-900">
+              Activity Logs
+            </h2>
+            <p className="text-sm text-gray-500 mt-1">
+              Track and monitor all system activities
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleRefresh}
+          disabled={loading}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          Refresh
+        </button>
+      </div>
+
+      <div className="rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+        {/* Filters & Actions Bar */}
+        <div className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">
+                Audit Trail
+              </h3>
+              <p className="text-sm text-gray-600 mt-0.5">
+                {filteredLogs.length > 0
+                  ? `Showing ${displayedLogs.length} of ${filteredLogs.length} activities`
+                  : "No activities found"}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <select
+                value={selectedAction}
+                onChange={handleActionChange}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:border-gray-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none cursor-pointer"
+              >
+                <option value="">All Activities</option>
+                <option value="add">Add</option>
+                <option value="edit">Edit</option>
+                <option value="delete">Delete</option>
+                <option value="login">Login</option>
+              </select>
+              <button
+                onClick={handleExport}
+                disabled={displayedLogs.length === 0}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 transition-colors disabled:opacity-50 font-medium text-sm"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
+              {/* Export Confirmation Modal */}
+              {showExportModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4">
+                  <div className="modal bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md sm:max-w-md max-w-xs sm:w-full overflow-hidden">
+                    <div className="p-4 sm:p-6 border-b">
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="text-lg font-semibold flex items-center gap-2.5">
+                          <Download className="h-5 w-5 text-emerald-600" />
+                          Export Activity Logs
+                        </h3>
+                        <button
+                          className="text-gray-500 hover:text-red-600 rounded-full p-1.5 transition-colors"
+                          onClick={() => setShowExportModal(false)}
+                          aria-label="Close"
+                        >
+                          <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1.5">
+                        Are you sure you want to export the currently displayed
+                        activity logs?
+                      </p>
+                    </div>
+                    <div className="p-4 sm:p-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
+                      <button
+                        className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={() => setShowExportModal(false)}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors font-semibold"
+                        onClick={confirmExport}
+                      >
+                        Export
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        <div className="border-b px-6 py-4">
-          <div className="relative w-full max-w-lg">
+        {/* Search Bar */}
+        <div className="border-b border-gray-100 px-6 py-4 bg-white">
+          <div className="relative w-full max-w-md">
             <input
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search activity logs..."
-              className="w-full rounded-md border border-gray-300 bg-white pl-10 py-2 text-sm shadow-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+              placeholder="Search by user, action, or description..."
+              className="w-full rounded-lg border border-gray-300 bg-white pl-10 pr-4 py-2.5 text-sm shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none"
             />
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#e28a33] pointer-events-none" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
           </div>
-          <p className="mt-1 text-sm text-gray-500 p-2">
-            <span className="font-semibold text-[#e28a33]">Note: </span>
-            You can search by action, user, details, or date & time.
+          <p className="mt-2 text-xs text-gray-500 flex items-center gap-1.5">
+            <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
+            Search across all fields: user name, role, action type, description,
+            IP address, and timestamps
           </p>
         </div>
 
-        <div className="p-6">
+        {/* Content Area */}
+        <div
+          ref={contentRef}
+          className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto"
+        >
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-gray-500">
-              <Loader2 className="h-10 w-10 animate-spin mb-4" />
-              <p className="text-lg">Loading activity history...</p>
+            <div className="flex flex-col items-center justify-center py-20 text-gray-500">
+              <div className="relative mb-4">
+                <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
+              </div>
+              <p className="text-lg font-medium">Loading activity history...</p>
+              <p className="text-sm mt-2">Please wait</p>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-16 text-red-600">
-              <AlertTriangle className="h-10 w-10 mb-4" />
-              <p className="text-lg">{error}</p>
+            <div className="flex flex-col items-center justify-center py-20 text-red-600">
+              <div className="bg-red-100 rounded-full p-4 mb-4">
+                <AlertTriangle className="h-8 w-8" />
+              </div>
+              <p className="text-lg font-medium">{error}</p>
+              <button
+                onClick={handleRefresh}
+                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+              >
+                Try Again
+              </button>
             </div>
           ) : displayedLogs.length === 0 && page === 1 ? (
-            <div className="py-16 text-center text-gray-500">
-              <p className="text-lg">
+            <div className="py-20 text-center text-gray-500">
+              <div className="bg-gray-100 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+                <Activity className="h-8 w-8 text-gray-400" />
+              </div>
+              <p className="text-lg font-medium">
                 {searchTerm || selectedAction
-                  ? "No matching activity logs found."
-                  : "No activity logs found."}
+                  ? "No matching activities found"
+                  : "No activity logs found"}
+              </p>
+              <p className="text-sm mt-2">
+                {searchTerm || selectedAction
+                  ? "Try adjusting your filters"
+                  : "Activities will appear here"}
               </p>
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto -mx-6 px-6">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gradient-to-r from-gray-50 to-gray-100 sticky top-0 text-black">
                     <tr>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-sm font-semibold text-gray-700 whitespace-nowrap"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                       >
                         Timestamp
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-sm font-semibold text-gray-700 whitespace-nowrap"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                       >
                         User
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-sm font-semibold text-gray-700 whitespace-nowrap"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                       >
                         Action
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-sm font-semibold text-gray-700"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider"
                       >
                         Description
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-right text-sm font-semibold text-gray-700 whitespace-nowrap"
+                        className="px-4 py-3.5 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider"
                       >
                         IP Address
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200 bg-white">
-                    {displayedLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-gray-50">
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {displayedLogs.map((log, idx) => (
+                      <tr
+                        key={log.id}
+                        className={`hover:bg-gradient-to-r hover:from-blue-50 to-transparent transition-colors ${
+                          idx % 2 === 0 ? "bg-white" : "bg-gray-50"
+                        }`}
+                      >
                         <td className="px-4 py-4">
                           <div className="flex flex-col">
-                            <div className="font-medium text-gray-700">
+                            <div className="font-medium text-gray-900 text-sm">
                               {format(new Date(log.created_at), "MMM d, yyyy")}
                             </div>
-                            <div className="mt-0.5 text-xs text-gray-500">
+                            <div className="mt-1 text-xs text-gray-500">
                               {format(new Date(log.created_at), "h:mm a")}
                             </div>
                           </div>
                         </td>
                         <td className="px-4 py-4">
-                          <div className="font-medium text-gray-700">
-                            {log.user_name}
-                          </div>
-                          <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 capitalize">
-                            {getRoleIcon(log.user_role)}
-                            <span>{log.user_role}</span>
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex-shrink-0">
+                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-xs font-bold">
+                                {getUserInitials(log.user_name)}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="font-medium text-gray-900 text-sm">
+                                {log.user_name}
+                              </div>
+                              <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 capitalize">
+                                {getRoleIcon(log.user_role)}
+                                <span>{log.user_role}</span>
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-sm">
                           <span
-                            className={`inline-flex items-center rounded-md border px-2.5 py-0.5 text-xs font-medium ${getActionColor(
-                              log.action
+                            className={`inline-flex items-center border-l-4 px-3 py-1 text-xs font-medium ${getActionColor(
+                              log.action,
                             )}`}
                           >
                             {getActionLabel(log.action)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-600 max-w-xl">
-                          <div className="line-clamp-2" title={log.description}>
+                        <td className="px-4 py-4 text-sm text-gray-600">
+                          <div
+                            className="line-clamp-2 max-w-xs"
+                            title={log.description}
+                          >
                             {log.description}
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-mono text-gray-500">
+                        <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-mono text-gray-600">
                           {log.ip_address}
                         </td>
                       </tr>
@@ -352,8 +555,8 @@ export function ActivityLogs() {
                 <div ref={loadMoreRef} className="py-10 flex justify-center">
                   {loadingMore ? (
                     <div className="flex items-center gap-2.5 text-gray-600">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      <span>Loading more...</span>
+                      <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                      <span>Loading more activities...</span>
                     </div>
                   ) : (
                     <div className="h-12" /> // trigger area
@@ -362,14 +565,27 @@ export function ActivityLogs() {
               )}
 
               {!hasMore && displayedLogs.length > 0 && (
-                <div className="py-6 text-center text-sm text-gray-500">
-                  End of results
+                <div className="py-8 text-center text-sm text-gray-500 font-medium">
+                  <span className="inline-block px-4 py-2 bg-gray-100 rounded-lg">
+                    You've reached the end
+                  </span>
                 </div>
               )}
             </>
           )}
         </div>
       </div>
+
+      {/* Scroll to Top Button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-110 transition-all z-50"
+          aria-label="Scroll to top"
+        >
+          <ChevronUp className="h-5 w-5" />
+        </button>
+      )}
     </div>
   );
 }

@@ -39,6 +39,7 @@ import {
 import { mapProjectsFromBackend } from "./utils/projectDataMapper";
 import { mapTasksFromBackend } from "./utils/taskDataMapper";
 import { mapUserDataFromBackend } from "./utils/userDataMapper";
+import { mapMaterialFromBackend, mapMaterialsFromBackend } from "./utils/materialDataMapper";
 import { emailService } from "./utils/emailService";
 import { apiService } from "./utils/apiService";
 import { useTimeBasedTheme } from "./hooks/useTimeBasedTheme";
@@ -205,7 +206,7 @@ export default function App() {
       }
 
       if (materialsRes.data) {
-        setMaterials(materialsRes.data);
+        setMaterials(mapMaterialsFromBackend(materialsRes.data));
       }
 
       if (usersRes.data) {
@@ -415,15 +416,34 @@ export default function App() {
     }
   };
 
-  const handleAddMaterial = (
+  const handleAddMaterial = async (
     materialData: Omit<Material, "id" | "addedAt">
   ) => {
-    const newMaterial: Material = {
-      ...materialData,
-      id: `mat-${Date.now()}`,
-      addedAt: new Date().toISOString(),
-    };
-    setMaterials((prevMaterials) => [...prevMaterials, newMaterial]);
+    try {
+      const payload = {
+        ...materialData,
+        projectId: materialData.projectId ?? "general",
+        costPerUnit: materialData.cost,
+        totalCost: materialData.cost * materialData.quantity,
+      };
+      const response = await apiService.createMaterial(payload);
+
+      if (response.data) {
+        const mapped = mapMaterialFromBackend(response.data);
+        setMaterials((prevMaterials) => [mapped, ...prevMaterials]);
+        return;
+      }
+      throw new Error(response.error || "Failed to save material");
+    } catch (error) {
+      console.error("Failed to save material:", error);
+      alert("Failed to save material. It will only be stored locally.");
+      const newMaterial: Material = {
+        ...materialData,
+        id: `mat-${Date.now()}`,
+        addedAt: new Date().toISOString(),
+      };
+      setMaterials((prevMaterials) => [newMaterial, ...prevMaterials]);
+    }
   };
 
   const handleAcceptAssignment = async (

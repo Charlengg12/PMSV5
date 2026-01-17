@@ -1,12 +1,12 @@
-import { useState } from 'react';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Label } from '../ui/label';
-import { Alert, AlertDescription } from '../ui/alert';
-import { UserPlus, CheckCircle2, Copy, Eye, EyeOff } from 'lucide-react';
-import { User, Project } from '../../types';
-import { apiService } from '../../utils/apiService';
-import Swal from 'sweetalert2';
+import { useState } from "react";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Alert, AlertDescription } from "../ui/alert";
+import { UserPlus, CheckCircle2, Copy, Eye, EyeOff } from "lucide-react";
+import { User, Project } from "../../types";
+import { apiService } from "../../utils/apiService";
+import Swal from "sweetalert2";
 
 interface ClientCreationDialogProps {
   open: boolean;
@@ -22,10 +22,10 @@ export function ClientCreationDialog({
   onClientCreated,
 }: ClientCreationDialogProps) {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -33,24 +33,26 @@ export function ClientCreationDialog({
   const [showPassword, setShowPassword] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  const isAssigned = !!(project.clientName && project.clientName.trim().length > 0);
+  const isAssigned = !!(
+    project.clientName && project.clientName.trim().length > 0
+  );
 
   if (!open) return null;
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.name.trim()) newErrors.name = 'Client name is required';
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
+    if (!formData.name.trim()) newErrors.name = "Client name is required";
+    if (!formData.email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = "Please enter a valid email address";
     }
-    if (!formData.password.trim()) newErrors.password = 'Password is required';
+    if (!formData.password.trim()) newErrors.password = "Password is required";
     else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = "Password must be at least 6 characters";
     }
     if (formData.phone && !/^(\+639|09)\d{9}$/.test(formData.phone)) {
-      newErrors.phone = 'Please enter a valid Philippine phone number';
+      newErrors.phone = "Please enter a valid Philippine phone number";
     }
 
     setErrors(newErrors);
@@ -60,7 +62,7 @@ export function ClientCreationDialog({
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: '' }));
+      setErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
@@ -69,18 +71,18 @@ export function ClientCreationDialog({
 
     if (isAssigned) {
       Swal.fire({
-        icon: 'warning',
-        title: 'Client Already Assigned',
+        icon: "warning",
+        title: "Client Already Assigned",
         text: `This project already has a client (${project.clientName}).`,
-        confirmButtonText: 'OK',
+        confirmButtonText: "OK",
         customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          confirmButton: 'swal-confirm-button',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon',
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
         },
       });
       return;
@@ -89,38 +91,38 @@ export function ClientCreationDialog({
     if (!validateForm()) return;
 
     const result = await Swal.fire({
-      title: 'Create client account?',
+      title: "Create client account?",
       text: `This will create a new client account for ${formData.name} and assign them to ${project.name}.`,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonText: 'Confirm',
-      cancelButtonText: 'Cancel',
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
       customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        confirmButton: 'swal-confirm-button',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon',
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
       },
     });
 
     if (!result.isConfirmed) return;
 
     Swal.fire({
-      title: 'Creating client account...',
+      title: "Creating client account...",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
       customClass: {
-        container: 'swal-container',
-        popup: 'swal-popup',
-        title: 'swal-title',
-        htmlContainer: 'swal-content',
-        confirmButton: 'swal-confirm-button',
-        cancelButton: 'swal-cancel-button',
-        icon: 'swal-icon',
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
       },
       didOpen: () => {
         Swal.showLoading();
@@ -137,50 +139,53 @@ export function ClientCreationDialog({
       });
 
       if (response.data) {
-const newClient = response.data.user || response.data;        setCreatedClient(newClient);
+        const newClient = response.data.user || response.data;
+        setCreatedClient(newClient);
         onClientCreated(newClient);
 
         Swal.close();
 
         await Swal.fire({
-          title: 'Success!',
+          title: "Success!",
           text: `Client account for ${newClient.name} has been created.`,
-          icon: 'success',
+          icon: "success",
           timer: 2200,
           showConfirmButton: false,
           customClass: {
-            container: 'swal-container',
-            popup: 'swal-popup',
-            title: 'swal-title',
-            htmlContainer: 'swal-content',
-            confirmButton: 'swal-confirm-button',
-            cancelButton: 'swal-cancel-button',
-            icon: 'swal-icon',
+            container: "swal-container",
+            popup: "swal-popup",
+            title: "swal-title",
+            htmlContainer: "swal-content",
+            confirmButton: "swal-confirm-button",
+            cancelButton: "swal-cancel-button",
+            icon: "swal-icon",
           },
         });
       } else {
-        throw new Error(response.error || 'Failed to create client');
+        throw new Error(response.error || "Failed to create client");
       }
     } catch (err: any) {
       Swal.close();
 
       Swal.fire({
-        icon: 'error',
-        title: 'Creation Failed',
-        text: err.message || 'Something went wrong while creating the client account.',
-        confirmButtonText: 'OK',
+        icon: "error",
+        title: "Creation Failed",
+        text:
+          err.message ||
+          "Something went wrong while creating the client account.",
+        confirmButtonText: "OK",
         customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          confirmButton: 'swal-confirm-button',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon',
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+          icon: "swal-icon",
         },
       });
 
-      setErrors({ submit: err.message || 'Failed to create client account' });
+      setErrors({ submit: err.message || "Failed to create client account" });
     } finally {
       setIsLoading(false);
     }
@@ -193,7 +198,7 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
   };
 
   const handleClose = () => {
-    setFormData({ name: '', email: '', phone: '', password: '' });
+    setFormData({ name: "", email: "", phone: "", password: "" });
     setErrors({});
     setCreatedClient(null);
     setShowPassword(false);
@@ -220,7 +225,9 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                 <div className="h-14 w-14 rounded-full bg-green-100 flex items-center justify-center mb-4">
                   <CheckCircle2 className="h-8 w-8 text-green-600" />
                 </div>
-                <h2 className="text-xl font-semibold">Client Account Created!</h2>
+                <h2 className="text-xl font-semibold">
+                  Client Account Created!
+                </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   Successfully created for <strong>{project.name}</strong>
                 </p>
@@ -229,26 +236,35 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
               <div className="space-y-5">
                 <Alert>
                   <AlertDescription>
-                    Login credentials sent to <strong>{createdClient.email}</strong>
+                    Login credentials sent to{" "}
+                    <strong>{createdClient.email}</strong>
                   </AlertDescription>
                 </Alert>
 
                 <div className="space-y-3 p-4 bg-muted/50 rounded-lg border">
-                  <p className="text-sm font-medium">Client Login Credentials</p>
+                  <p className="text-sm font-medium">
+                    Client Login Credentials
+                  </p>
 
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between p-2.5 bg-background rounded border">
                       <div>
-                        <p className="text-xs text-muted-foreground">Client ID</p>
-                        <p className="font-mono text-sm">{createdClient.secureId}</p>
+                        <p className="text-xs text-muted-foreground">
+                          Client ID
+                        </p>
+                        <p className="font-mono text-sm">
+                          {createdClient.secureId}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleCopy(createdClient.secureId, 'secureId')}
+                        onClick={() =>
+                          handleCopy(createdClient.secureId, "secureId")
+                        }
                       >
-                        {copiedField === 'secureId' ? (
+                        {copiedField === "secureId" ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
                         ) : (
                           <Copy className="h-4 w-4" />
@@ -265,9 +281,9 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                         variant="ghost"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => handleCopy(createdClient.email, 'email')}
+                        onClick={() => handleCopy(createdClient.email, "email")}
                       >
-                        {copiedField === 'email' ? (
+                        {copiedField === "email" ? (
                           <CheckCircle2 className="h-4 w-4 text-green-600" />
                         ) : (
                           <Copy className="h-4 w-4" />
@@ -277,16 +293,21 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
 
                     <div className="flex items-center justify-between p-2.5 bg-background rounded border">
                       <div>
-                        <p className="text-xs text-muted-foreground">Password</p>
+                        <p className="text-xs text-muted-foreground">
+                          Password
+                        </p>
                         <p className="font-mono text-sm">••••••••</p>
                       </div>
-                      <span className="text-xs text-muted-foreground">As set</span>
+                      <span className="text-xs text-muted-foreground">
+                        As set
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 <div className="p-3 bg-blue-50 border border-blue-200 rounded text-sm text-blue-900">
-                  <strong>Access Level:</strong> View only — project docs & progress
+                  <strong>Access Level:</strong> View only — project docs &
+                  progress
                 </div>
 
                 <Button onClick={handleClose} className="w-full">
@@ -302,11 +323,12 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <UserPlus className="h-5 w-5 text-primary" />
-                  <h2 className="text-xl font-semibold">Create Client Account</h2>
+                  <h2 className="text-xl font-semibold">
+                    Create Client Account
+                  </h2>
                 </div>
                 <Button variant="ghost" size="icon" onClick={handleClose}>
-                  <span className="sr-only">Close</span>
-                  ×
+                  <span className="sr-only">Close</span>×
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mt-1">
@@ -329,11 +351,13 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                   id="name"
                   placeholder="Full name"
                   value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  className={errors.name ? 'border-destructive' : ''}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  className={errors.name ? "border-destructive" : ""}
                   disabled={isAssigned || isLoading}
                 />
-                {errors.name && <p className="text-sm text-destructive pt-1">{errors.name}</p>}
+                {errors.name && (
+                  <p className="text-sm text-destructive pt-1">{errors.name}</p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -343,11 +367,15 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                   type="email"
                   placeholder="client@example.com"
                   value={formData.email}
-                  onChange={(e) => handleInputChange('email', e.target.value)}
-                  className={errors.email ? 'border-destructive' : ''}
+                  onChange={(e) => handleInputChange("email", e.target.value)}
+                  className={errors.email ? "border-destructive" : ""}
                   disabled={isAssigned || isLoading}
                 />
-                {errors.email && <p className="text-sm text-destructive pt-1">{errors.email}</p>}
+                {errors.email && (
+                  <p className="text-sm text-destructive pt-1">
+                    {errors.email}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -357,11 +385,15 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                   type="tel"
                   placeholder="+639123456789 / 09123456789"
                   value={formData.phone}
-                  onChange={(e) => handleInputChange('phone', e.target.value)}
-                  className={errors.phone ? 'border-destructive' : ''}
+                  onChange={(e) => handleInputChange("phone", e.target.value)}
+                  className={errors.phone ? "border-destructive" : ""}
                   disabled={isAssigned || isLoading}
                 />
-                {errors.phone && <p className="text-sm text-destructive pt-1">{errors.phone}</p>}
+                {errors.phone && (
+                  <p className="text-sm text-destructive pt-1">
+                    {errors.phone}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
@@ -369,11 +401,13 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                 <div className="relative">
                   <Input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     placeholder="Minimum 6 characters"
                     value={formData.password}
-                    onChange={(e) => handleInputChange('password', e.target.value)}
-                    className={errors.password ? 'border-destructive' : ''}
+                    onChange={(e) =>
+                      handleInputChange("password", e.target.value)
+                    }
+                    className={errors.password ? "border-destructive" : ""}
                     disabled={isAssigned || isLoading}
                   />
                   <Button
@@ -392,7 +426,9 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
                   </Button>
                 </div>
                 {errors.password && (
-                  <p className="text-sm text-destructive pt-1">{errors.password}</p>
+                  <p className="text-sm text-destructive pt-1">
+                    {errors.password}
+                  </p>
                 )}
               </div>
 
@@ -403,7 +439,8 @@ const newClient = response.data.user || response.data;        setCreatedClient(n
               )}
 
               <div className="text-sm text-muted-foreground bg-muted/40 p-3 rounded border">
-                Client will receive login credentials via email and can view project progress & documents only.
+                Client will receive login credentials via email and can view
+                project progress & documents only.
               </div>
 
               <div className="flex gap-3 pt-2">

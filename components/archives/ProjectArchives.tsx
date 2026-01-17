@@ -34,17 +34,8 @@ import {
 } from "lucide-react";
 import { Project, User as UserType, Material, WorkLogEntry } from "../../types";
 import { ProjectDetails } from "../projects/ProjectDetails";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
 import { CreateProjectForm } from "../projects/CreateProjectForm";
+import Swal from "sweetalert2";
 
 interface ProjectArchivesProps {
   projects: Project[];
@@ -99,9 +90,6 @@ export function ProjectArchives({
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
 
   const isArchivableProject = (project: Project) => {
     const normalizedStatus = safeText(project.status).toLowerCase().trim();
@@ -181,6 +169,68 @@ export function ProjectArchives({
 
   const canViewFinancials = currentUser.role === "admin";
 
+  const handleDeleteClick = (project: Project) => {
+    Swal.fire({
+      title: "Are you sure?",
+      text: `Are you sure you want to delete "${project.name}"? This action cannot be undone.`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Confirm",
+      customClass: {
+        container: "swal-container !z-[10000]",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        Swal.fire({
+          title: "Deleting...",
+          text: "Please wait...",
+          allowOutsideClick: false,
+          showConfirmButton: false,
+          customClass: {
+            container: "swal-container !z-[10000]",
+            popup: "swal-popup",
+            title: "swal-title",
+            htmlContainer: "swal-content",
+            confirmButton: "swal-confirm-button",
+            cancelButton: "swal-cancel-button",
+            icon: "swal-icon",
+          },
+          didOpen: () => {
+            Swal.showLoading();
+          },
+        });
+
+        setTimeout(() => {
+          if (onDeleteProject) {
+            onDeleteProject(project.id);
+          }
+          Swal.fire({
+            title: "Deleted!",
+            text: "The project has been deleted.",
+            icon: "success",
+            customClass: {
+              container: "swal-container !z-[10000]",
+              popup: "swal-popup",
+              title: "swal-title",
+              htmlContainer: "swal-content",
+              confirmButton: "swal-confirm-button",
+              cancelButton: "swal-cancel-button",
+              icon: "swal-icon",
+            },
+          });
+        }, 1500);
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -200,17 +250,6 @@ export function ProjectArchives({
           >
             {filteredProjects.length} Archived Projects
           </Badge>
-          {(currentUser.role === "admin" ||
-            currentUser.role === "supervisor") && (
-            <Button
-              size="sm"
-              className="h-9 px-3 w-full sm:w-auto"
-              onClick={() => setShowCreateDialog(true)}
-            >
-              <Archive className="h-4 w-4 mr-2" />
-              Add Record
-            </Button>
-          )}
         </div>
       </div>
 
@@ -256,9 +295,6 @@ export function ProjectArchives({
           const supervisor = users.find((u) => u.id === project.supervisorId);
           const fabricators = users.filter((u) =>
             getFabricatorIds(project).includes(u.id)
-          );
-          const client = users.find(
-            (u) => u.role === "client" && u.clientProjectId === project.id
           );
           const projectSchool = getProjectSchool(project);
           const fabricatorDocs = getFabricatorDocumentation(project);
@@ -413,10 +449,7 @@ export function ProjectArchives({
                           variant="outline"
                           size="sm"
                           className="w-full lg:flex-1 text-destructive hover:text-destructive"
-                          onClick={() => {
-                            setProjectToDelete(project);
-                            setDeleteDialogOpen(true);
-                          }}
+                          onClick={() => handleDeleteClick(project)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" />
                           <span className="truncate">Delete</span>
@@ -852,64 +885,6 @@ export function ProjectArchives({
           }}
         />
       )}
-
-      {/* Delete Confirmation */}
-      {/* Create Archive Dialog */}
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Archived Project</DialogTitle>
-            <DialogDescription>
-              Create a new historical project record for the archives.
-            </DialogDescription>
-          </DialogHeader>
-          <CreateProjectForm
-            users={users}
-            currentUser={currentUser}
-            onSubmit={async (data) => {
-              if (onCreateProject) {
-                // Ensure status is completed for archive
-                await onCreateProject({
-                  ...data,
-                  status: "completed",
-                  progress: 100,
-                });
-                setShowCreateDialog(false);
-              }
-            }}
-            onCancel={() => setShowCreateDialog(false)}
-          />
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Archived Project</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{projectToDelete?.name}"? This
-              action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setProjectToDelete(null)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={() => {
-                if (projectToDelete && onDeleteProject) {
-                  onDeleteProject(projectToDelete.id);
-                }
-                setDeleteDialogOpen(false);
-                setProjectToDelete(null);
-              }}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

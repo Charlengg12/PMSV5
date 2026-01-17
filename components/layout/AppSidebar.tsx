@@ -41,6 +41,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   const [showLogoutSpinner, setShowLogoutSpinner] = useState(false);
   const [activeHash, setActiveHash] = useState("");
   const [isMd, setIsMd] = useState(false);
+  const [autoCollapsed, setAutoCollapsed] = useState(false);
   // Detect md (iPad) screen
   useEffect(() => {
     const checkMd = () => {
@@ -52,8 +53,14 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
     return () => window.removeEventListener("resize", checkMd);
   }, []);
   useEffect(() => {
-    if (isMd) setOpen(false); // collapse sidebar on md
-  }, [isMd, setOpen]);
+    if (isMd) {
+      setOpen(false); // collapse sidebar on md
+      setAutoCollapsed(true);
+    } else if (autoCollapsed) {
+      setOpen(true); // restore sidebar on desktop
+      setAutoCollapsed(false);
+    }
+  }, [isMd, setOpen, autoCollapsed]);
   const isCollapsed = state === "collapsed" || isMd;
   const isCollapsedDesktop = isCollapsed && !isMobile;
   const menuLinkClassName = isCollapsedDesktop

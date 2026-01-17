@@ -136,7 +136,7 @@ export function ProjectsGrid({
 
   // Client-side search filtering
   const filteredProjects = roleFilteredProjects
-    .filter((p) => p.status !== "completed")
+    .filter((p) => p.status !== "completed" && p.progress < 100)
     .filter((project) => {
       if (!searchTerm.trim()) return true;
 
@@ -220,9 +220,17 @@ export function ProjectsGrid({
     }
   };
 
-  const getSupervisorName = (supervisorId: string) => {
-    const supervisor = users.find((u) => u.id === supervisorId);
-    return supervisor?.name || "Unknown Supervisor";
+  const getSupervisorLabel = (project: Project) => {
+    if (project.supervisorId) {
+      const supervisor = users.find((u) => u.id === project.supervisorId);
+      return supervisor?.name || "Unknown Supervisor";
+    }
+
+    if (project.pendingSupervisors && project.pendingSupervisors.length > 0) {
+      return "Pending supervisor acceptance";
+    }
+
+    return "Not assigned";
   };
 
   const getFabricatorNames = (fabricatorIds: string[]) => {
@@ -325,14 +333,18 @@ export function ProjectsGrid({
           <div className="flex flex-col gap-2 sm:flex-row sm:gap-3">
             {(currentUser.role === "admin" ||
               currentUser.role === "supervisor") && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto whitespace-nowrap"
-                onClick={handleMarkProjectAsDone} // ← placeholder - replace with your actual archive logic
-                disabled={projects.filter(p => p.status === "completed" || p.progress >= 100).length === 0}
-              >
-                Archive Completed ({projects.filter(p => p.status === "completed" || p.progress >= 100).length})
-              </Button>
+              // <Button
+              //   variant="outline"
+              //   className="w-full sm:w-auto whitespace-nowrap hover:none"
+              //   onClick={handleMarkProjectAsDone} // ← placeholder - replace with your actual archive logic
+              //   disabled={projects.filter(p => p.status === "completed" || p.progress >= 100).length === 0}
+              // >
+              //   Archive Completed ({projects.filter(p => p.status === "completed" || p.progress >= 100).length})
+              // </Button>
+              <div className="w-full sm:w-auto whitespace-nowrap text-sm text-green-600 flex items-center gap-1">
+                Total Completed:{" "}
+                {projects.filter(p => p.status === "completed" || p.progress >= 100).length}
+              </div>
             )}
 
             {canCreateProject && (
@@ -535,7 +547,7 @@ export function ProjectsGrid({
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <Users className="h-3 w-3" />
                 <span className="truncate">
-                  Supervisor: {getSupervisorName(project.supervisorId)}
+                  Supervisor: {getSupervisorLabel(project)}
                 </span>
               </div>
 
@@ -615,13 +627,13 @@ export function ProjectsGrid({
                         size="sm"
                         className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                         onClick={() =>
-                          onAcceptAssignment &&
-                          onAcceptAssignment("", "accepted", project.id)
-                        }
-                      >
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Accept Project
-                      </Button>
+                        onAcceptAssignment &&
+                        onAcceptAssignment("", "accepted", project.id)
+                      }
+                    >
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Accept
+                    </Button>
                       <Button
                         size="sm"
                         variant="outline"
