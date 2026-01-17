@@ -26,7 +26,7 @@ import {
   TrendingUp,
   Briefcase,
 } from "lucide-react";
-import { format } from "date-fns";
+import { addDays, format, setHours } from "date-fns";
 import { Project, User } from "../../types";
 
 const MAX_ALLOCATION_VALUE = 999_999_999.99;
@@ -86,12 +86,16 @@ export function CreateProjectForm({
   onCreateProject,
   onClose,
 }: CreateProjectFormProps) {
+  const normalizeDate = (date: Date) => setHours(date, 12, 0, 0, 0);
+
   const [formData, setFormData] = useState({
     name: "",
     description: "",
     priority: "medium" as Project["priority"],
-    startDate: new Date(),
-    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)),
+    startDate: normalizeDate(new Date()),
+    endDate: normalizeDate(
+      new Date(new Date().setMonth(new Date().getMonth() + 1)),
+    ),
     supervisorId: "",
     fabricatorIds: [] as string[],
     fabricatorAllocation: "",
@@ -140,6 +144,8 @@ export function CreateProjectForm({
   const matAlloc = parseFloat(formData.materialsAllocation) || 0;
   const supAlloc = parseFloat(formData.supervisorAllocation) || 0;
   const compAlloc = parseFloat(formData.companyAllocation) || 0;
+  const today = normalizeDate(new Date());
+  const minEndDate = addDays(normalizeDate(formData.startDate), 1);
 
   // 1. Budget (Operational Cost): Sum of expenses only
   const operationalBudget = fabAlloc + matAlloc + supAlloc;
@@ -389,8 +395,8 @@ export function CreateProjectForm({
         clientName: "",
         status: initialStatus,
         priority: formData.priority,
-        startDate: formData.startDate.toISOString().split("T")[0],
-        endDate: formData.endDate.toISOString().split("T")[0],
+        startDate: format(formData.startDate, "yyyy-MM-dd"),
+        endDate: format(formData.endDate, "yyyy-MM-dd"),
         progress: 0,
         supervisorId: formData.supervisorId,
         fabricatorIds: formData.supervisorAssignsFabricators
@@ -580,16 +586,35 @@ export function CreateProjectForm({
                         mode="single"
                         selected={formData.startDate}
                         onSelect={(date) => {
-                          if (date) {
-                            handleInputChange("startDate", date);
-                            setShowStartCalendar(false);
+                          if (!date) return;
+                          const normalizedStart = normalizeDate(date);
+                          setFormData((prev) => {
+                            const normalizedEnd = normalizeDate(prev.endDate);
+                            const nextEnd =
+                              normalizedEnd <= normalizedStart
+                                ? addDays(normalizedStart, 1)
+                                : normalizedEnd;
+                            return {
+                              ...prev,
+                              startDate: normalizedStart,
+                              endDate: nextEnd,
+                            };
+                          });
+                          if (errors.startDate || errors.endDate) {
+                            setErrors((prev) => ({
+                              ...prev,
+                              startDate: "",
+                              endDate: "",
+                            }));
                           }
+                          setShowStartCalendar(false);
                         }}
                         initialFocus
                         // FIXED: fixedWeeks prevents height jumping
                         fixedWeeks
                         // Hide outside days to avoid showing next/prev month
                         showOutsideDays={false}
+                        disabled={{ before: today }}
                         weekStartsOn={0}
                         formatters={{
                           formatWeekdayName: (date) =>
@@ -629,16 +654,17 @@ export function CreateProjectForm({
                         mode="single"
                         selected={formData.endDate}
                         onSelect={(date) => {
-                          if (date) {
-                            handleInputChange("endDate", date);
-                            setShowEndCalendar(false);
-                          }
+                          if (!date) return;
+                          const normalizedEnd = normalizeDate(date);
+                          handleInputChange("endDate", normalizedEnd);
+                          setShowEndCalendar(false);
                         }}
                         initialFocus
                         // FIXED: fixedWeeks prevents height jumping
                         fixedWeeks
                         // Hide outside days to avoid showing next/prev month
                         showOutsideDays={false}
+                        disabled={{ before: minEndDate }}
                         weekStartsOn={0}
                         formatters={{
                           formatWeekdayName: (date) =>
