@@ -18,6 +18,7 @@ import { ProjectArchives } from "./components/archives/ProjectArchives";
 import { ClientDashboard } from "./components/client/ClientDashboard";
 import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
 import { ActivityLogs } from "./components/logs/ActivityLogs";
+import { TeamOverview } from "./components/team/TeamOverview";
 // import { AdminProjectsManager } from './components/admin/AdminProjectsManager';
 // import { AdminTasksManager } from './components/admin/AdminTasksManager';
 import {
@@ -1027,6 +1028,30 @@ export default function App() {
                 : undefined
             }
           />
+        );
+
+      case "team":
+        if (currentUser.role === "admin" || currentUser.role === "supervisor") {
+          return (
+            <TeamOverview
+              users={users}
+              projects={projects}
+              tasks={tasks}
+              workLogs={workLogs}
+              currentUser={currentUser}
+              onAssignFabricator={handleAssignFabricator}
+            />
+          );
+        }
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg mb-2">Access Restricted</h3>
+              <p className="text-muted-foreground">
+                Team overview is only available for admins and supervisors.
+              </p>
+            </div>
+          </div>
         );
 
 case "activity-logs":
