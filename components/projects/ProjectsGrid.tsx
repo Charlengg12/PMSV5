@@ -18,7 +18,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../ui/dialog";
-import { Textarea } from "../ui/textarea";
 import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import {
@@ -34,7 +33,6 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  MessageSquare,
   Eye,
   TrendingUp,
   AlertCircle,
@@ -90,7 +88,6 @@ export function ProjectsGrid({
   const [showAssignForm, setShowAssignForm] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState("");
   const [selectedFabricatorId, setSelectedFabricatorId] = useState("");
-  const [assignMessage, setAssignMessage] = useState("");
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [showProjectDetails, setShowProjectDetails] = useState(false);
   const [showClientDialog, setShowClientDialog] = useState(false);
@@ -99,7 +96,6 @@ export function ProjectsGrid({
     new Set()
   );
   const [selectedAssignment, setSelectedAssignment] = useState<string | null>(null);
-  const [assignmentResponse, setAssignmentResponse] = useState("");
 
   // ─── Search state ───────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
@@ -174,15 +170,10 @@ export function ProjectsGrid({
 
   const handleAssignFabricator = () => {
     if (onAssignFabricator && selectedProjectId && selectedFabricatorId) {
-      onAssignFabricator(
-        selectedProjectId,
-        selectedFabricatorId,
-        assignMessage || undefined
-      );
+      onAssignFabricator(selectedProjectId, selectedFabricatorId);
       setShowAssignForm(false);
       setSelectedProjectId("");
       setSelectedFabricatorId("");
-      setAssignMessage("");
     }
   };
 
@@ -378,10 +369,10 @@ export function ProjectsGrid({
             className="hover:shadow-lg transition-all duration-200 border-0 shadow-md overflow-hidden group"
           >
             <div className="h-2 bg-gradient-to-r from-primary to-accent"></div>
-            <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-              <div className="flex justify-between items-start">
+            <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent p-4 sm:p-6">
+              <div className="space-y-2">
                 <CardTitle className="text-lg">{project.name}</CardTitle>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap gap-2">
                   <Badge
                     variant={getStatusColor(project.status)}
                     className="text-xs"
@@ -397,7 +388,7 @@ export function ProjectsGrid({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 sm:p-6">
               <p className="text-sm text-muted-foreground">
                 {project.description}
               </p>
@@ -683,21 +674,6 @@ export function ProjectsGrid({
 
                         return (
                           <div key={assignment.id} className="space-y-3">
-                            {assignment.message && (
-                              <div className="bg-white dark:bg-gray-800 rounded-md p-3 border border-orange-200 dark:border-orange-800">
-                                <div className="flex items-start gap-2 text-sm">
-                                  <MessageSquare className="h-4 w-4 mt-0.5 text-orange-600 dark:text-orange-400 flex-shrink-0" />
-                                  <div>
-                                    <p className="font-medium text-orange-900 dark:text-orange-100 mb-1">
-                                      Message from Supervisor:
-                                    </p>
-                                    <p className="text-orange-800 dark:text-orange-200">
-                                      {assignment.message}
-                                    </p>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
                             <div className="text-xs text-orange-700 dark:text-orange-300 flex items-center gap-2">
                               <Users className="h-3 w-3" />
                               <span>
@@ -717,7 +693,6 @@ export function ProjectsGrid({
                                     setSelectedAssignment(
                                       `accept-${assignment.id}`
                                     );
-                                    setAssignmentResponse("");
                                   }}
                                 >
                                   <CheckCircle className="h-4 w-4 mr-2" />
@@ -729,7 +704,6 @@ export function ProjectsGrid({
                                   className="flex-1 border-red-300 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 hover:border-red-400"
                                   onClick={() => {
                                     setSelectedAssignment(assignment.id);
-                                    setAssignmentResponse("");
                                   }}
                                 >
                                   <XCircle className="h-4 w-4 mr-2" />
@@ -743,15 +717,9 @@ export function ProjectsGrid({
                                 <Label className="text-sm font-medium text-green-900 dark:text-green-100">
                                   Accept
                                 </Label>
-                                <Textarea
-                                  value={assignmentResponse}
-                                  onChange={(e) =>
-                                    setAssignmentResponse(e.target.value)
-                                  }
-                                  placeholder="Add an optional message to the supervisor..."
-                                  className="text-sm"
-                                  rows={3}
-                                />
+                                <p className="text-sm text-green-800 dark:text-green-200">
+                                  Confirm you want to accept this assignment.
+                                </p>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
@@ -759,7 +727,6 @@ export function ProjectsGrid({
                                     className="flex-1"
                                     onClick={() => {
                                       setSelectedAssignment(null);
-                                      setAssignmentResponse("");
                                     }}
                                   >
                                     Cancel
@@ -769,12 +736,8 @@ export function ProjectsGrid({
                                     className="flex-1 bg-green-600 hover:bg-green-700 text-white"
                                     onClick={() => {
                                       if (onAcceptAssignment) {
-                                        onAcceptAssignment(
-                                          assignment.id,
-                                          assignmentResponse.trim() || undefined
-                                        );
+                                        onAcceptAssignment(assignment.id);
                                         setSelectedAssignment(null);
-                                        setAssignmentResponse("");
                                       }
                                     }}
                                   >
@@ -790,23 +753,16 @@ export function ProjectsGrid({
                                 <Label className="text-sm font-medium text-red-900 dark:text-red-100">
                                   Decline
                                 </Label>
-                                <Textarea
-                                  value={assignmentResponse}
-                                  onChange={(e) =>
-                                    setAssignmentResponse(e.target.value)
-                                  }
-                                  placeholder="Add an optional reason for declining..."
-                                  className="text-sm"
-                                  rows={3}
-                                />
+                                <p className="text-sm text-red-800 dark:text-red-200">
+                                  Confirm you want to decline this assignment.
+                                </p>
                                 <div className="flex gap-2">
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="flex-1"
+                                    className="flex-1 dark:text-white"
                                     onClick={() => {
                                       setSelectedAssignment(null);
-                                      setAssignmentResponse("");
                                     }}
                                   >
                                     Cancel
@@ -814,15 +770,11 @@ export function ProjectsGrid({
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    className="flex-1"
+                                    className="flex-1 dark:text-white"
                                     onClick={() => {
                                       if (onDeclineAssignment) {
-                                        onDeclineAssignment(
-                                          assignment.id,
-                                          assignmentResponse.trim() || undefined
-                                        );
+                                        onDeclineAssignment(assignment.id);
                                         setSelectedAssignment(null);
-                                        setAssignmentResponse("");
                                       }
                                     }}
                                   >
@@ -838,7 +790,7 @@ export function ProjectsGrid({
                   </div>
                 )}
 
-              <div className="grid grid-cols-2 lg:flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -872,8 +824,8 @@ export function ProjectsGrid({
                         setShowClientDialog(true);
                       }}
                     >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      <span className="truncate">Client</span>
+                      <UserPlus className="h-3 w-3 mr-1 dark:text-white" />
+                      <span className="truncate dark:text-white">Client</span>
                     </Button>
                   ))}
 
@@ -912,7 +864,7 @@ export function ProjectsGrid({
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full lg:flex-1 col-span-2 lg:col-auto bg-primary"
+                      className="w-full sm:col-span-2 md:col-span-2 lg:col-span-2 bg-primary whitespace-normal"
                       onClick={() =>
                         handleTransition(project, "1_Assigned_to_FAB")
                       }
@@ -1039,8 +991,7 @@ export function ProjectsGrid({
             <DialogHeader>
               <DialogTitle>Assign Fabricator to Project</DialogTitle>
               <DialogDescription>
-                Select a fabricator to assign to this project and send them a
-                message.
+                Select a fabricator to assign to this project.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
@@ -1061,17 +1012,6 @@ export function ProjectsGrid({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="assignMessage">Message (optional)</Label>
-                <Textarea
-                  id="assignMessage"
-                  value={assignMessage}
-                  onChange={(e) => setAssignMessage(e.target.value)}
-                  placeholder="Add a message for the fabricator about this project assignment..."
-                  rows={3}
-                />
               </div>
 
               <div className="flex gap-2 justify-end">

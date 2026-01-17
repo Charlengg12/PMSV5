@@ -140,6 +140,8 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     setShowModal(false);
     setEditingId(null);
   };
+  
+
 
   // ─── CREATE / UPDATE with confirmation + loading ───────────────────────────
   const handleSubmit = async () => {
@@ -148,6 +150,28 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         icon: "warning",
         title: "Incomplete",
         text: "Title and content are required.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if title is > 50 chars return the sweet alert exceeding limit
+
+    if (title.length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Title Exceeds Limit",
+        text: "Title must be less than 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (content.length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Content must be less than 1000 characters.",
         customClass: swalCustomClasses,
       });
       return;
@@ -334,7 +358,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
           <Badge
             key={r}
             variant="outline"
-            className="text-[10px] h-4 px-1 uppercase border-primary/30 text-primary"
+            className="text-[10px] h-4 px-1 uppercase border-primary/30 text-primary dark:border-primary/50 dark:text-white"
           >
             {r}
           </Badge>
@@ -351,10 +375,10 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 px-4 sm:px-6">
           {/* Left Side: Title & Counter */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Megaphone className="h-5 w-5 text-primary" />
+            <Megaphone className="h-5 w-5 text-primary dark:text-white" />
             <CardTitle className="text-lg">Announcements</CardTitle>
             {!loading && announcements.length > 0 && (
-              <span className="text-xs text-muted-foreground ml-2 bg-muted px-2 py-0.5 flex items-center gap-1 whitespace-nowrap rounded-full">
+              <span className="text-xs text-muted-foreground ml-2 bg-muted dark:bg-slate-800 px-2 py-0.5 flex items-center gap-1 whitespace-nowrap rounded-full">
                 {currentIndex + 1} / {announcements.length}
               </span>
             )}
@@ -363,7 +387,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
           {/* Right Side: Actions (Aligns right on mobile) */}
           <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             {announcements.length > 1 && (
-              <div className="flex items-center border rounded-md mr-2 bg-background shadow-sm">
+              <div className="flex items-center border dark:border-slate-700 rounded-md mr-2 bg-background dark:bg-slate-800 shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -372,7 +396,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <div className="w-[1px] h-4 bg-border"></div>
+                <div className="w-[1px] h-4 bg-border dark:bg-slate-700"></div>
                 <Button
                   variant="ghost"
                   size="icon"
@@ -400,17 +424,17 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
             </div>
           ) : announcements.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-              <Megaphone className="h-8 w-8 mb-2 opacity-20" />
+              <Megaphone className="h-8 w-8 mb-2 opacity-20 dark:text-slate-300" />
               <p>No announcements yet.</p>
             </div>
           ) : (
-            <div className="h-full w-full bg-card border rounded-xl p-5 flex flex-col shadow-sm relative group animate-in fade-in duration-300">
+            <div className="h-full w-full bg-card dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-5 flex flex-col shadow-sm relative group animate-in fade-in duration-300">
               <div className="flex justify-between items-start mb-2">
                 <div>
-                  <h4 className="font-semibold text-lg leading-tight">
+                  <h4 className="font-semibold text-lg leading-tight dark:text-slate-100">
                     {currentAnnouncement.title}
                   </h4>
-                  <div className="text-xs text-muted-foreground mt-1">
+                  <div className="text-xs text-muted-foreground dark:text-slate-400 mt-1">
                     {currentAnnouncement.author_name} •{" "}
                     {format(
                       new Date(currentAnnouncement.created_at),
@@ -421,12 +445,12 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
               </div>
 
               <div className="flex-1 overflow-y-auto mb-2 pr-1 custom-scrollbar">
-                <p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">
+                <p className="text-sm text-foreground/90 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
                   {currentAnnouncement.content}
                 </p>
               </div>
 
-              <div className="mt-auto pt-2 border-t flex justify-between items-center">
+              <div className="mt-auto pt-2 border-t dark:border-slate-700 flex justify-between items-center">
                 <div className="flex-1">
                   {renderTargetBadges(currentAnnouncement.target_role)}
                 </div>
@@ -464,7 +488,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       {showModal &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-background border rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
+            <div className="bg-background dark:bg-slate-900 border dark:border-slate-700 rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
               <Button
                 variant="ghost"
                 size="icon"
@@ -475,17 +499,17 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
               </Button>
 
               <div className="mb-5">
-                <h2 className="text-xl font-semibold">
+                <h2 className="text-xl font-semibold dark:text-slate-100">
                   {editingId ? "Edit Announcement" : "New Announcement"}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground dark:text-slate-400">
                   Share updates with your team.
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Title</label>
+                  <label className="text-sm font-medium dark:text-slate-100">Title</label>
                   <Input
                     placeholder="e.g. Holiday Schedule"
                     value={title}
@@ -494,7 +518,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Content</label>
+                  <label className="text-sm font-medium dark:text-slate-100">Content</label>
                   <Textarea
                     placeholder="Write your message here..."
                     value={content}
@@ -504,10 +528,10 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium flex items-center gap-2">
+                  <label className="text-sm font-medium dark:text-slate-100 flex items-center gap-2">
                     <Users className="h-4 w-4" /> Visible To
                   </label>
-                  <div className="flex flex-wrap gap-2 p-3 border rounded-md bg-muted/20">
+                  <div className="flex flex-wrap gap-2 p-3 border dark:border-slate-700 rounded-md bg-muted/20 dark:bg-slate-800">
                     <Badge
                       variant={
                         selectedRoles.includes("all") ? "default" : "outline"
@@ -530,7 +554,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                       </Badge>
                     ))}
                   </div>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[10px] text-muted-foreground dark:text-slate-400">
                     Select "Everyone" or pick specific roles.
                   </p>
                 </div>

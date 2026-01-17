@@ -148,6 +148,42 @@ export function ReportsManager({
     const title = formData.title.trim();
     if (!title || isCreating) return;
 
+    // if title and descrotpion are empty, do not proceed
+
+    if (title.length === 0 || formData.description.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Form",
+        text: "All fields are required.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if title is > 50 characters, do not proceed
+
+    if (title.length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Title cannot exceed 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if description is > 200 characters, do not proceed
+    if (formData.description.length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Description cannot exceed 200 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+
     const result = await Swal.fire({
       title: "Create this report?",
       html: `Title: <strong>${title}</strong><br>Type: <strong>${formData.type}</strong>`,
@@ -215,6 +251,38 @@ export function ReportsManager({
   const handleUpdate = async () => {
     if (!selectedReport || !formData.title.trim()) return;
 
+    const title = formData.title.trim();
+    const description = formData.description.trim();
+
+    if (title.length === 0 || description.length === 0) {
+      Swal.fire({
+        icon: "warning",
+        title: "Incomplete Form",
+        text: "All fields are required.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (title.length > 50) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Title cannot exceed 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+    
+    if (description.length > 200) {
+      Swal.fire({
+        icon: "warning",
+        title: "Content Exceeds Limit",
+        text: "Title cannot exceed 200 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
     const result = await Swal.fire({
       title: "Save changes?",
       html: `Update report: <strong>${formData.title}</strong>`,
@@ -588,149 +656,132 @@ export function ReportsManager({
           <p className="font-medium">{error}</p>
         </div>
       ) : (
-        <Tabs defaultValue="all" className="space-y-4">
-          <TabsList>
-            <TabsTrigger value="all">All Reports</TabsTrigger>
-            <TabsTrigger value="project">Project</TabsTrigger>
-            <TabsTrigger value="task">Task</TabsTrigger>
-            <TabsTrigger value="financial">Financial</TabsTrigger>
-          </TabsList>
+    <Tabs defaultValue="all" className="space-y-4">
+            <TabsList>
+              <TabsTrigger value="all">All Reports</TabsTrigger>
+              <TabsTrigger value="project">Project</TabsTrigger>
+              <TabsTrigger value="task">Task</TabsTrigger>
+              <TabsTrigger value="financial">Financial</TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="all" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {searchedReports.map((report) => (
-                <Card
-                  key={report.id}
-                  className="hover:shadow-md transition-shadow"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">
-                          {report.title}
-                        </CardTitle>
-                        {report.description && (
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {report.description}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex gap-2 ml-4">
-                        <Badge variant={getStatusColor(report.status)}>
-                          {report.status}
-                        </Badge>
-                        <Badge variant={getTypeColor(report.type)}>
-                          {report.type}
-                        </Badge>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid gap-3 text-sm">
-                      {report.project_id && (
-                        <div className="flex items-center gap-2">
-                          <Building className="h-4 w-4 text-muted-foreground" />
-                          <span className="truncate">
-                            {projects.find((p) => p.id === report.project_id)
-                              ?.name || "Unknown"}
-                          </span>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          Created by:{" "}
-                          {users.find((u) => u.id === report.created_by)
-                            ?.name || "Unknown"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-muted-foreground" />
-                        <span>
-                          Created:{" "}
-                          {new Date(report.created_at).toLocaleDateString(
-                            "en-PH"
-                          )}
-                        </span>
-                        {report.updated_at !== report.created_at && (
-                          <>
-                            <span>•</span>
-                            <span>
-                              Updated:{" "}
-                              {new Date(report.updated_at).toLocaleDateString(
-                                "en-PH"
+            {/* Helper function to render report cards to avoid code duplication */}
+            {["all", "project", "task", "financial"].map((tabValue) => (
+              <TabsContent key={tabValue} value={tabValue} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {searchedReports
+                    .filter((r) => tabValue === "all" || r.type === tabValue)
+                    .map((report) => (
+                      <Card
+                        key={report.id}
+                        className="hover:shadow-md transition-shadow"
+                      >
+                        <CardHeader className="pb-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg">
+                                {report.title}
+                              </CardTitle>
+                              {report.description && (
+                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                  {report.description}
+                                </p>
                               )}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                            </div>
+                            <div className="flex gap-2 ml-4">
+                              <Badge variant={getStatusColor(report.status)}>
+                                {report.status}
+                              </Badge>
+                              <Badge variant={getTypeColor(report.type)}>
+                                {report.type}
+                              </Badge>
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid gap-3 text-sm">
+                            {report.project_id && (
+                              <div className="flex items-center gap-2">
+                                <Building className="h-4 w-4 text-muted-foreground" />
+                                <span className="truncate">
+                                  {projects.find(
+                                    (p) => p.id === report.project_id
+                                  )?.name || "Unknown"}
+                                </span>
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span>
+                                Created by:{" "}
+                                {users.find((u) => u.id === report.created_by)
+                                  ?.name || "Unknown"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4 text-muted-foreground" />
+                              <span>
+                                Created:{" "}
+                                {new Date(report.created_at).toLocaleDateString(
+                                  "en-PH"
+                                )}
+                              </span>
+                            </div>
+                          </div>
 
-                    <div className="flex flex-wrap gap-2 mt-5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleView(report)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleExport(report)}
-                      >
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                      </Button>
-                      {canEditReport(report) && (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEdit(report)}
-                          >
-                            <Edit className="h-4 w-4 mr-2" />
-                            Edit
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            onClick={() => handleDelete(report)}
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete
-                          </Button>
-                        </>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="project">
-            <div className="text-center py-12 text-muted-foreground">
-              Project-specific report summaries coming soon...
-            </div>
-          </TabsContent>
-
-          <TabsContent value="task">
-            <div className="text-center py-12 text-muted-foreground">
-              Task analytics overview coming soon...
-            </div>
-          </TabsContent>
-
-          <TabsContent value="financial">
-            <div className="text-center py-12 text-muted-foreground">
-              Financial summary view coming soon...
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
-
+                          <div className="flex flex-wrap gap-2 mt-5">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleView(report)}
+                            >
+                              <Eye className="h-4 w-4 mr-2" />
+                              View
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExport(report)}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Export
+                            </Button>
+                            {canEditReport(report) && (
+                              <>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(report)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                  onClick={() => handleDelete(report)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  
+                  {/* Empty state for specific tabs */}
+                  {searchedReports.filter((r) => tabValue === "all" || r.type === tabValue).length === 0 && (
+                     <div className="col-span-full text-center py-12 text-muted-foreground">
+                        <p>No {tabValue === 'all' ? '' : tabValue} reports found.</p>
+                     </div>
+                  )}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        )}
       {searchedReports.length === 0 && !loading && !error && (
         <Card>
           <CardContent className="py-12 text-center">

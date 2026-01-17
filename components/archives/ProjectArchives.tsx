@@ -442,8 +442,8 @@ export function ProjectArchives({
                             setShowEditDialog(true);
                           }}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
-                          <span className="truncate">Edit</span>
+                          <Edit className="h-4 w-4 mr-2 dark:text-white" />
+                          <span className="truncate dark:text-white">Edit</span>
                         </Button>
                         <Button
                           variant="outline"
