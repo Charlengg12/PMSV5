@@ -168,7 +168,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
                   index === 2 ? 'bg-secondary/10 text-secondary' :
                     'bg-accent/10 text-accent'
                 }`}>
-                <stat.icon className="h-4 w-4 md:h-5 md:w-5" />
+                <stat.icon className="h-4 w-4 md:h-5 md:w-5 dark:text-white" />
               </div>
             </CardHeader>
             <CardContent className="pt-4 px-4 md:px-6">
@@ -185,18 +185,18 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
 
       {showRevenueDetails && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl overflow-hidden border animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+          <div className="w-full max-w-2xl bg-white dark:bg-slate-900 rounded-xl shadow-xl overflow-hidden border dark:border-slate-700 animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
             
-            <div className="flex items-center justify-between p-4 border-b bg-muted/30 shrink-0">
-              <h3 className="font-semibold text-lg flex items-center gap-2">
+            <div className="flex items-center justify-between p-4 border-b dark:border-slate-700 bg-muted/30 dark:bg-slate-800 shrink-0">
+              <h3 className="font-semibold text-lg flex items-center gap-2 dark:text-slate-100">
                 <PhilippinePeso className="w-5 h-5 text-green-600" />
                 Assigned Projects Distribution
               </h3>
               <button
                 onClick={() => setShowRevenueDetails(false)}
-                className="p-1 hover:bg-slate-100 rounded-full transition-colors"
+                className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors"
               >
-                <X className="w-5 h-5 text-gray-500" />
+                <X className="w-5 h-5 text-gray-500 dark:text-gray-400" />
               </button>
             </div>
 
@@ -225,7 +225,12 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
                         </Pie>
                         <Tooltip 
                           formatter={(value: number) => `${peso}${value.toLocaleString()}`}
-                          contentStyle={{ backgroundColor: 'white', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                          contentStyle={{
+                            backgroundColor: document.documentElement.classList.contains('dark') ? '#1e293b' : 'white',
+                            borderRadius: '8px',
+                            border: document.documentElement.classList.contains('dark') ? '1px solid #475569' : '1px solid #e2e8f0',
+                            color: document.documentElement.classList.contains('dark') ? '#f1f5f9' : '#000'
+                          }}
                         />
                         <Legend verticalAlign="bottom" height={36}/>
                       </PieChart>
@@ -234,15 +239,15 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
 
                   {/* LIST SECTION */}
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Project Breakdown</h4>
+                    <h4 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Project Breakdown</h4>
                     {filteredProjects.map((project, index) => (
-                      <div key={project.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors">
+                      <div key={project.id} className="flex items-center justify-between p-3 border dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                         <div className="flex items-center gap-3">
                             {/* Color Legend Dot */}
                             <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
                             
                             <div className="space-y-1">
-                                <p className="font-medium text-sm text-slate-900">{project.name}</p>
+                                <p className="font-medium text-sm text-slate-900 dark:text-slate-100">{project.name}</p>
                                 <span className={`text-[10px] px-2 py-0.5 rounded-full capitalize ${
                                     project.status === 'completed' ? 'bg-green-100 text-green-700' :
                                     project.status === 'in-progress' ? 'bg-blue-100 text-blue-700' :
@@ -253,7 +258,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
                             </div>
                         </div>
                         <div className="text-right">
-                          <p className="font-bold text-slate-700">{peso}{project.revenue.toLocaleString()}</p>
+                          <p className="font-bold text-slate-700 dark:text-slate-200">{peso}{project.revenue.toLocaleString()}</p>
                         </div>
                       </div>
                     ))}
@@ -262,8 +267,8 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
               )}
             </div>
 
-            <div className="p-4 border-t bg-slate-50 flex justify-between items-center shrink-0">
-              <span className="text-sm font-medium text-gray-500">Total Value</span>
+            <div className="p-4 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-800 flex justify-between items-center shrink-0">
+              <span className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Value</span>
               <span className="text-lg font-bold text-green-600">
                 {revenueData.value}
               </span>
