@@ -50,6 +50,11 @@ export function ProjectDetails({
   const [newFabricatorId, setNewFabricatorId] = useState<string>("");
   const [showAddFabricator, setShowAddFabricator] = useState(false);
   const [backendClientAssigned, setBackendClientAssigned] = useState(false);
+  const [financialEdits, setFinancialEdits] = useState(() => ({
+    budget: project.budget?.toString() ?? "",
+    spent: project.spent?.toString() ?? "",
+    revenue: project.revenue?.toString() ?? "",
+  }));
 
   const clientUser = users.find(
     (u) => u.role === "client" && u.clientProjectId === project.id
@@ -68,6 +73,44 @@ export function ProjectDetails({
 
   const MAX_NAME_LENGTH = 50;
   const MAX_DESCRIPTION_LENGTH = 100;
+  const MAX_FINANCIAL_VALUE = 999_999_999.99;
+  const MAX_FINANCIAL_INTEGER_DIGITS = 9;
+  const MAX_FINANCIAL_DECIMALS = 2;
+
+  const clampFinancialValue = (value: string) => {
+    if (!value.trim()) return 0;
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    const rounded =
+      Math.round(numeric * 10 ** MAX_FINANCIAL_DECIMALS) /
+      10 ** MAX_FINANCIAL_DECIMALS;
+    if (rounded < 0) return 0;
+    return Math.min(rounded, MAX_FINANCIAL_VALUE);
+  };
+
+  const sanitizeFinancialInput = (value: string) => {
+    if (value === "") return "";
+    if (!/^\d*\.?\d*$/.test(value)) return null;
+
+    const [rawInteger, rawDecimal = ""] = value.split(".");
+    const integerPart =
+      rawInteger.slice(0, MAX_FINANCIAL_INTEGER_DIGITS) || "0";
+    const decimalPart = rawDecimal.slice(0, MAX_FINANCIAL_DECIMALS);
+    const hasDecimal = value.includes(".");
+    const endsWithDecimal = value.endsWith(".");
+
+    let next = hasDecimal ? `${integerPart}.${decimalPart}` : integerPart;
+    if (endsWithDecimal && decimalPart.length === 0) {
+      next = `${integerPart}.`;
+    }
+
+    const numeric = Number(next);
+    if (Number.isFinite(numeric) && numeric > MAX_FINANCIAL_VALUE) {
+      return MAX_FINANCIAL_VALUE.toFixed(MAX_FINANCIAL_DECIMALS);
+    }
+
+    return next;
+  };
 
   useEffect(() => {
     let active = true;
@@ -89,6 +132,24 @@ export function ProjectDetails({
       active = false;
     };
   }, [project.id]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+    setFinancialEdits({
+      budget:
+        typeof editedProject.budget === "number"
+          ? editedProject.budget.toString()
+          : "",
+      spent:
+        typeof editedProject.spent === "number"
+          ? editedProject.spent.toString()
+          : "",
+      revenue:
+        typeof editedProject.revenue === "number"
+          ? editedProject.revenue.toString()
+          : "",
+    });
+  }, [isEditing, editedProject.budget, editedProject.spent, editedProject.revenue]);
 
   const canEdit =
     currentUser.role === "admin" ||
@@ -172,6 +233,15 @@ export function ProjectDetails({
     return missing;
   };
 
+  const updateFinancialEdit = (
+    field: "budget" | "spent" | "revenue",
+    value: string
+  ) => {
+    const sanitized = sanitizeFinancialInput(value);
+    if (sanitized === null) return;
+    setFinancialEdits((prev) => ({ ...prev, [field]: sanitized }));
+  };
+
   const handleSave = async () => {
     // ─── Character limit checks (separate alerts like in create form) ───
     if (editedProject.name && editedProject.name.length > MAX_NAME_LENGTH) {
@@ -239,7 +309,15 @@ export function ProjectDetails({
     }
 
     // ─── No changes check ───
-    const hasChanges = JSON.stringify(editedProject) !== JSON.stringify(project);
+    const normalizedProject = {
+      ...editedProject,
+      budget: clampFinancialValue(financialEdits.budget),
+      spent: clampFinancialValue(financialEdits.spent),
+      revenue: clampFinancialValue(financialEdits.revenue),
+    };
+
+    const hasChanges =
+      JSON.stringify(normalizedProject) !== JSON.stringify(project);
     if (!hasChanges) {
       Swal.fire({
         icon: "info",
@@ -293,7 +371,8 @@ export function ProjectDetails({
 
     // Simulate save delay (replace with real API call if needed)
     setTimeout(() => {
-      onUpdateProject(editedProject);
+      setEditedProject(normalizedProject);
+      onUpdateProject(normalizedProject);
       setIsEditing(false);
 
       Swal.close();
@@ -646,12 +725,12 @@ export function ProjectDetails({
                           {isEditing && currentUser.role === "admin" ? (
                             <Input
                               type="number"
-                              value={editedProject.budget ?? 0}
+                              min="0"
+                              max={MAX_FINANCIAL_VALUE}
+                              step="0.01"
+                              value={financialEdits.budget}
                               onChange={(e) =>
-                                setEditedProject((prev) => ({
-                                  ...prev,
-                                  budget: parseFloat(e.target.value) || 0,
-                                }))
+                                updateFinancialEdit("budget", e.target.value)
                               }
                               className="text-2xl font-semibold"
                             />
@@ -672,12 +751,12 @@ export function ProjectDetails({
                           {isEditing && currentUser.role === "admin" ? (
                             <Input
                               type="number"
-                              value={editedProject.spent ?? 0}
+                              min="0"
+                              max={MAX_FINANCIAL_VALUE}
+                              step="0.01"
+                              value={financialEdits.spent}
                               onChange={(e) =>
-                                setEditedProject((prev) => ({
-                                  ...prev,
-                                  spent: parseFloat(e.target.value) || 0,
-                                }))
+                                updateFinancialEdit("spent", e.target.value)
                               }
                               className="text-2xl font-semibold"
                             />
@@ -704,12 +783,12 @@ export function ProjectDetails({
                       {isEditing && currentUser.role === "admin" ? (
                         <Input
                           type="number"
-                          value={editedProject.revenue ?? 0}
+                          min="0"
+                          max={MAX_FINANCIAL_VALUE}
+                          step="0.01"
+                          value={financialEdits.revenue}
                           onChange={(e) =>
-                            setEditedProject((prev) => ({
-                              ...prev,
-                              revenue: parseFloat(e.target.value) || 0,
-                            }))
+                            updateFinancialEdit("revenue", e.target.value)
                           }
                           className="text-2xl font-semibold"
                         />
