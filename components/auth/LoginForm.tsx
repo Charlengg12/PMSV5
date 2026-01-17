@@ -179,11 +179,11 @@ export function LoginForm({
           <div className="space-y-2">
             <div className="flex items-center justify-center gap-2">
               <Shield className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl font-[Archivo_Black] dark:text-white">
+              <CardTitle className="text-2xl font-[Archivo_Black] dark:text-white w-auto max-w-none whitespace-normal overflow-visible text-center leading-snug">
                 Ehub Project Management
               </CardTitle>
             </div>
-            <CardDescription className="text-base dark:text-slate-400">
+            <CardDescription className="text-base dark:text-slate-400 text-center">
               Enter your credentials to access the system
             </CardDescription>
           </div>
