@@ -249,7 +249,7 @@ function log_activity(PDO $pdo, string $userId, string $action, ?string $descrip
             ':desc' => $description,
             ':ip' => $ip
         ]);
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         // Silently fail if logging fails to not break the app
         error_log("Logging failed: " . $e->getMessage());
     }
@@ -1764,7 +1764,7 @@ function handle_create_client(PDO $pdo): void
 
         json_response(['user' => $user]);
 
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         // If anything goes wrong, roll back changes so we don't have broken data
         if ($pdo->inTransaction()) {
             $pdo->rollBack();

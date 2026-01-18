@@ -94,16 +94,19 @@ export default function App() {
     const initializeApp = async () => {
       try {
         // Restore session
+        let storedUserRaw: string | null = null;
+        let hasHash = false;
         try {
-          const storedUser = localStorage.getItem("currentUser");
-          if (storedUser) {
-            const parsed = JSON.parse(storedUser) as User;
+          storedUserRaw = localStorage.getItem("currentUser");
+          if (storedUserRaw) {
+            const parsed = JSON.parse(storedUserRaw) as User;
             setCurrentUser(parsed);
           }
           const hash = (window.location.hash || "").slice(1);
+          hasHash = Boolean(hash);
           if (!hash) {
             // Default to dashboard for signed-in users
-            if (storedUser) {
+            if (storedUserRaw) {
               setCurrentView("dashboard");
               try {
                 window.location.hash = "dashboard";
@@ -121,6 +124,41 @@ export default function App() {
           setBackendHealthy(false);
           _setIsInitialized(true);
           return;
+        }
+
+        // Validate session against the backend before loading protected data
+        let sessionUser: User | null = null;
+        try {
+          const meResponse = await apiService.getMe();
+          const meUser = (meResponse.data as any)?.user;
+          if (meUser) {
+            sessionUser = mapUserDataFromBackend(meUser);
+          }
+        } catch (sessionError) {
+          console.warn("Failed to restore session:", sessionError);
+        }
+
+        if (!sessionUser) {
+          if (storedUserRaw) {
+            try {
+              localStorage.removeItem("currentUser");
+            } catch {}
+          }
+          setCurrentUser(null);
+          setBackendHealthy(true);
+          _setIsInitialized(true);
+          return;
+        }
+
+        setCurrentUser(sessionUser);
+        try {
+          localStorage.setItem("currentUser", JSON.stringify(sessionUser));
+        } catch {}
+        if (!hasHash) {
+          setCurrentView("dashboard");
+          try {
+            window.location.hash = "dashboard";
+          } catch {}
         }
 
         // Load data from database
@@ -875,7 +913,7 @@ export default function App() {
         if (!isMounted) return;
         setBackendHealthy((prev) => {
           // Transition from unhealthy -> healthy: reload data
-          if (prev === false && healthy) {
+          if (prev === false && healthy && currentUser) {
             loadDataFromDatabase()
               .then(() => setLastReloadAt(Date.now()))
               .catch(() => {});
@@ -892,12 +930,12 @@ export default function App() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [currentUser]);
 
   // Refresh when tab gains focus or when coming back online
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && backendHealthy) {
+      if (document.visibilityState === "visible" && backendHealthy && currentUser) {
         // Avoid excessive reloads: only if >10s since last reload
         if (Date.now() - lastReloadAt > 10000) {
           loadDataFromDatabase()
@@ -912,7 +950,7 @@ export default function App() {
         const res = await apiService.healthCheck();
         const healthy = !res.error;
         setBackendHealthy(healthy);
-        if (healthy) {
+        if (healthy && currentUser) {
           loadDataFromDatabase()
             .then(() => setLastReloadAt(Date.now()))
             .catch(() => {});
@@ -925,7 +963,7 @@ export default function App() {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("online", handleOnline);
     };
-  }, [backendHealthy, lastReloadAt]);
+  }, [backendHealthy, currentUser, lastReloadAt]);
 
   if (!currentUser) {
     switch (authView) {

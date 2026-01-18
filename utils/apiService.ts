@@ -96,6 +96,9 @@ class ApiService {
 
         return response;
     }
+    async getMe(): Promise<ApiResponse<any>> {
+        return this.request('/auth/me');
+    }
    async verifyPassword(password: string): Promise<ApiResponse<any>> {
     const response = await this.request('/auth/verify-password', {
         method: 'POST',

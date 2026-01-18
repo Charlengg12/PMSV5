@@ -144,6 +144,19 @@ CREATE TABLE IF NOT EXISTS `reports` (
   INDEX `idx_reports_creator` (`created_by`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Activity logs table
+CREATE TABLE IF NOT EXISTS `activity_logs` (
+  `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` VARCHAR(255) NOT NULL,
+  `action` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `ip_address` VARCHAR(45) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_activity_user_id` (`user_id`),
+  INDEX `idx_activity_action` (`action`),
+  INDEX `idx_activity_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Insert default admin user
 INSERT IGNORE INTO `users` (
   `id`, `name`, `email`, `password_hash`, `role`, `secure_id`, `employee_number`, `is_active`
