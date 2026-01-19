@@ -372,11 +372,11 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
   return (
     <>
       <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden">
-        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 px-4 sm:px-6">
+        <CardHeader className="w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 px-0 sm:px-6">
           {/* Left Side: Title & Counter */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Megaphone className="h-5 w-5 text-primary dark:text-white" />
-            <CardTitle className="text-lg">Announcements</CardTitle>
+            <CardTitle className="text-lg w-full sm:w-auto">Announcements</CardTitle>
             {!loading && announcements.length > 0 && (
               <span className="text-xs text-muted-foreground ml-2 bg-muted dark:bg-slate-800 px-2 py-0.5 flex items-center gap-1 whitespace-nowrap rounded-full">
                 {currentIndex + 1} / {announcements.length}
