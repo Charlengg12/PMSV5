@@ -1,0 +1,254 @@
+import { AlertCircle, Calendar, Clock, CheckCircle, Activity } from "lucide-react";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Progress } from "../ui/progress";
+import { Project, Task, User as UserType, WorkLogEntry } from "../../types";
+import { STATUS_LABELS, STATUS_SEQUENCE } from "./clientStatusData";
+
+interface ClientProjectStatusProps {
+  currentUser: UserType;
+  projects: Project[];
+  users: UserType[];
+  workLogs: WorkLogEntry[];
+  tasks: Task[];
+}
+
+const formatDate = (value?: string) =>
+  value
+    ? new Date(value).toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : "TBD";
+
+export function ClientProjectStatus({
+  currentUser,
+  projects,
+  users,
+  workLogs,
+  tasks,
+}: ClientProjectStatusProps) {
+  const clientProject =
+    projects.find((project) => project.id === currentUser.clientProjectId) ||
+    projects.find((project) => project.clientId === currentUser.id);
+
+  if (!clientProject) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-2 h-64 rounded-2xl border border-muted-foreground/40 bg-background/70 text-center">
+        <AlertCircle className="h-12 w-12 text-muted-foreground" />
+        <h3 className="text-lg font-semibold">No Project Assigned</h3>
+        <p className="text-sm text-muted-foreground">
+          You don't have any projects assigned to your account yet.
+        </p>
+      </div>
+    );
+  }
+
+  const projectTasks = tasks.filter(
+    (task) => task.projectId === clientProject.id
+  );
+  const recentUpdates = workLogs
+    .filter((log) => log.projectId === clientProject.id)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 3);
+
+  const pendingTasks = projectTasks.filter((task) => task.status !== "completed");
+  const nextDeadline = pendingTasks
+    .filter(Boolean)
+    .sort((a, b) => {
+      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_VALUE;
+      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_VALUE;
+      return aDate - bDate;
+    })[0];
+
+  const supervisor = users.find((user) => user.id === clientProject.supervisorId);
+  const statusIndex = STATUS_SEQUENCE.indexOf(clientProject.status);
+  const statusPercent = Math.max(0, Math.min(100, clientProject.progress));
+
+  const timelineSteps = STATUS_SEQUENCE.map((status) => ({
+    status,
+    label: STATUS_LABELS[status] ?? status,
+    isActive: STATUS_SEQUENCE.indexOf(status) <= statusIndex,
+  }));
+
+  return (
+    <div className="space-y-6">
+      <Card className="p-4 md:p-6">
+        <CardHeader className="flex flex-col gap-2">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                Project Status
+              </p>
+              <h1 className="text-2xl font-semibold">{clientProject.name}</h1>
+              <p className="text-sm text-muted-foreground mt-1">
+                {clientProject.description || "Recent project timeline and milestones"}
+              </p>
+            </div>
+            <Badge variant="outline" className="text-xs uppercase">
+              {STATUS_LABELS[clientProject.status] ?? clientProject.status}
+            </Badge>
+          </div>
+          <Progress value={statusPercent} className="h-2" />
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <Calendar className="h-4 w-4" />
+            <span>
+              {formatDate(clientProject.startDate)} - {formatDate(clientProject.endDate)}
+            </span>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div>
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+              Journey
+            </p>
+            <div className="mt-4 grid grid-cols-4 gap-3">
+              {timelineSteps.map((step) => (
+                <div
+                  key={step.status}
+                  className={`rounded-lg border p-3 text-xs font-semibold ${
+                    step.isActive
+                      ? "border-primary bg-primary/10 text-primary"
+                      : "border-muted-foreground/30 text-muted-foreground"
+                  }`}
+                >
+                  <div className="flex items-center gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    <span className="truncate">{step.label}</span>
+                  </div>
+                  <p className="text-[0.65rem] uppercase tracking-widest mt-1">
+                    {step.isActive ? "Completed" : "Upcoming"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1">
+              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
+                Supervisor
+              </p>
+              <p className="text-sm font-semibold">
+                {supervisor ? supervisor.name : "Pending assignment"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {supervisor?.school ?? "N/A"}
+              </p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
+                Progress
+              </p>
+              <p className="text-sm font-semibold">{clientProject.progress}% Complete</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
+                Next milestone
+              </p>
+              {nextDeadline ? (
+                <p className="text-sm font-semibold">
+                  {nextDeadline.title} — {formatDate(nextDeadline.dueDate)}
+                </p>
+              ) : (
+                <p className="text-sm font-semibold text-muted-foreground">
+                  No upcoming tasks
+                </p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card className="p-4 md:p-6">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Task Sprint
+            </CardTitle>
+            <Badge variant="outline">{projectTasks.length} tasks</Badge>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {pendingTasks.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                All tasks are marked complete. Great job!
+              </p>
+            ) : (
+              pendingTasks.slice(0, 4).map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{task.title}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Due {formatDate(task.dueDate)}
+                    </p>
+                  </div>
+                  <Badge className="text-[0.7rem]">
+                    {task.status.replace("-", " ")}
+                  </Badge>
+                </div>
+              ))
+            )}
+            {pendingTasks.length > 4 && (
+              <p className="text-xs text-muted-foreground">
+                {pendingTasks.length - 4} more tasks pending. Check back soon for updates.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className="p-4 md:p-6">
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-4 w-4" />
+              Recent Activity
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (typeof window !== "undefined") {
+                  window.location.hash = "dashboard";
+                }
+              }}
+            >
+              Return to Dashboard
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recentUpdates.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No recent updates — the team is prepping the next milestone.
+              </p>
+            ) : (
+              recentUpdates.map((log) => {
+                const fabricator = users.find((user) => user.id === log.fabricatorId);
+                return (
+                  <div
+                    key={log.id}
+                    className="rounded-xl border p-3 space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>{formatDate(log.date)}</span>
+                      <span>{log.hoursWorked.toFixed(1)} hrs</span>
+                    </div>
+                    <p className="text-sm font-semibold">
+                      {fabricator ? fabricator.name : "Fabricator update"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {log.description || "No summary provided."}
+                    </p>
+                  </div>
+                );
+              })
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}

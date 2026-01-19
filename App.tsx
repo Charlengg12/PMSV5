@@ -16,6 +16,8 @@ import { TaskManager } from "./components/tasks/TaskManager";
 import { ReportsManager } from "./components/reports/ReportsManager";
 import { ProjectArchives } from "./components/archives/ProjectArchives";
 import { ClientDashboard } from "./components/client/ClientDashboard";
+import { ClientProjectStatus } from "./components/client/ClientProjectStatus";
+import { ClientDocumentation } from "./components/client/ClientDocumentation";
 import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
 import { ActivityLogs } from "./components/logs/ActivityLogs";
 import { TeamOverview } from "./components/team/TeamOverview";
@@ -316,7 +318,22 @@ export default function App() {
 
   // Add user to list without changing the current session (for admin creating clients)
   const handleAddUser = (newUser: User) => {
-    setUsers((prevUsers) => [...prevUsers, newUser]);
+    setUsers((prevUsers) => {
+      const exists = prevUsers.some((user) => user.id === newUser.id);
+      if (exists) {
+        return prevUsers.map((user) =>
+          user.id === newUser.id ? newUser : user
+        );
+      }
+      return [...prevUsers, newUser];
+    });
+
+    if (currentUser?.id === newUser.id) {
+      setCurrentUser(newUser);
+      try {
+        localStorage.setItem("currentUser", JSON.stringify(newUser));
+      } catch {}
+    }
   };
 
   const handleShowFabricatorSignup = () => {
@@ -1184,10 +1201,28 @@ export default function App() {
     if (currentUser.role === "client") {
       switch (currentView) {
         case "dashboard":
-        case "project-status":
-        case "documentation":
           return (
             <ClientDashboard
+              currentUser={currentUser}
+              projects={projects}
+              users={users}
+              workLogs={workLogs}
+              tasks={tasks}
+            />
+          );
+        case "project-status":
+          return (
+            <ClientProjectStatus
+              currentUser={currentUser}
+              projects={projects}
+              users={users}
+              workLogs={workLogs}
+              tasks={tasks}
+            />
+          );
+        case "documentation":
+          return (
+            <ClientDocumentation
               currentUser={currentUser}
               projects={projects}
               users={users}

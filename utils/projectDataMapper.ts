@@ -55,6 +55,7 @@ export function mapProjectFromBackend(raw: any): Project {
     supervisorAllocation: toNumberOrZero(raw.supervisor_allocation ?? raw.supervisorAllocation),
     companyAllocation: toNumberOrZero(raw.company_allocation ?? raw.companyAllocation),
     clientName: raw.client_name || raw.clientName || '',
+    clientId: raw.client_id || raw.clientId || undefined,
     documentationUrl: raw.documentation_url || raw.documentationUrl || undefined,
     attachments: Array.isArray(raw.attachments) ? raw.attachments : undefined,
     fabricatorBudgets,
