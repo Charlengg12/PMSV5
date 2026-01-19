@@ -324,7 +324,7 @@ export function WorkLogManager({
             Select Project
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className='pb-5 px-5'>
           <Select value={selectedProject} onValueChange={setSelectedProject}>
             <SelectTrigger>
               <SelectValue placeholder="Choose a project to log work for" />
@@ -698,7 +698,7 @@ export function WorkLogManager({
             )}
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className='px-5 mb-10'>
           {filteredWorkLogs.length === 0 ? (
             <div className="text-center py-8">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
