@@ -48,6 +48,7 @@ export function ActivityLogs() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [hasUserScrolled, setHasUserScrolled] = useState(false);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -62,7 +63,11 @@ export function ActivityLogs() {
   useEffect(() => {
     const handleScroll = () => {
       if (contentRef.current) {
-        setShowScrollTop(contentRef.current.scrollTop > 300);
+        const scrollTop = contentRef.current.scrollTop;
+        setShowScrollTop(scrollTop > 300);
+        if (scrollTop > 0) {
+          setHasUserScrolled(true);
+        }
       }
     };
     const ref = contentRef.current;
@@ -120,7 +125,7 @@ export function ActivityLogs() {
         observerRef.current.disconnect();
       }
     };
-  }, [loading, loadingMore, hasMore, filteredLogs.length]); // ← important: depend on length too
+  }, [loading, loadingMore, hasMore, filteredLogs.length, hasUserScrolled]); // ← important: depend on length too
 
   const fetchLogs = async () => {
     try {
@@ -223,15 +228,23 @@ export function ActivityLogs() {
   const getRoleIcon = (role: string) => {
     const r = role.toLowerCase().trim();
     if (r.includes("admin"))
-      return <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />;
+      return (
+        <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+      );
     if (r.includes("supervisor") || r.includes("moderator"))
-      return <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />;
+      return (
+        <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+      );
     if (r.includes("manager") || r.includes("lead"))
-      return <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />;
+      return (
+        <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+      );
     if (r === "user" || r === "member" || r.includes("regular"))
       return <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />;
     if (r.includes("guest") || r.includes("visitor"))
-      return <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />;
+      return (
+        <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+      );
     return <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />;
   };
 
@@ -410,16 +423,15 @@ export function ActivityLogs() {
         </div>
 
         {/* Content Area */}
-        <div
-          ref={contentRef}
-          className="p-6 max-h-[calc(100vh-300px)] overflow-y-auto bg-white dark:bg-gray-800"
-        >
+        <div className="p-6 bg-white dark:bg-gray-800">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
               <div className="relative mb-4">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
               </div>
-              <p className="text-lg font-medium dark:text-white">Loading activity history...</p>
+              <p className="text-lg font-medium dark:text-white">
+                Loading activity history...
+              </p>
               <p className="text-sm mt-2">Please wait</p>
             </div>
           ) : error ? (
@@ -453,9 +465,12 @@ export function ActivityLogs() {
             </div>
           ) : (
             <>
-              <div className="overflow-x-auto -mx-6 px-6">
+              <div
+                ref={contentRef}
+                className="max-h-[calc(100vh-300px)] overflow-y-auto overflow-x-auto"
+              >
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="sticky top-0">
+                  <thead className="sticky top-0 z-10 bg-white dark:bg-gray-800">
                     <tr>
                       <th
                         scope="col"
