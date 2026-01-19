@@ -8,37 +8,36 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
-// import { Separator } from '../ui/separator';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../ui/dialog';
 import { 
   Package, 
   Plus, 
   Search,
-  // Filter,
   PhilippinePeso,
   CircleHelp,
   Truck,
   CheckCircle,
   AlertCircle,
   XCircle,
-  // Edit,
-  // Trash2
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { Material, User, Project } from '../../types';
+import Swal from 'sweetalert2';
 
 interface MaterialsManagerProps {
   currentUser: User;
   projects: Project[];
   materials: Material[];
-  onAddMaterial: (material: Omit<Material, 'id' | 'addedAt'>) => void;
-  _onUpdateMaterial?: (id: string, material: Partial<Material>) => void;
-  _onDeleteMaterial?: (id: string) => void;
-  onDeleteMaterial?: (id: string) => void;
+  onAddMaterial: (material: Omit<Material, 'id' | 'addedAt'>) => Promise<void> | void;
+  onUpdateMaterial: (id: string, material: Partial<Material>) => Promise<void> | void;
+  onDeleteMaterial: (id: string) => Promise<void> | void;
 }
 
 const peso = "\u20B1";
 type SortOption = 'recent' | 'name' | 'quantity' | 'unit-cost' | 'total-value';
 
+// --- Helper Functions ---
 const formatCompactAmount = (value: number) => {
   if (!Number.isFinite(value)) return "0";
   const absValue = Math.abs(value);
@@ -69,13 +68,22 @@ export function MaterialsManager({
   projects, 
   materials,
   onAddMaterial,
-  _onUpdateMaterial,
-  _onDeleteMaterial
+  onUpdateMaterial,
+  onDeleteMaterial
 }: MaterialsManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
+  
   const [selectedProject, setSelectedProject] = useState('');
   const [statusFilter, setStatusFilter] = useState<Material['status'] | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+  const [supplierFilter, setSupplierFilter] = useState('all');
+  const [sortBy, setSortBy] = useState<SortOption>('recent');
+  const [lowStockOnly, setLowStockOnly] = useState(false);
+  const [lowStockThreshold, setLowStockThreshold] = useState(5);
+
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -87,13 +95,19 @@ export function MaterialsManager({
     projectId: '',
     category: ''
   });
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [supplierFilter, setSupplierFilter] = useState('all');
-  const [sortBy, setSortBy] = useState<SortOption>('recent');
-  const [lowStockOnly, setLowStockOnly] = useState(false);
-  const [lowStockThreshold, setLowStockThreshold] = useState(5);
 
-  // Filter projects for current fabricator
+  const [editFormData, setEditFormData] = useState({
+    name: '',
+    description: '',
+    quantity: '',
+    unit: '',
+    cost: '',
+    supplier: '',
+    status: 'ordered' as Material['status'],
+    projectId: '',
+    category: ''
+  });
+
   const fabricatorProjects = projects.filter(p => 
     p.fabricatorIds.includes(currentUser.id) && p.status !== 'pending-assignment'
   );
@@ -108,7 +122,6 @@ export function MaterialsManager({
     return normalized === 'general' || normalized === 'none';
   };
 
-  // Filter materials
   const filteredMaterials = materials.filter((m) => {
     const isGeneral = isGeneralInventory(m.projectId);
     const matchesOwner = m.addedBy === currentUser.id || isGeneral || !m.addedBy;
@@ -160,15 +173,8 @@ export function MaterialsManager({
   });
 
   const materialCategories = [
-    'Raw Materials',
-    'Structural Materials',
-    'Consumables',
-    'Tools & Equipment',
-    'Safety',
-    'Electrical',
-    'Finishing Materials',
-    'Hardware',
-    'Other'
+    'Raw Materials', 'Structural Materials', 'Consumables', 'Tools & Equipment',
+    'Safety', 'Electrical', 'Finishing Materials', 'Hardware', 'Other'
   ];
 
   const units = [
@@ -178,42 +184,47 @@ export function MaterialsManager({
 
   const availableCategories = Array.from(new Set([
     ...materialCategories,
-    ...materials
-      .map((material) => material.category)
-      .filter((category): category is string => Boolean(category)),
+    ...materials.map((material) => material.category).filter((category): category is string => Boolean(category)),
   ])).sort((a, b) => a.localeCompare(b));
 
   const availableSuppliers = Array.from(new Set(
-    materials
-      .map((material) => material.supplier)
-      .filter((supplier): supplier is string => Boolean(supplier))
+    materials.map((material) => material.supplier).filter((supplier): supplier is string => Boolean(supplier))
   )).sort((a, b) => a.localeCompare(b));
 
   const lowStockCount = filteredMaterials.filter((material) => material.quantity <= lowStockLimit).length;
-  const supplierCount = new Set(
-    filteredMaterials
-      .map((material) => material.supplier)
-      .filter((supplier): supplier is string => Boolean(supplier))
-  ).size;
-  const categoryCount = new Set(
-    filteredMaterials
-      .map((material) => material.category)
-      .filter((category): category is string => Boolean(category))
-  ).size;
+  const supplierCount = new Set(filteredMaterials.map((m) => m.supplier).filter(Boolean)).size;
+  const categoryCount = new Set(filteredMaterials.map((m) => m.category).filter(Boolean)).size;
 
+  // --- HANDLERS ---
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    if (!onAddMaterial) return;
+
+    if(!formData.name || !formData.quantity || !formData.cost || !formData.unit) {
+       // Target the add modal if it's open
+       const target = document.getElementById('add-dialog-content');
+       Swal.fire({
+         icon: 'error',
+         title: 'Missing Fields',
+         text: 'Please fill in all required fields (Name, Quantity, Unit, Cost).',
+         target: target || 'body', // Fallback to body if modal not found
+         customClass: { container: 'z-[99999]' } 
+       });
+       return;
+    }
+
+    setIsSubmitting(true);
+
     const newMaterial: Omit<Material, 'id' | 'addedAt'> = {
       name: formData.name,
       description: formData.description || undefined,
-      quantity: parseFloat(formData.quantity),
+      quantity: parseFloat(formData.quantity) || 0,
       unit: formData.unit,
-      cost: parseFloat(formData.cost),
+      cost: parseFloat(formData.cost) || 0,
       supplier: formData.supplier || undefined,
       status: formData.status,
       projectId: (formData.projectId && formData.projectId !== 'none') ? formData.projectId : undefined,
@@ -221,50 +232,194 @@ export function MaterialsManager({
       category: formData.category || undefined
     };
 
-    onAddMaterial(newMaterial);
-
-    // Reset form
-    setFormData({
-      name: '',
-      description: '',
-      quantity: '',
-      unit: '',
-      cost: '',
-      supplier: '',
-      status: 'ordered',
-      projectId: 'none',
-      category: ''
-    });
-    setShowAddForm(false);
+    try {
+      await onAddMaterial(newMaterial);
+      
+      setFormData({
+        name: '', description: '', quantity: '', unit: '', cost: '', supplier: '',
+        status: 'ordered', projectId: 'none', category: ''
+      });
+      setShowAddForm(false);
+      
+      Swal.fire({
+        icon: 'success',
+        title: 'Added!',
+        text: 'Material added to inventory.',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      console.error(error);
+      const target = document.getElementById('add-dialog-content');
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to add material',
+        target: target || 'body'
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
+  const handleEditClick = (material: Material) => {
+    setEditingMaterial(material);
+    setEditFormData({
+      name: material.name,
+      description: material.description || '',
+      quantity: material.quantity.toString(),
+      unit: material.unit,
+      cost: material.cost.toString(),
+      supplier: material.supplier || '',
+      status: material.status,
+      projectId: material.projectId || 'none',
+      category: material.category || ''
+    });
+  };
+
+  const handleEditInputChange = (field: string, value: string) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMaterial) return;
+
+    // Use specific ID to target the open modal
+    const modalTarget = document.getElementById('edit-dialog-content');
+
+    if (!onUpdateMaterial) {
+      Swal.fire({
+        icon: 'error',
+        title: 'System Error',
+        text: 'Update function not connected.',
+        target: modalTarget || 'body'
+      });
+      return;
+    }
+
+    if(!editFormData.name || !editFormData.quantity || !editFormData.cost) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Missing Details',
+            text: 'Name, Quantity, and Cost are required.',
+            target: modalTarget || 'body',
+            customClass: { container: 'z-[99999]' }
+        });
+        return;
+    }
+
+    const result = await Swal.fire({
+      title: 'Save changes?',
+      text: `Update details for "${editFormData.name}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, Save',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#0f172a',
+      target: modalTarget || 'body', // This forces the alert INSIDE the modal focus trap
+      customClass: { container: 'z-[99999]' }
+    });
+
+    if (!result.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Updating...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+      target: modalTarget || 'body'
+    });
+
+    const updatedData: Partial<Material> = {
+      name: editFormData.name,
+      description: editFormData.description || undefined,
+      quantity: parseFloat(editFormData.quantity) || 0,
+      unit: editFormData.unit,
+      cost: parseFloat(editFormData.cost) || 0,
+      supplier: editFormData.supplier || undefined,
+      status: editFormData.status,
+      projectId: (editFormData.projectId && editFormData.projectId !== 'none') ? editFormData.projectId : undefined,
+      category: editFormData.category || undefined
+    };
+
+    try {
+      await onUpdateMaterial(editingMaterial.id, updatedData);
+      
+      setEditingMaterial(null);
+      
+      // Since modal closes, we can show success on body
+      Swal.fire({
+        icon: 'success',
+        title: 'Updated!',
+        text: 'Material details have been saved.',
+        timer: 1500,
+        showConfirmButton: false,
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to update material',
+        target: modalTarget || 'body'
+      });
+    }
+  };
+
+  const handleDeleteClick = async (id: string) => {
+    if(!onDeleteMaterial) return;
+
+    // Delete is not in a modal, so standard body target is fine
+    const result = await Swal.fire({
+      title: 'Are you sure?',
+      text: "You won't be able to revert this!",
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Yes, delete it!',
+    });
+
+    if (result.isConfirmed) {
+      Swal.fire({
+        title: 'Deleting...',
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
+
+      try {
+        await onDeleteMaterial(id);
+        
+        Swal.fire({
+          title: 'Deleted!',
+          text: 'The material has been removed.',
+          icon: 'success',
+          timer: 1500,
+          showConfirmButton: false,
+        });
+      } catch (error) {
+        Swal.fire('Error', 'Failed to delete material', 'error');
+      }
+    }
+  };
+
+  // --- UI HELPERS ---
   const getStatusIcon = (status: Material['status']) => {
     switch (status) {
-      case 'ordered':
-        return <Truck className="h-4 w-4" />;
-      case 'delivered':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'in-use':
-        return <AlertCircle className="h-4 w-4 text-orange-600" />;
-      case 'depleted':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <Package className="h-4 w-4" />;
+      case 'ordered': return <Truck className="h-4 w-4" />;
+      case 'delivered': return <CheckCircle className="h-4 w-4 text-green-600" />;
+      case 'in-use': return <AlertCircle className="h-4 w-4 text-orange-600" />;
+      case 'depleted': return <XCircle className="h-4 w-4 text-red-600" />;
+      default: return <Package className="h-4 w-4" />;
     }
   };
 
   const getStatusColor = (status: Material['status']) => {
     switch (status) {
-      case 'ordered':
-        return 'secondary';
-      case 'delivered':
-        return 'default';
-      case 'in-use':
-        return 'secondary';
-      case 'depleted':
-        return 'destructive';
-      default:
-        return 'outline';
+      case 'ordered': return 'secondary';
+      case 'delivered': return 'default';
+      case 'in-use': return 'secondary';
+      case 'depleted': return 'destructive';
+      default: return 'outline';
     }
   };
 
@@ -280,7 +435,10 @@ export function MaterialsManager({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* ================================================================
+        ADD MATERIAL DIALOG 
+        ================================================================
+      */}
       <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
         <div className="flex justify-between items-center">
           <div>
@@ -298,7 +456,8 @@ export function MaterialsManager({
           </DialogTrigger>
         </div>
 
-        <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
+        {/* Added ID here to target for SweetAlert */}
+        <DialogContent id="add-dialog-content" className="max-w-4xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Material</DialogTitle>
             <DialogDescription>Fill out the form to add materials to inventory.</DialogDescription>
@@ -324,9 +483,7 @@ export function MaterialsManager({
                   </SelectTrigger>
                   <SelectContent>
                     {materialCategories.map(category => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -354,7 +511,6 @@ export function MaterialsManager({
                   step="0.01"
                   value={formData.quantity}
                   onChange={(e) => handleInputChange('quantity', e.target.value)}
-                  placeholder="0"
                   required
                 />
               </div>
@@ -367,9 +523,7 @@ export function MaterialsManager({
                   </SelectTrigger>
                   <SelectContent>
                     {units.map(unit => (
-                      <SelectItem key={unit} value={unit}>
-                        {unit}
-                      </SelectItem>
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -384,7 +538,6 @@ export function MaterialsManager({
                   step="0.01"
                   value={formData.cost}
                   onChange={(e) => handleInputChange('cost', e.target.value)}
-                  placeholder="0.00"
                   required
                 />
               </div>
@@ -404,9 +557,7 @@ export function MaterialsManager({
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
                 <Select value={formData.status} onValueChange={(value: Material['status']) => handleInputChange('status', value)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="ordered">Ordered</SelectItem>
                     <SelectItem value="delivered">Delivered</SelectItem>
@@ -426,29 +577,163 @@ export function MaterialsManager({
                 <SelectContent>
                   <SelectItem value="none">General Inventory</SelectItem>
                   {fabricatorProjects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div className="flex gap-2">
-              <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
-                Cancel
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>Cancel</Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? 'Adding...' : <><Plus className="h-4 w-4 mr-2" /> Add Material</>}
               </Button>
-              <Button type="submit">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Material
-              </Button>
-            </div>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
 
-      {/* Summary Stats */}
+      {/* ================================================================
+        EDIT MATERIAL DIALOG 
+        ================================================================
+      */}
+      <Dialog open={!!editingMaterial} onOpenChange={(open) => !open && setEditingMaterial(null)}>
+        {/* Added ID here to target for SweetAlert */}
+        <DialogContent id="edit-dialog-content" className="max-w-4xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Material</DialogTitle>
+            <DialogDescription>Update the details of this material.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+             {/* Reusing the form structure but binding to editFormData */}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-name">Material Name *</Label>
+                <Input
+                  id="edit-name"
+                  value={editFormData.name}
+                  onChange={(e) => handleEditInputChange('name', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-category">Category</Label>
+                <Select value={editFormData.category} onValueChange={(value) => handleEditInputChange('category', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {materialCategories.map(category => (
+                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-description">Description</Label>
+              <Textarea
+                id="edit-description"
+                value={editFormData.description}
+                onChange={(e) => handleEditInputChange('description', e.target.value)}
+                rows={2}
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="edit-quantity">Quantity *</Label>
+                <Input
+                  id="edit-quantity"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editFormData.quantity}
+                  onChange={(e) => handleEditInputChange('quantity', e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-unit">Unit *</Label>
+                <Select value={editFormData.unit} onValueChange={(value) => handleEditInputChange('unit', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select unit" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {units.map(unit => (
+                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-cost">Cost per Unit ({peso}) *</Label>
+                <Input
+                  id="edit-cost"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={editFormData.cost}
+                  onChange={(e) => handleEditInputChange('cost', e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="edit-supplier">Supplier</Label>
+                <Input
+                  id="edit-supplier"
+                  value={editFormData.supplier}
+                  onChange={(e) => handleEditInputChange('supplier', e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-status">Status *</Label>
+                <Select value={editFormData.status} onValueChange={(value: Material['status']) => handleEditInputChange('status', value)}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ordered">Ordered</SelectItem>
+                    <SelectItem value="delivered">Delivered</SelectItem>
+                    <SelectItem value="in-use">In Use</SelectItem>
+                    <SelectItem value="depleted">Depleted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-projectId">Assign to Project</Label>
+              <Select value={editFormData.projectId} onValueChange={(value) => handleEditInputChange('projectId', value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="General inventory" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">General Inventory</SelectItem>
+                  {fabricatorProjects.map(project => (
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setEditingMaterial(null)}>Cancel</Button>
+              <Button type="submit">Save Changes</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Summary Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
+        {/* Total Items */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -459,6 +744,7 @@ export function MaterialsManager({
           </CardContent>
         </Card>
         
+        {/* Total Value */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -466,11 +752,7 @@ export function MaterialsManager({
               <span className="text-sm">Total Value</span>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <button
-                    type="button"
-                    className="text-muted-foreground hover:text-foreground"
-                    aria-label="Total value info"
-                  >
+                  <button type="button" className="text-muted-foreground hover:text-foreground">
                     <CircleHelp className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
@@ -481,6 +763,7 @@ export function MaterialsManager({
           </CardContent>
         </Card>
 
+        {/* In Use */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -491,6 +774,7 @@ export function MaterialsManager({
           </CardContent>
         </Card>
 
+        {/* Depleted */}
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-2">
@@ -511,50 +795,44 @@ export function MaterialsManager({
         Totals and badges update based on the filters below.
       </p>
 
-      {/* Filters */}
+      {/* Filters Section (Unchanged logic, just keeping structure) */}
       <Card>
         <CardContent className="pt-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
+             {/* Search */}
             <div className="space-y-2">
               <Label>Search Materials</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name, category, supplier..."
+                  placeholder="Search..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-8"
                 />
               </div>
-              <p className="text-xs text-muted-foreground">
-                Matches name, category, supplier, or description.
-              </p>
             </div>
 
+            {/* Project Filter */}
             <div className="space-y-2">
               <Label>Project Filter</Label>
               <Select value={selectedProject} onValueChange={setSelectedProject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Projects" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="All Projects" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Projects</SelectItem>
                   <SelectItem value="general">General Inventory</SelectItem>
                   {fabricatorProjects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>
-                      {project.name}
-                    </SelectItem>
+                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Status Filter */}
             <div className="space-y-2">
               <Label>Status Filter</Label>
-              <Select value={statusFilter} onValueChange={(value: Material['status'] | 'all') => setStatusFilter(value)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
                   <SelectItem value="ordered">Ordered</SelectItem>
@@ -565,148 +843,81 @@ export function MaterialsManager({
               </Select>
             </div>
 
+            {/* Category Filter */}
             <div className="space-y-2">
               <Label>Category Filter</Label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="All Categories" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="uncategorized">Uncategorized</SelectItem>
-                  {availableCategories.map((category) => (
-                    <SelectItem key={category} value={category}>
-                      {category}
-                    </SelectItem>
-                  ))}
+                  {availableCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Supplier Filter */}
             <div className="space-y-2">
               <Label>Supplier Filter</Label>
               <Select value={supplierFilter} onValueChange={setSupplierFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All Suppliers" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="All Suppliers" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Suppliers</SelectItem>
                   <SelectItem value="unspecified">Unspecified</SelectItem>
-                  {availableSuppliers.map((supplier) => (
-                    <SelectItem key={supplier} value={supplier}>
-                      {supplier}
-                    </SelectItem>
-                  ))}
+                  {availableSuppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
 
+            {/* Sort */}
             <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label>Sort By</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground"
-                      aria-label="Sort info"
-                    >
-                      <CircleHelp className="h-3.5 w-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Changes the order of the materials list.</TooltipContent>
-                </Tooltip>
-              </div>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as SortOption)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
+              <Label>Sort By</Label>
+              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recent">Recently Added</SelectItem>
                   <SelectItem value="name">Name (A-Z)</SelectItem>
                   <SelectItem value="quantity">Quantity (High to Low)</SelectItem>
-                  <SelectItem value="unit-cost">Unit Cost (High to Low)</SelectItem>
-                  <SelectItem value="total-value">Total Value (High to Low)</SelectItem>
+                  <SelectItem value="unit-cost">Unit Cost</SelectItem>
+                  <SelectItem value="total-value">Total Value</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-1">
-                <Label htmlFor="lowStockThreshold">Low Stock Threshold</Label>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      type="button"
-                      className="text-muted-foreground hover:text-foreground"
-                      aria-label="Low stock threshold info"
-                    >
-                      <CircleHelp className="h-3.5 w-3.5" />
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent>Items at or below this quantity are marked low stock.</TooltipContent>
-                </Tooltip>
-              </div>
+          <div className="mt-4 flex flex-wrap gap-4 items-end">
+             <div className="space-y-2 w-full md:w-auto">
+              <Label htmlFor="lowStockThreshold">Low Stock Threshold</Label>
               <Input
                 id="lowStockThreshold"
                 type="number"
                 min="0"
-                step="0.01"
                 value={lowStockThreshold}
-                onChange={(e) => {
-                  const nextValue = Number(e.target.value);
-                  setLowStockThreshold(Number.isNaN(nextValue) ? 0 : nextValue);
-                }}
+                onChange={(e) => setLowStockThreshold(Number(e.target.value) || 0)}
+                className="w-full md:w-[150px]"
               />
-              <p className="text-xs text-muted-foreground">
-                Applied after filters; defaults to 5.
-              </p>
             </div>
 
-            <div className="flex items-end">
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="low-stock-only"
-                  checked={lowStockOnly}
-                  onCheckedChange={setLowStockOnly}
-                />
-                <div className="flex items-center gap-1">
-                  <Label htmlFor="low-stock-only">Low Stock Only</Label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        className="text-muted-foreground hover:text-foreground"
-                        aria-label="Low stock only info"
-                      >
-                        <CircleHelp className="h-3.5 w-3.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Shows only items under the low stock threshold.</TooltipContent>
-                  </Tooltip>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 pb-2">
+              <Switch id="low-stock-only" checked={lowStockOnly} onCheckedChange={setLowStockOnly} />
+              <Label htmlFor="low-stock-only">Low Stock Only</Label>
             </div>
 
-            <div className="flex items-end">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSelectedProject('all');
-                  setStatusFilter('all');
-                  setCategoryFilter('all');
-                  setSupplierFilter('all');
-                  setSearchTerm('');
-                  setSortBy('recent');
-                  setLowStockOnly(false);
-                  setLowStockThreshold(5);
-                }}
-              >
-                Clear Filters
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setSelectedProject('all');
+                setStatusFilter('all');
+                setCategoryFilter('all');
+                setSupplierFilter('all');
+                setSearchTerm('');
+                setSortBy('recent');
+                setLowStockOnly(false);
+                setLowStockThreshold(5);
+              }}
+            >
+              Clear Filters
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -736,9 +947,9 @@ export function MaterialsManager({
                 return (
                 <div
                   key={material.id}
-                  className={`border rounded-lg p-4 ${isLowStock ? 'border-orange-200 bg-orange-50/40' : ''}`}
+                  className={`border rounded-lg p-4 relative ${isLowStock ? 'border-orange-200 bg-orange-50/40' : ''}`}
                 >
-                  <div className="flex justify-between items-start mb-3">
+                  <div className="flex justify-between items-start mb-3 pr-20">
                     <div className="flex items-center gap-3">
                       {getStatusIcon(material.status)}
                       <div>
@@ -763,7 +974,32 @@ export function MaterialsManager({
                     </div>
                   </div>
 
-                  <div className="grid gap-4 md:grid-cols-4 text-sm">
+                  {/* ================================================================
+                     ACTION BUTTONS (EDIT / DELETE) 
+                     ================================================================
+                  */}
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleEditClick(material)}
+                        title="Edit Material"
+                    >
+                        <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-8 w-8 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDeleteClick(material.id)}
+                        title="Delete Material"
+                    >
+                        <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-4 text-sm mt-4">
                     <div>
                       <p className="text-muted-foreground">Quantity</p>
                       <p>{material.quantity} {material.unit}</p>
@@ -790,7 +1026,7 @@ export function MaterialsManager({
                     </div>
                   )}
 
-                  <div className="text-xs text-muted-foreground mt-2">
+                  <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
                     Added on {new Date(material.addedAt).toLocaleDateString()}
                   </div>
                 </div>

@@ -762,6 +762,45 @@ export default function App() {
     }
   };
 
+  const handleUpdateMaterial = async (id: string, updates: Partial<Material>) => {
+    try {
+      // 1. Call API
+      const response = await apiService.updateMaterial(id, updates);
+      
+      if (response.data) {
+        // 2. Map backend response if necessary (assuming mapMaterialFromBackend handles raw DB format)
+        const updatedMaterial = mapMaterialFromBackend(response.data);
+        
+        // 3. Update Local State
+        setMaterials((prevMaterials) =>
+          prevMaterials.map((m) => (m.id === id ? updatedMaterial : m))
+        );
+      } else {
+         console.error("Failed to update material:", response.error);
+      }
+    } catch (error) {
+      console.error("Error updating material:", error);
+      // Optional: Add a toast notification here
+    }
+  };
+
+  const handleDeleteMaterial = async (id: string) => {
+    try {
+      // 1. Call API
+      const response = await apiService.deleteMaterial(id);
+      
+      if (!response.error) {
+        // 2. Update Local State
+        setMaterials((prevMaterials) => 
+          prevMaterials.filter((m) => m.id !== id)
+        );
+      } else {
+        console.error("Failed to delete material:", response.error);
+      }
+    } catch (error) {
+      console.error("Error deleting material:", error);
+    }
+  };
   // Handle navigation based on URL hash
   useEffect(() => {
     const validViews = [
@@ -1030,6 +1069,32 @@ export default function App() {
           />
         );
 
+        // ... inside renderView ...
+
+      case "materials":
+        if (currentUser.role === "fabricator") {
+          return (
+            <MaterialsManager
+              currentUser={currentUser}
+              projects={projects}
+              materials={materials}
+              onAddMaterial={handleAddMaterial}
+              // ADD THESE TWO LINES:
+              onUpdateMaterial={handleUpdateMaterial}
+              onDeleteMaterial={handleDeleteMaterial}
+            />
+          );
+        }
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg mb-2">Access Restricted</h3>
+              <p className="text-muted-foreground">
+                Materials management is only available for fabricators.
+              </p>
+            </div>
+          </div>
+        );
       case "team":
         if (currentUser.role === "admin" || currentUser.role === "supervisor") {
           return (

@@ -239,6 +239,18 @@ class ApiService {
             body: JSON.stringify(materialData),
         });
     }
+    async updateMaterial(id: string, materialData: any): Promise<ApiResponse<any>> {
+        return this.request(`/materials/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify(materialData),
+        });
+    }
+
+    async deleteMaterial(id: string): Promise<ApiResponse<any>> {
+        return this.request(`/materials/${id}`, {
+            method: 'DELETE',
+        });
+    }
 
     // Users methods
     async getUsers(): Promise<ApiResponse<User[]>> {
