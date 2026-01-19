@@ -33,7 +33,6 @@ const swalCustomClasses = {
   htmlContainer: "swal-content",
   confirmButton: "swal-confirm-button",
   cancelButton: "swal-cancel-button",
-  icon: "swal-icon",
 };
 
 const MIN_LOADING_TIME = 2000;
@@ -273,11 +272,22 @@ export function AdminSettingsPage({
     const fullName = `${trimmedFirst} ${trimmedLast}`.trim();
     const trimmedEmail = formData.email.trim();
 
-    if (!fullName || !trimmedEmail) {
+    // if firstname is > 50 chars or lastname > 50 chars, show error
+    if (trimmedFirst.length > 50 || trimmedLast.length > 50) {
+      await Swal.fire({
+        icon: "error",
+        title: "Content Exceeds Limit",
+        text: "First name and last name cannot exceed 50 characters.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (!fullName || !trimmedEmail || !trimmedFirst || !trimmedLast || !formData.phone.trim()) {
       await Swal.fire({
         icon: "error",
         title: "Missing fields",
-        text: "Name and email are required.",
+        text: "Please fill in all required fields.",
         customClass: swalCustomClasses,
       });
       return;
@@ -575,7 +585,7 @@ export function AdminSettingsPage({
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div
-            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="modal bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
@@ -603,6 +613,8 @@ export function AdminSettingsPage({
                   </Label>
                   <Input
                     id="first-name"
+                    minLength={1}
+                    maxLength={50}
                     value={formData.firstName}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -622,6 +634,8 @@ export function AdminSettingsPage({
                     Last Name
                   </Label>
                   <Input
+                    minLength={1}
+                    maxLength={50}
                     id="last-name"
                     value={formData.lastName}
                     onChange={(e) =>
@@ -670,6 +684,8 @@ export function AdminSettingsPage({
                     Phone Number
                   </Label>
                   <Input
+                    minLength={1}
+                    maxLength={11}
                     id="phone"
                     placeholder="+639XXXXXXXXX or 09XXXXXXXXX"
                     value={formData.phone}
@@ -693,6 +709,8 @@ export function AdminSettingsPage({
                     GCash Number
                   </Label>
                   <Input
+                    minLength={1}
+                    maxLength={11}
                     id="gcash-number"
                     placeholder="09XXXXXXXXX"
                     value={formData.gcashNumber}
@@ -718,6 +736,8 @@ export function AdminSettingsPage({
                     Department / School
                   </Label>
                   <Input
+                    minLength={1}
+                    maxLength={20}
                     id="department"
                     value={formData.department}
                     onChange={(e) =>
