@@ -266,6 +266,23 @@ function log_activity(PDO $pdo, string $userId, string $action, ?string $descrip
     }
 }
 
+function apply_project_progress_delta(PDO $pdo, string $projectId, float $delta): void
+{
+    if ($projectId === '' || $delta == 0.0) {
+        return;
+    }
+
+    $stmt = $pdo->prepare(
+        'UPDATE projects
+         SET progress = LEAST(100, GREATEST(0, COALESCE(progress, 0) + :delta))
+         WHERE id = :id'
+    );
+    $stmt->execute([
+        ':delta' => $delta,
+        ':id' => $projectId,
+    ]);
+}
+
 // ----------------------------------------------------------------------
 // HANDLERS
 // ----------------------------------------------------------------------
@@ -1635,6 +1652,8 @@ function handle_create_worklog(PDO $pdo): void
         );
         $stmt->execute($params);
 
+        apply_project_progress_delta($pdo, $projectId, floatval($progressPercentage));
+
         // LOGGING
         log_activity($pdo, $_SESSION['user_id'], 'CREATE_WORKLOG', "Added $hours hours to project $projectId");
 
@@ -1658,6 +1677,16 @@ function handle_update_worklog(PDO $pdo, string $id): void
 {
     require_login();
     $body = sanitize_recursive(json_input());
+
+    $stmt = $pdo->prepare('SELECT project_id, progress_percentage FROM work_logs WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    $existingLog = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$existingLog) {
+        json_response(['error' => 'Work log not found'], 404);
+    }
+    $projectId = (string) ($existingLog['project_id'] ?? '');
+    $previousProgress = floatval($existingLog['progress_percentage'] ?? 0);
+    $progressDelta = 0.0;
 
     $fields = [];
     $params = [':id' => $id];
@@ -1691,8 +1720,10 @@ function handle_update_worklog(PDO $pdo, string $id): void
 
     if (array_key_exists('progressPercentage', $body) || array_key_exists('progress_percentage', $body)) {
         $progressInput = $body['progressPercentage'] ?? $body['progress_percentage'] ?? 0;
+        $progressValue = floatval($progressInput);
         $fields[] = 'progress_percentage = :progress_percentage';
-        $params[':progress_percentage'] = floatval($progressInput);
+        $params[':progress_percentage'] = $progressValue;
+        $progressDelta = $progressValue - $previousProgress;
     }
 
     if (
@@ -1724,6 +1755,10 @@ function handle_update_worklog(PDO $pdo, string $id): void
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
+        if ($progressDelta != 0.0 && $projectId !== '') {
+            apply_project_progress_delta($pdo, $projectId, $progressDelta);
+        }
+
         $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id LIMIT 1');
         $stmt->execute([':id' => $id]);
         $log = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1753,15 +1788,21 @@ function handle_delete_worklog(PDO $pdo, string $id): void
 {
     require_login();
 
-    $stmt = $pdo->prepare('SELECT project_id FROM work_logs WHERE id = :id');
+    $stmt = $pdo->prepare('SELECT project_id, progress_percentage FROM work_logs WHERE id = :id');
     $stmt->execute([':id' => $id]);
     $log = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$log) {
         json_response(['error' => 'Work log not found'], 404);
     }
+    $projectId = (string) ($log['project_id'] ?? '');
+    $progressDelta = -floatval($log['progress_percentage'] ?? 0);
 
     $stmt = $pdo->prepare('DELETE FROM work_logs WHERE id = :id');
     $stmt->execute([':id' => $id]);
+
+    if ($progressDelta != 0.0 && $projectId !== '') {
+        apply_project_progress_delta($pdo, $projectId, $progressDelta);
+    }
 
     // LOGGING
     log_activity($pdo, $_SESSION['user_id'], 'DELETE_WORKLOG', "Deleted work log: $id");

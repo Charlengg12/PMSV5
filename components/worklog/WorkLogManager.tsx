@@ -23,7 +23,14 @@ import {
   Package,
   Trash2
 } from 'lucide-react';
-import { Project, User, WorkLogEntry, Material } from '../../types';
+import { ProjectFileUpload } from '../projects/ProjectFileUpload';
+import {
+  Project,
+  User,
+  WorkLogEntry,
+  Material,
+  ProjectAttachment,
+} from '../../types';
 
 interface WorkLogManagerProps {
   currentUser: User;
@@ -260,6 +267,21 @@ export function WorkLogManager({
     });
 
     return hasStatus && !hasInvalidStatus && hasDocs && hasProgress;
+  };
+  const canManageDocumentation = () => {
+    const proj = getSelectedProject();
+    if (!proj) return false;
+    if (currentUser.role === 'admin' || currentUser.role === 'supervisor') return true;
+    if (currentUser.role === 'fabricator') {
+      return proj.fabricatorIds.includes(currentUser.id);
+    }
+    return false;
+  };
+  const handleProjectFilesUploaded = (newAttachments: ProjectAttachment[]) => {
+    const proj = getSelectedProject();
+    if (!proj || !onUpdateProject) return;
+    const updatedAttachments = [...(proj.attachments || []), ...newAttachments];
+    onUpdateProject({ ...proj, attachments: updatedAttachments });
   };
   const submitForSupervisorReview = () => {
     const proj = getSelectedProject();
@@ -652,7 +674,15 @@ export function WorkLogManager({
               </Button>
             </div>
           </CardContent>
-        </Card>
+      </Card>
+    )}
+
+      {selectedProject && canManageDocumentation() && onUpdateProject && (
+        <ProjectFileUpload
+          projectId={selectedProject}
+          currentUserId={currentUser.id}
+          onFilesUploaded={handleProjectFilesUploaded}
+        />
       )}
 
       {/* Work Log History */}

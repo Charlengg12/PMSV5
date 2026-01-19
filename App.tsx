@@ -459,13 +459,6 @@ export default function App() {
           };
         })
       );
-      if (updatedProgress !== null && progressIncrease > 0) {
-        apiService
-          .updateProject(savedLog.projectId, { progress: updatedProgress })
-          .catch((error) => {
-            console.warn("Failed to persist project progress:", error);
-          });
-      }
     } catch (error) {
       console.error("Network crash:", error);
       alert("Network Error: Could not save work log.");
@@ -554,13 +547,6 @@ export default function App() {
         );
       }
 
-      if (progressDelta !== 0) {
-        apiService
-          .updateProject(previousLog.projectId, { progress: nextProjectProgress })
-          .catch((error) => {
-            console.warn("Failed to persist project progress:", error);
-          });
-      }
     } catch (error) {
       console.error("Failed to update work log:", error);
       setWorkLogs(previousLogs);
@@ -607,13 +593,6 @@ export default function App() {
 
     try {
       await apiService.deleteWorkLog(id);
-      if (progressDelta !== 0) {
-        apiService
-          .updateProject(previousLog.projectId, { progress: nextProjectProgress })
-          .catch((error) => {
-            console.warn("Failed to persist project progress:", error);
-          });
-      }
     } catch (error) {
       console.error("Failed to delete work log:", error);
       setWorkLogs(previousLogs);
