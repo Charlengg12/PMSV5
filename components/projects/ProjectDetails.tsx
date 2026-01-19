@@ -25,6 +25,7 @@ import {
   Link as LinkIcon,
   Users as UsersIcon,
   DollarSign as RevenueIcon,
+  UserMinus, // Added icon for unassigning
 } from "lucide-react";
 import { addDays, format, setHours } from "date-fns";
 import { Project, User, ProjectAttachment } from "../../types";
@@ -101,21 +102,21 @@ export function ProjectDetails({
   }));
 
   // ────────────────────────────────────────────────
-  //  FIXED: Robust Client Detection Logic
+  //  FIXED: Robust Client Detection Logic (Tracks editedProject now)
   // ────────────────────────────────────────────────
   // 1. Try to find the user object by ID (most accurate)
-  const matchedUser = users.find((u) => u.id === project.clientId);
+  const matchedUser = users.find((u) => u.id === editedProject.clientId);
 
   // 2. Fallback: Find by legacy clientProjectId link
   const linkedUser = users.find(
-    (u) => u.role === "client" && u.clientProjectId === project.id
+    (u) => u.role === "client" && u.clientProjectId === editedProject.id
   );
 
   // 3. Construct a display object. If no user found, use project.clientName string.
-  const clientDisplay = matchedUser || linkedUser || (project.clientName ? {
-    name: project.clientName,
-    email: "", // Email might not be available if we only have the name string
-    id: project.clientId
+  const clientDisplay = matchedUser || linkedUser || (editedProject.clientName ? {
+    name: editedProject.clientName,
+    email: "", 
+    id: editedProject.clientId
   } : null);
 
   const localClientAssigned = !!clientDisplay;
@@ -306,23 +307,25 @@ export function ProjectDetails({
     setFinancialEdits((prev) => ({ ...prev, [field]: sanitized }));
   };
 
+  // ────────────────────────────────────────────────
+  //  NEW: Unassign Client Handler
+  // ────────────────────────────────────────────────
+  const handleUnassignClient = () => {
+    setEditedProject((prev) => ({
+      ...prev,
+      clientId: null as any, // Cast if type strictly requires string, usually ID can be null/undefined in DB
+      clientName: null as any,
+    }));
+  };
+
   const handleSave = async () => {
-    // ─── Character limit checks (separate alerts like in create form) ───
+    // ─── Character limit checks ───
     if (editedProject.name && editedProject.name.length > MAX_NAME_LENGTH) {
       Swal.fire({
         title: "Input Limit Exceeded",
         text: `Project name cannot exceed ${MAX_NAME_LENGTH} characters.`,
         icon: "warning",
         confirmButtonText: "Okay",
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-          icon: "swal-icon",
-        },
       });
       return;
     }
@@ -336,15 +339,6 @@ export function ProjectDetails({
         text: `Description cannot exceed ${MAX_DESCRIPTION_LENGTH} characters.`,
         icon: "warning",
         confirmButtonText: "Okay",
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-          icon: "swal-icon",
-        },
       });
       return;
     }
@@ -359,15 +353,6 @@ export function ProjectDetails({
         )}</strong>`,
         icon: "warning",
         confirmButtonText: "Okay",
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-          icon: "swal-icon",
-        },
       });
       return;
     }
@@ -389,10 +374,6 @@ export function ProjectDetails({
         text: "Nothing to save.",
         timer: 1800,
         showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup",
-        },
       });
       setIsEditing(false);
       return;
@@ -406,14 +387,6 @@ export function ProjectDetails({
       showCancelButton: true,
       confirmButtonText: "Yes, save",
       cancelButtonText: "Cancel",
-      customClass: {
-        container: "swal-container",
-        popup: "swal-popup",
-        title: "swal-title",
-        htmlContainer: "swal-content",
-        confirmButton: "swal-confirm-button",
-        cancelButton: "swal-cancel-button",
-      },
     });
 
     if (!result.isConfirmed) return;
@@ -426,10 +399,6 @@ export function ProjectDetails({
       showConfirmButton: false,
       didOpen: () => {
         Swal.showLoading();
-      },
-      customClass: {
-        container: "swal-container",
-        popup: "swal-popup",
       },
     });
 
@@ -446,10 +415,6 @@ export function ProjectDetails({
         icon: "success",
         timer: 1800,
         showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup",
-        },
       });
     }, 1200);
   };
@@ -600,7 +565,7 @@ export function ProjectDetails({
               )}
 
               {/* Check if ANY client is assigned (local or backend) */}
-              {canEdit && localClientAssigned && (
+              {canEdit && localClientAssigned && !isEditing && (
                 <Button variant="outline" disabled>
                   Client Assigned
                 </Button>
@@ -886,20 +851,35 @@ export function ProjectDetails({
                       Client
                     </Label>
                     {clientDisplay ? (
-                      <div className="mt-1.5 text-sm text-muted-foreground min-w-0">
-                        <p
-                          className="font-medium truncate"
-                          title={clientDisplay.name}
-                        >
-                          {clientDisplay.name}
-                        </p>
-                        {clientDisplay.email && (
+                      <div className="mt-1.5 flex items-center justify-between bg-muted/30 p-2 rounded-md border text-sm min-w-0">
+                        <div className="min-w-0">
                           <p
-                            className="text-xs truncate"
-                            title={clientDisplay.email}
+                            className="font-medium truncate"
+                            title={clientDisplay.name}
                           >
-                            {clientDisplay.email}
+                            {clientDisplay.name}
                           </p>
+                          {clientDisplay.email && (
+                            <p
+                              className="text-xs text-muted-foreground truncate"
+                              title={clientDisplay.email}
+                            >
+                              {clientDisplay.email}
+                            </p>
+                          )}
+                        </div>
+                        {/* ── UNASSIGN BUTTON (Only in Edit Mode) ── */}
+                        {isEditing && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+                            onClick={handleUnassignClient}
+                            title="Unassign Client"
+                          >
+                            <UserMinus className="h-4 w-4 mr-1" />
+                            Unassign
+                          </Button>
                         )}
                       </div>
                     ) : (
