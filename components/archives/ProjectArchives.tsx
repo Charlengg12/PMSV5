@@ -69,7 +69,7 @@ export function ProjectArchives({
   };
   const getProjectSchool = (project: Project) => {
     const client = users.find(
-      (u) => u.role === "client" && u.clientProjectId === project.id
+      (u) => u.role === "client" && u.clientProjectId === project.id,
     );
     const name = safeText(client?.school || project.clientName).trim();
     return name || "Unknown";
@@ -107,7 +107,7 @@ export function ProjectArchives({
 
   // Get unique schools from completed projects
   const schools = Array.from(
-    new Set(completedProjects.map(getProjectSchool))
+    new Set(completedProjects.map(getProjectSchool)),
   ).sort();
 
   // Filter projects based on search and school
@@ -144,7 +144,7 @@ export function ProjectArchives({
   const calculateTotalMaterialCost = (projectId: string) => {
     return getProjectMaterials(projectId).reduce(
       (total, material) => total + safeNumber(material.cost),
-      0
+      0,
     );
   };
 
@@ -152,7 +152,7 @@ export function ProjectArchives({
     const attachments = getAttachments(project);
     const fabricatorIds = getFabricatorIds(project);
     return attachments.filter((att) =>
-      fabricatorIds.some((fabId) => att.uploadedBy === fabId)
+      fabricatorIds.some((fabId) => att.uploadedBy === fabId),
     );
   };
 
@@ -163,7 +163,7 @@ export function ProjectArchives({
         safeText(att.name).toLowerCase().includes("cost") ||
         safeText(att.name).toLowerCase().includes("analysis") ||
         safeText(att.name).toLowerCase().includes("budget") ||
-        att.type?.includes("spreadsheet")
+        att.type?.includes("spreadsheet"),
     );
   };
 
@@ -254,8 +254,8 @@ export function ProjectArchives({
       </div>
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
+      <Card className="p-4 sm:p-6">
+        <CardHeader className="p-0">
           <CardTitle className="text-base">Filter Archives</CardTitle>
         </CardHeader>
         <CardContent>
@@ -294,7 +294,7 @@ export function ProjectArchives({
         {filteredProjects.map((project) => {
           const supervisor = users.find((u) => u.id === project.supervisorId);
           const fabricators = users.filter((u) =>
-            getFabricatorIds(project).includes(u.id)
+            getFabricatorIds(project).includes(u.id),
           );
           const projectSchool = getProjectSchool(project);
           const fabricatorDocs = getFabricatorDocumentation(project);
@@ -307,10 +307,10 @@ export function ProjectArchives({
           return (
             <Card
               key={project.id}
-              className="hover:shadow-md transition-shadow"
+              className="hover:shadow-md transition-shadow p-4 sm:p-6"
             >
-              <CardHeader>
-                <div className="flex justify-between items-start">
+              <CardHeader className="p-0">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
                     <CardTitle className="text-lg">
                       {safeText(project.name)}
@@ -319,7 +319,7 @@ export function ProjectArchives({
                       {safeText(project.description)}
                     </p>
                   </div>
-                  <div className="flex gap-2 ml-4">
+                  <div className="flex flex-wrap gap-2 sm:ml-4">
                     <Badge variant="default" className="bg-green-600">
                       Completed
                     </Badge>
@@ -465,9 +465,9 @@ export function ProjectArchives({
       </div>
 
       {filteredProjects.length === 0 && (
-        <Card>
-          <CardContent className="py-12">
-            <div className="text-center">
+        <Card className="p-4 sm:p-6">
+          <CardContent>
+            <div className="text-center py-12">
               <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg mb-2">No Archived Projects Found</h3>
               <p className="text-muted-foreground">
@@ -514,7 +514,7 @@ export function ProjectArchives({
                         {users.find(
                           (u) =>
                             u.role === "client" &&
-                            u.clientProjectId === selectedProject.id
+                            u.clientProjectId === selectedProject.id,
                         )?.school || safeText(selectedProject.clientName)}
                       </p>
                     </div>
@@ -552,7 +552,7 @@ export function ProjectArchives({
                         <p className="text-lg">
                           $
                           {calculateTotalMaterialCost(
-                            selectedProject.id
+                            selectedProject.id,
                           ).toLocaleString()}
                         </p>
                       </div>
@@ -596,7 +596,7 @@ export function ProjectArchives({
                                 <Download className="h-4 w-4" />
                               </Button>
                             </div>
-                          )
+                          ),
                         )}
                       </div>
                     </div>
@@ -615,7 +615,7 @@ export function ProjectArchives({
                                 <p className="text-sm">{doc.name}</p>
                                 <p className="text-xs text-muted-foreground">
                                   {(safeNumber(doc.size) / 1024 / 1024).toFixed(
-                                    2
+                                    2,
                                   )}{" "}
                                   MB - {formatDate(doc.uploadedAt)}
                                 </p>
@@ -656,7 +656,7 @@ export function ProjectArchives({
                                       Created by{" "}
                                       {
                                         users.find(
-                                          (u) => u.id === doc.uploadedBy
+                                          (u) => u.id === doc.uploadedBy,
                                         )?.name
                                       }
                                     </p>
@@ -666,7 +666,7 @@ export function ProjectArchives({
                                   <Download className="h-4 w-4" />
                                 </Button>
                               </div>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
@@ -677,10 +677,10 @@ export function ProjectArchives({
                           {(selectedProject.fabricatorBudgets || []).map(
                             (budget) => {
                               const fabricator = users.find(
-                                (u) => u.id === budget.fabricatorId
+                                (u) => u.id === budget.fabricatorId,
                               );
                               const allocated = safeNumber(
-                                budget.allocatedAmount
+                                budget.allocatedAmount,
                               );
                               const spent = safeNumber(budget.spentAmount);
                               const utilizationRate =
@@ -718,7 +718,7 @@ export function ProjectArchives({
                                       <span className="ml-2">
                                         $
                                         {safeNumber(
-                                          budget.allocatedAmount
+                                          budget.allocatedAmount,
                                         ).toLocaleString()}
                                       </span>
                                     </div>
@@ -729,14 +729,14 @@ export function ProjectArchives({
                                       <span className="ml-2">
                                         $
                                         {safeNumber(
-                                          budget.spentAmount
+                                          budget.spentAmount,
                                         ).toLocaleString()}
                                       </span>
                                     </div>
                                   </div>
                                 </div>
                               );
-                            }
+                            },
                           )}
                         </div>
                       </div>
@@ -761,7 +761,7 @@ export function ProjectArchives({
                                   ${safeNumber(material.cost).toLocaleString()}
                                 </p>
                               </div>
-                            )
+                            ),
                           )}
                         </div>
                       </div>
@@ -787,7 +787,7 @@ export function ProjectArchives({
                       <div className="p-4 border rounded-lg">
                         {(() => {
                           const supervisor = users.find(
-                            (u) => u.id === selectedProject.supervisorId
+                            (u) => u.id === selectedProject.supervisorId,
                           );
                           return supervisor ? (
                             <div className="flex items-center gap-3">
@@ -816,16 +816,16 @@ export function ProjectArchives({
                         {getFabricatorIds(selectedProject).map(
                           (fabricatorId) => {
                             const fabricator = users.find(
-                              (u) => u.id === fabricatorId
+                              (u) => u.id === fabricatorId,
                             );
                             const workLogs = getProjectWorkLogs(
-                              selectedProject.id
+                              selectedProject.id,
                             ).filter(
-                              (log) => log.fabricatorId === fabricatorId
+                              (log) => log.fabricatorId === fabricatorId,
                             );
                             const totalHours = workLogs.reduce(
                               (sum, log) => sum + log.hoursWorked,
-                              0
+                              0,
                             );
 
                             return fabricator ? (
@@ -857,7 +857,7 @@ export function ProjectArchives({
                                 </div>
                               </div>
                             ) : null;
-                          }
+                          },
                         )}
                       </div>
                     </div>
