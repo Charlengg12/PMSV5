@@ -48,8 +48,9 @@ export interface Project {
   materialsAllocation?: number;
   supervisorAllocation?: number;
   companyAllocation?: number;
-  
+
   clientName: string;
+  clientId?: string;
   documentationUrl?: string; 
   attachments?: ProjectAttachment[];
   fabricatorBudgets?: FabricatorBudget[]; 

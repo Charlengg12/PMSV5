@@ -116,22 +116,24 @@ export function ClientCreationDialog({
     if (isAssigned) return showAssignedWarning();
     if (!validateForm()) return;
 
-    confirmAction(
-      "Create client account?",
-      `This will create a new client account for ${formData.name} and assign them to ${project.name}.`,
-      async () => {
-        const response = await apiService.createClient({
-          ...formData,
-          projectId: project.id,
-          projectName: project.name,
-        });
-        if (response.data) {
-          return response.data.user || response.data;
-        } else {
-          throw new Error(response.error || "Failed to create client");
-        }
-      }
-    );
+        confirmAction(
+          "Create client account?",
+          `This will create a new client account for ${formData.name} and assign them to ${project.name}.`,
+          async () => {
+            const response = await apiService.createClient({
+              ...formData,
+              projectId: project.id,
+              projectName: project.name,
+            });
+            if (response.data) {
+              const user = response.data.user || response.data;
+              user.clientProjectId = project.id;
+              return user;
+            } else {
+              throw new Error(response.error || "Failed to create client");
+            }
+          }
+        );
   };
 
   // --- Logic for Select Existing ---
@@ -149,23 +151,26 @@ export function ClientCreationDialog({
     );
     if (!clientToAssign) return;
 
-    confirmAction(
-      "Assign existing client?",
-      `This will give ${clientToAssign.name} access to view ${project.name}.`,
-      async () => {
-        // Use updateProject to assign the client
-        const response = await apiService.updateProject(project.id, {
-          clientId: clientToAssign.id,
-          clientName: clientToAssign.name,
-        });
+        confirmAction(
+          "Assign existing client?",
+          `This will give ${clientToAssign.name} access to view ${project.name}.`,
+          async () => {
+            const response = await apiService.updateProject(project.id, {
+              clientId: clientToAssign.id,
+              clientName: clientToAssign.name,
+            });
 
-        if (response.data) {
-          return clientToAssign;
-        } else {
-          throw new Error(response.error || "Failed to assign client");
-        }
-      }
-    );
+            if (!response.data) {
+              throw new Error(response.error || "Failed to assign client");
+            }
+
+            await apiService.updateUser(clientToAssign.id, {
+              clientProjectId: project.id,
+            });
+
+            return { ...clientToAssign, clientProjectId: project.id };
+          }
+        );
   };
 
   // --- Shared Helpers ---
