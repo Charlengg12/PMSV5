@@ -27,7 +27,7 @@ import {
 import { User } from "../../types";
 import { useSidebar } from "../ui/sidebar";
 import Swal from "sweetalert2";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { CustomLogoutSpinner } from "../ui/CustomLogoutSpinner";
 import { CompanyLogo } from "../ui/company-logo";
 
@@ -42,6 +42,162 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   const [activeHash, setActiveHash] = useState("");
   const [isMd, setIsMd] = useState(false);
   const [autoCollapsed, setAutoCollapsed] = useState(false);
+
+  // Auto-logout activity tracking
+  const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const [countdownSeconds, setCountdownSeconds] = useState(180);
+  const [alertShown, setAlertShown] = useState(false);
+  const INACTIVITY_TIME = 300000; // 5 minds
+  const COUNTDOWN_TIME = 180000; // 3 minutes countdown
+
+  // Handle activity detection
+  const handleActivity = () => {
+    // If alert is already shown, don't reset it on activity detection
+    if (alertShown) return;
+
+    // Clear existing timeouts
+    if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
+    if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
+    if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+
+    // Reset countdown
+    setCountdownSeconds(180);
+
+    // Set new inactivity timeout
+    inactivityTimeoutRef.current = setTimeout(() => {
+      showInactivityWarning();
+    }, INACTIVITY_TIME);
+  };
+
+  // Show inactivity warning
+  const showInactivityWarning = () => {
+    setAlertShown(true);
+    setCountdownSeconds(180);
+
+    Swal.fire({
+      title: "Inactivity Warning",
+      html: `<div>You will be logged out in <strong><span id="countdown">${countdownSeconds}</span></strong> due to inactivity.</div>`,
+      icon: "warning",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      showConfirmButton: true,
+      showCancelButton: true,
+      confirmButtonText: "Logout",
+      cancelButtonText: "Cancel",
+      didOpen: () => {
+        // Add hover listener to dismiss alert
+        const swalPopup = document.querySelector(".swal2-popup");
+        if (swalPopup) {
+          const handlePopupHover = () => {
+            // Clear all timers
+            if (countdownIntervalRef.current)
+              clearInterval(countdownIntervalRef.current);
+            if (countdownTimeoutRef.current)
+              clearTimeout(countdownTimeoutRef.current);
+            // Close alert and reset
+            Swal.close();
+            setAlertShown(false);
+            handleActivity();
+          };
+          swalPopup.addEventListener("mouseenter", handlePopupHover);
+        }
+
+        // Start countdown
+        let seconds = 180;
+        countdownIntervalRef.current = setInterval(() => {
+          seconds--;
+          const countdownElement = document.getElementById("countdown");
+          if (countdownElement) {
+            countdownElement.textContent = seconds.toString();
+          }
+          if (seconds <= 0) {
+            if (countdownIntervalRef.current)
+              clearInterval(countdownIntervalRef.current);
+            Swal.close();
+            setShowLogoutSpinner(true);
+            setTimeout(() => {
+              setShowLogoutSpinner(false);
+              onLogout();
+            }, 3000);
+          }
+        }, 1000);
+
+        // Set timeout for final logout
+        countdownTimeoutRef.current = setTimeout(() => {
+          Swal.close();
+          setShowLogoutSpinner(true);
+          setTimeout(() => {
+            setShowLogoutSpinner(false);
+            onLogout();
+          }, 3000);
+        }, COUNTDOWN_TIME);
+      },
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
+    }).then((result) => {
+      if (result.isConfirmed) {
+        // User clicked Logout button
+        if (countdownIntervalRef.current)
+          clearInterval(countdownIntervalRef.current);
+        if (countdownTimeoutRef.current)
+          clearTimeout(countdownTimeoutRef.current);
+        setShowLogoutSpinner(true);
+        setTimeout(() => {
+          setShowLogoutSpinner(false);
+          onLogout();
+        }, 3000);
+      } else if (result.dismiss) {
+        // User clicked Cancel button
+        if (countdownIntervalRef.current)
+          clearInterval(countdownIntervalRef.current);
+        if (countdownTimeoutRef.current)
+          clearTimeout(countdownTimeoutRef.current);
+        setAlertShown(false);
+        // Reset activity tracking
+        handleActivity();
+      }
+    });
+  };
+
+  // Setup activity listeners
+  useEffect(() => {
+    const activityEvents = [
+      "mousedown",
+      "mousemove",
+      "keypress",
+      "scroll",
+      "touchstart",
+      "click",
+    ];
+
+    activityEvents.forEach((event) => {
+      window.addEventListener(event, handleActivity);
+    });
+
+    // Initial timeout
+    handleActivity();
+
+    return () => {
+      activityEvents.forEach((event) => {
+        window.removeEventListener(event, handleActivity);
+      });
+      if (inactivityTimeoutRef.current)
+        clearTimeout(inactivityTimeoutRef.current);
+      if (countdownTimeoutRef.current)
+        clearTimeout(countdownTimeoutRef.current);
+      if (countdownIntervalRef.current)
+        clearInterval(countdownIntervalRef.current);
+    };
+  }, [alertShown]);
   // Detect md (iPad) screen
   useEffect(() => {
     const checkMd = () => {
