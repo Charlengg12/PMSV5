@@ -150,7 +150,7 @@ export function LoginForm({
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#103055] dark:bg-slate-950 relative overflow-hidden transition-colors duration-300">
+    <div className="min-h-screen flex items-center justify-center bg-[#103055] dark:bg-slate-950 relative overflow-hidden transition-colors duration-300 px-4 sm:px-6">
       {/* Theme Toggle Button */}
       <button
         onClick={toggleDarkMode}
@@ -170,8 +170,8 @@ export function LoginForm({
         <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-orange-500/5 dark:bg-orange-500/10 rounded-full blur-3xl"></div>
       </div>
 
-      <Card className="w-full max-w-md relative z-10 shadow-xl border-0 bg-white dark:bg-slate-900 dark:border dark:border-slate-700 backdrop-blur-sm transition-colors duration-300">
-        <CardHeader className="text-center space-y-4 pb-8">
+      <Card className="w-full max-w-md relative z-10 shadow-xl border-0 bg-white dark:bg-slate-900 dark:border dark:border-slate-700 backdrop-blur-sm transition-colors duration-300 p-4 sm:p-6 my-6 sm:my-0">
+        <CardHeader className="p-0 text-center space-y-3 pb-6">
           <div className="flex items-center justify-center mb-4">
             <CompanyLogo size="xl" showText={true} className="font-[Archivo_Black]" />
           </div>
@@ -188,8 +188,8 @@ export function LoginForm({
           </div>
         </CardHeader>
 
-        <CardContent className="space-y-6">
-          <form onSubmit={handleSubmit} className="space-y-5">
+        <CardContent className="p-0 space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="identifier" className="dark:text-slate-200">
                 Employee ID / Secure ID / Email
@@ -247,7 +247,7 @@ export function LoginForm({
 
             <Button
               type="submit"
-              className="w-full h-12 text-base bg-accent hover:bg-accent/90 dark:bg-accent dark:hover:bg-accent/80 font-[Archivo_Black] dark:text-white transition-colors duration-300"
+              className="w-full h-11 text-base bg-accent hover:bg-accent/90 dark:bg-accent dark:hover:bg-accent/80 font-[Archivo_Black] dark:text-white transition-colors duration-300"
               disabled={isLoading || showLoginAnimation}
             >
               {isLoading ? (
