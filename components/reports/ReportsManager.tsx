@@ -657,17 +657,29 @@ export function ReportsManager({
         </div>
       ) : (
     <Tabs defaultValue="all" className="space-y-4">
-            <TabsList>
-              <TabsTrigger value="all">All Reports</TabsTrigger>
-              <TabsTrigger value="project">Project</TabsTrigger>
-              <TabsTrigger value="task">Task</TabsTrigger>
-              <TabsTrigger value="financial">Financial</TabsTrigger>
+            <TabsList className="w-full">
+              <TabsTrigger value="all">
+                <FileText className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">All Reports</span>
+              </TabsTrigger>
+              <TabsTrigger value="project">
+                <Building className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Project</span>
+              </TabsTrigger>
+              <TabsTrigger value="task">
+                <AlertCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Task</span>
+              </TabsTrigger>
+              <TabsTrigger value="financial">
+                <BarChart3 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Financial</span>
+              </TabsTrigger>
             </TabsList>
 
             {/* Helper function to render report cards to avoid code duplication */}
             {["all", "project", "task", "financial"].map((tabValue) => (
               <TabsContent key={tabValue} value={tabValue} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {searchedReports
                     .filter((r) => tabValue === "all" || r.type === tabValue)
                     .map((report) => (
@@ -675,9 +687,9 @@ export function ReportsManager({
                         key={report.id}
                         className="hover:shadow-md transition-shadow"
                       >
-                        <CardHeader className="pb-3">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
+                        <CardHeader className="px-4 pt-4 pb-2">
+                          <div className="space-y-3">
+                            <div>
                               <CardTitle className="text-lg">
                                 {report.title}
                               </CardTitle>
@@ -687,7 +699,7 @@ export function ReportsManager({
                                 </p>
                               )}
                             </div>
-                            <div className="flex gap-2 ml-4">
+                            <div className="flex flex-wrap gap-2">
                               <Badge variant={getStatusColor(report.status)}>
                                 {report.status}
                               </Badge>
@@ -697,7 +709,7 @@ export function ReportsManager({
                             </div>
                           </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="px-4 pb-4">
                           <div className="grid gap-3 text-sm">
                             {report.project_id && (
                               <div className="flex items-center gap-2">
@@ -728,43 +740,50 @@ export function ReportsManager({
                             </div>
                           </div>
 
-                          <div className="flex flex-wrap gap-2 mt-5">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleView(report)}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExport(report)}
-                            >
-                              <Download className="h-4 w-4 mr-2" />
-                              Export
-                            </Button>
+                          <div className="mt-5 space-y-2">
+                            <div className="grid grid-cols-2 gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleView(report)}
+                                className="w-full"
+                              >
+                                <Eye className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">View</span>
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleExport(report)}
+                                className="w-full"
+                              >
+                                <Download className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Export</span>
+                              </Button>
+                            </div>
                             {canEditReport(report) && (
-                              <>
+                              <div className="grid grid-cols-2 gap-2">
                                 <Button
                                   variant="outline"
                                   size="sm"
                                   onClick={() => handleEdit(report)}
+                                  className="w-full"
                                 >
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Edit
+                                  <Edit className="h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Edit</span>
                                 </Button>
                                 <Button
                                   variant="outline"
                                   size="sm"
-                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
                                   onClick={() => handleDelete(report)}
+                                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                                 >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Delete
+                                  <Trash2 className="h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">
+                                    Delete
+                                  </span>
                                 </Button>
-                              </>
+                              </div>
                             )}
                           </div>
                         </CardContent>
