@@ -614,7 +614,7 @@ export function AdminSettingsPage({
                   <Input
                     id="first-name"
                     minLength={1}
-                    maxLength={50}
+                    maxLength={20}
                     value={formData.firstName}
                     onChange={(e) =>
                       setFormData((prev) => ({
@@ -635,7 +635,7 @@ export function AdminSettingsPage({
                   </Label>
                   <Input
                     minLength={1}
-                    maxLength={50}
+                    maxLength={20}
                     id="last-name"
                     value={formData.lastName}
                     onChange={(e) =>
@@ -656,6 +656,8 @@ export function AdminSettingsPage({
                     Email
                   </Label>
                   <Input
+                    minLength={1}
+                    maxLength={30}
                     id="email"
                     type="email"
                     value={formData.email}
