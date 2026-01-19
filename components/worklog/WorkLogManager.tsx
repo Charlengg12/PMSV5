@@ -7,21 +7,14 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle
-} from '../ui/dialog';
-import {
   Calendar,
   Edit,
   FileText,
   Plus,
   TrendingUp,
   Package,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import { ProjectFileUpload } from '../projects/ProjectFileUpload';
 import {
@@ -31,6 +24,7 @@ import {
   Material,
   ProjectAttachment,
 } from '../../types';
+import Swal from 'sweetalert2';
 
 interface WorkLogManagerProps {
   currentUser: User;
@@ -56,6 +50,7 @@ export function WorkLogManager({
   const [selectedProject, setSelectedProject] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingLog, setEditingLog] = useState<WorkLogEntry | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [editFormData, setEditFormData] = useState({
     date: '',
     description: '',
@@ -126,21 +121,107 @@ export function WorkLogManager({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // if progress contribution is no value return 
+
     if (!selectedProject) {
-      alert('Please select a project first');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Project Required',
+        text: 'Please select a project first',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
       return;
     }
 
     const progressValue = clampNumber(formData.progressPercentage, 0, 100);
     const hoursValue = clampNumber(formData.hoursWorked, 0);
 
-    if (progressValue === null || hoursValue === null) {
-      alert('Please enter valid values for progress and hours.');
+    //get all the input name values
+    const { date, description, materialsUsed } = formData;
+    
+    if (!date || !description || materialsUsed.length === 0) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Fields',
+        text: 'Please fill up the missing fields.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
       return;
     }
+
+    if (progressValue === null || hoursValue === null) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Fields',
+        text: 'Please enter valid values for progress (0-100) and hours (positive number).',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+      return;
+    }
+
+    // First confirmation before submission
+    const confirmResult = await Swal.fire({
+      title: 'Confirm Add Work Log',
+      text: `Are you sure you want to add this work log for project "${getProjectName(selectedProject)}"?`,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+    });
+
+    if (!confirmResult.isConfirmed) {
+      return; // user cancelled
+    }
+
+    // Show loading for 2 seconds
+    Swal.fire({
+      title: 'Adding Work Log...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      timer: 2000,
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+    });
 
     const newWorkLog: Omit<WorkLogEntry, 'id' | 'createdAt'> = {
       projectId: selectedProject,
@@ -152,18 +233,54 @@ export function WorkLogManager({
       materials: formData.materialsUsed.length > 0 ? formData.materialsUsed : undefined
     };
 
-    onAddWorkLog(newWorkLog);
+    try {
+      // Simulate async operation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      onAddWorkLog(newWorkLog);
 
-    // Reset form
-    setFormData({
-      date: new Date().toISOString().split('T')[0],
-      description: '',
-      progressPercentage: '',
-      hoursWorked: '0',
-      materialsUsed: []
-    });
-    setShowAddForm(false);
+      // Reset form
+      setFormData({
+        date: new Date().toISOString().split('T')[0],
+        description: '',
+        progressPercentage: '',
+        hoursWorked: '0',
+        materialsUsed: []
+      });
+      setShowAddForm(false);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Added!',
+        text: 'Work log has been added successfully.',
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to add work log',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    }
   };
+
 
   const openEditLog = (log: WorkLogEntry) => {
     setEditingLog(log);
@@ -189,33 +306,214 @@ export function WorkLogManager({
     }));
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingLog || !onUpdateWorkLog) return;
 
     const progressValue = clampNumber(editFormData.progressPercentage, 0, 100);
     const hoursValue = clampNumber(editFormData.hoursWorked, 0);
+    // get all the input name value
+    const { date, description, progressPercentage, hoursWorked, materialsUsed } = editFormData;
 
-    if (progressValue === null || hoursValue === null) {
-      alert('Please enter valid values for progress and hours.');
+    if (!date || !description || !progressPercentage || !hoursWorked || materialsUsed.length === 0 ) {
+      Swal.fire({
+      icon: 'error',
+        title: 'Missing Fields',
+        text: 'Please fill up the missing fields.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
       return;
     }
 
-    onUpdateWorkLog(editingLog.id, {
-      date: editFormData.date,
-      description: editFormData.description,
-      progressPercentage: progressValue,
-      hoursWorked: hoursValue,
-      materials: editFormData.materialsUsed
+    if (progressValue === null || hoursValue === null) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Fields',
+        text: 'Please enter valid values for progress (0-100) and hours (positive number).',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+      return;
+    }
+
+    // Show confirmation dialog
+    const result = await Swal.fire({
+      title: 'Save Changes?',
+      text: 'Update this work log entry?',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Update',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#0f172a',
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
     });
-    setEditingLog(null);
+
+    if (!result.isConfirmed) return;
+
+    // Show loading
+    Swal.fire({
+      title: 'Updating...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      timer: 2000,
+      timerProgressBar: true,
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+    });
+
+    try {
+      // Simulate async operation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      onUpdateWorkLog(editingLog.id, {
+        date: editFormData.date,
+        description: editFormData.description,
+        progressPercentage: progressValue,
+        hoursWorked: hoursValue,
+        materials: editFormData.materialsUsed
+      });
+      
+      setEditingLog(null);
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Updated!',
+        text: 'Work log has been updated successfully.',
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to update work log',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    }
   };
 
-  const handleDeleteLog = (log: WorkLogEntry) => {
+  const handleDeleteLog = async (log: WorkLogEntry) => {
     if (!onDeleteWorkLog) return;
+    
     const formattedDate = new Date(log.date).toLocaleDateString();
-    if (!window.confirm(`Delete work log from ${formattedDate}?`)) return;
-    onDeleteWorkLog(log.id);
+
+    const result = await Swal.fire({
+      title: 'Delete Work Log?',
+      text: `Are you sure you want to delete the work log from ${formattedDate}?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#dc2626',
+      cancelButtonColor: '#64748b',
+      confirmButtonText: 'Delete',
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+    });
+
+    if (!result.isConfirmed) return;
+
+    // Show loading
+    Swal.fire({
+      title: 'Deleting...',
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      timer: 2000,
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+    });
+
+    try {
+      // Simulate async operation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      onDeleteWorkLog(log.id);
+
+      Swal.fire({
+        title: 'Deleted!',
+        text: 'The work log has been removed.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to delete work log',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    }
   };
 
   const getProjectProgress = (projectId: string) => {
@@ -231,6 +529,7 @@ export function WorkLogManager({
     const hasLink = !!proj.documentationUrl && proj.documentationUrl.trim().length > 0;
     return hasFiles || hasLink;
   };
+  
   const canSubmitForReview = () => {
     const proj = getSelectedProject();
     if (!proj) return false;
@@ -268,6 +567,7 @@ export function WorkLogManager({
 
     return hasStatus && !hasInvalidStatus && hasDocs && hasProgress;
   };
+  
   const canManageDocumentation = () => {
     const proj = getSelectedProject();
     if (!proj) return false;
@@ -277,12 +577,14 @@ export function WorkLogManager({
     }
     return false;
   };
+  
   const handleProjectFilesUploaded = (newAttachments: ProjectAttachment[]) => {
     const proj = getSelectedProject();
     if (!proj || !onUpdateProject) return;
     const updatedAttachments = [...(proj.attachments || []), ...newAttachments];
     onUpdateProject({ ...proj, attachments: updatedAttachments });
   };
+  
   const submitForSupervisorReview = () => {
     const proj = getSelectedProject();
     if (!proj || !onUpdateProject) return;
@@ -301,11 +603,268 @@ export function WorkLogManager({
 
   return (
     <div className="space-y-6">
+      {/* ================================================================
+        ADD WORK LOG FORM (Normal Div instead of Dialog)
+        ================================================================
+      */}
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[85vh] overflow-y-auto mx-4">
+            <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold">Add Work Log Entry</h2>
+                {selectedProject && (
+                  <p className="text-sm text-muted-foreground">
+                    Project: {getProjectName(selectedProject)}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAddForm(false)}
+                disabled={isSubmitting}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="date">Date</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => handleInputChange('date', e.target.value)}
+                    
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="progress">Progress Contribution (%)</Label>
+                <Input
+                  id="progress"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="5"
+                  value={formData.progressPercentage}
+                  onChange={(e) => handleInputChange('progressPercentage', e.target.value)}
+                  
+                />
+                <p className="text-sm text-muted-foreground">
+                  How much of the project does this work session complete?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="hours">Hours Worked</Label>
+                <Input
+                  id="hours"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="4.5"
+                  value={formData.hoursWorked ?? ''}
+                  onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
+                  
+                />
+                <p className="text-xs text-muted-foreground">
+                  How many hours did you spend on this session?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Work Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe the work performed, challenges faced, and achievements..."
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  rows={4}
+                  
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Materials Used (Optional)</Label>
+                {projectMaterials.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No materials available for this project.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-3">
+                    {projectMaterials.map(material => (
+                      <div key={material.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`material-${material.id}`}
+                          checked={formData.materialsUsed.includes(material.name)}
+                          onChange={() => handleMaterialToggle(material.name)}
+                          className="rounded"
+                        />
+                        <Label
+                          htmlFor={`material-${material.id}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          {material.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Adding...' : <><Plus className="h-4 w-4 mr-2" /> Add Work Log</>}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================================================================
+        EDIT WORK LOG FORM (Normal Div instead of Dialog)
+        ================================================================
+      */}
+      {editingLog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[85vh] overflow-y-auto mx-4">
+            <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold">Edit Work Log Entry</h2>
+                <p className="text-sm text-muted-foreground">
+                  Project: {getProjectName(editingLog.projectId)}
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditingLog(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-date">Date</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editFormData.date}
+                    onChange={(e) => handleEditInputChange('date', e.target.value)}
+                    
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-progress">Progress Contribution (%)</Label>
+                <Input
+                  id="edit-progress"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="5"
+                  value={editFormData.progressPercentage}
+                  onChange={(e) =>
+                    handleEditInputChange('progressPercentage', e.target.value)
+                  }
+                  
+                />
+                <p className="text-sm text-muted-foreground">
+                  How much of the project does this work session complete?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-hours">Hours Worked</Label>
+                <Input
+                  id="edit-hours"
+                  type="number"
+                  min="0"
+                  step="0.5"
+                  placeholder="4.5"
+                  value={editFormData.hoursWorked}
+                  onChange={(e) =>
+                    handleEditInputChange('hoursWorked', e.target.value)
+                  }
+                  
+                />
+                <p className="text-xs text-muted-foreground">
+                  How many hours did you spend on this session?
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Work Description</Label>
+                <Textarea
+                  id="edit-description"
+                  placeholder="Describe the work performed, challenges faced, and achievements..."
+                  value={editFormData.description}
+                  onChange={(e) =>
+                    handleEditInputChange('description', e.target.value)
+                  }
+                  rows={4}
+                  
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Materials Used (Optional)</Label>
+                {editMaterialOptions.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No materials available for this project.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-3">
+                    {editMaterialOptions.map(material => (
+                      <div key={material.id} className="flex items-center space-x-2">
+                        <input
+                          type="checkbox"
+                          id={`edit-material-${material.id}`}
+                          checked={editFormData.materialsUsed.includes(material.name)}
+                          onChange={() => handleEditMaterialToggle(material.name)}
+                          className="rounded"
+                        />
+                        <Label
+                          htmlFor={`edit-material-${material.id}`}
+                          className="text-sm cursor-pointer"
+                        >
+                          {material.name}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setEditingLog(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+          <h2 className="flex items-center gap-2 text-2xl font-bold">
+            <FileText className="h-6 w-6" />
             Work Log & Progress Reports
           </h2>
           <p className="text-muted-foreground">Track your daily work progress and material usage</p>
@@ -379,240 +938,6 @@ export function WorkLogManager({
           </Card>
         </div>
       )}
-
-      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add Work Log Entry</DialogTitle>
-            {selectedProject && (
-              <DialogDescription>
-                Project: {getProjectName(selectedProject)}
-              </DialogDescription>
-            )}
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => handleInputChange('date', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="progress">Progress Contribution (%)</Label>
-              <Input
-                id="progress"
-                type="number"
-                min="0"
-                max="100"
-                placeholder="5"
-                value={formData.progressPercentage}
-                onChange={(e) => handleInputChange('progressPercentage', e.target.value)}
-                required
-              />
-              <p className="text-sm text-muted-foreground">
-                How much of the project does this work session complete?
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="hours">Hours Worked</Label>
-              <Input
-                id="hours"
-                type="number"
-                min="0"
-                step="0.5"
-                placeholder="4.5"
-                value={formData.hoursWorked ?? ''}
-                onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
-                required
-              />
-              <p className="text-xs text-muted-foreground">
-                How many hours did you spend on this session?
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Work Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Describe the work performed, challenges faced, and achievements..."
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                rows={4}
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Materials Used (Optional)</Label>
-              {projectMaterials.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No materials available for this project.
-                </p>
-              ) : (
-                <div className="grid gap-2 md:grid-cols-3">
-                  {projectMaterials.map(material => (
-                    <div key={material.id} className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        id={`material-${material.id}`}
-                        checked={formData.materialsUsed.includes(material.name)}
-                        onChange={() => handleMaterialToggle(material.name)}
-                        className="rounded"
-                      />
-                      <Label
-                        htmlFor={`material-${material.id}`}
-                        className="text-sm cursor-pointer"
-                      >
-                        {material.name}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
-                Cancel
-              </Button>
-              <Button type="submit">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Work Log
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={Boolean(editingLog)}
-        onOpenChange={(open) => {
-          if (!open) setEditingLog(null);
-        }}
-      >
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          {editingLog && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Edit Work Log Entry</DialogTitle>
-                <DialogDescription>
-                  Project: {getProjectName(editingLog.projectId)}
-                </DialogDescription>
-              </DialogHeader>
-              <form onSubmit={handleEditSubmit} className="space-y-4">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="edit-date">Date</Label>
-                    <Input
-                      id="edit-date"
-                      type="date"
-                      value={editFormData.date}
-                      onChange={(e) => handleEditInputChange('date', e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-progress">Progress Contribution (%)</Label>
-                  <Input
-                    id="edit-progress"
-                    type="number"
-                    min="0"
-                    max="100"
-                    placeholder="5"
-                    value={editFormData.progressPercentage}
-                    onChange={(e) =>
-                      handleEditInputChange('progressPercentage', e.target.value)
-                    }
-                    required
-                  />
-                  <p className="text-sm text-muted-foreground">
-                    How much of the project does this work session complete?
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-hours">Hours Worked</Label>
-                  <Input
-                    id="edit-hours"
-                    type="number"
-                    min="0"
-                    step="0.5"
-                    placeholder="4.5"
-                    value={editFormData.hoursWorked}
-                    onChange={(e) =>
-                      handleEditInputChange('hoursWorked', e.target.value)
-                    }
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    How many hours did you spend on this session?
-                  </p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-description">Work Description</Label>
-                  <Textarea
-                    id="edit-description"
-                    placeholder="Describe the work performed, challenges faced, and achievements..."
-                    value={editFormData.description}
-                    onChange={(e) =>
-                      handleEditInputChange('description', e.target.value)
-                    }
-                    rows={4}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Materials Used (Optional)</Label>
-                  {editMaterialOptions.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">
-                      No materials available for this project.
-                    </p>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-3">
-                      {editMaterialOptions.map(material => (
-                        <div key={material.id} className="flex items-center space-x-2">
-                          <input
-                            type="checkbox"
-                            id={`edit-material-${material.id}`}
-                            checked={editFormData.materialsUsed.includes(material.name)}
-                            onChange={() => handleEditMaterialToggle(material.name)}
-                            className="rounded"
-                          />
-                          <Label
-                            htmlFor={`edit-material-${material.id}`}
-                            className="text-sm cursor-pointer"
-                          >
-                            {material.name}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <DialogFooter>
-                  <Button type="button" variant="outline" onClick={() => setEditingLog(null)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit">Save Changes</Button>
-                </DialogFooter>
-              </form>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Submit for Supervisor Review */}
       {selectedProject && (
