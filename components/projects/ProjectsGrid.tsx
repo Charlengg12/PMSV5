@@ -812,7 +812,7 @@ export function ProjectsGrid({
                       title="Client already assigned to this project"
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
-                      <span className="truncate">Assigned</span>
+                      <span className="truncate">Client Assigned</span>
                     </Button>
                   ) : (
                     <Button
@@ -832,7 +832,7 @@ export function ProjectsGrid({
                 {currentUser.role === "supervisor" &&
                   project.supervisorId === currentUser.id && (
                     <>
-                      <Button
+                      {/* <Button
                         variant="outline"
                         size="sm"
                         className="w-full lg:flex-1 text-accent"
@@ -842,8 +842,8 @@ export function ProjectsGrid({
                         }}
                       >
                         <UserPlus className="h-3 w-3 mr-1" />
-                        <span className="truncate">Assign</span>
-                      </Button>
+                        <span className="truncate">Assignww</span>
+                      </Button> */}
                       <Button
                         variant="outline"
                         size="sm"
@@ -985,7 +985,7 @@ export function ProjectsGrid({
         />
       )}
 
-      {showAssignForm && (
+      {/* {showAssignForm && (
         <Dialog open={showAssignForm} onOpenChange={setShowAssignForm}>
           <DialogContent>
             <DialogHeader>
@@ -1032,7 +1032,7 @@ export function ProjectsGrid({
             </div>
           </DialogContent>
         </Dialog>
-      )}
+      )} */}
 
       {showProjectDetails && selectedProject && (
         <ProjectDetails
