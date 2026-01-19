@@ -703,9 +703,9 @@ export function TaskManager({
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {searchedTasks.map((task) => (
-          <Card key={task.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex justify-between items-start gap-3">
+          <Card key={task.id} className="hover:shadow-md transition-shadow p-4 sm:p-6">
+            <CardHeader className="p-0 pb-3">
+              <div className="flex flex-col gap-3">
                 <div className="flex-1">
                   <CardTitle className="text-lg leading-tight">
                     {task.title}
@@ -716,18 +716,18 @@ export function TaskManager({
                     </p>
                   )}
                 </div>
-                <div className="flex gap-1.5 shrink-0">
+                <div className="flex flex-wrap gap-1.5">
                   <Badge variant={getStatusColor(task.status)}>
                     {task.status}
                   </Badge>
                   <Badge variant={getPriorityColor(task.priority)}>
                     {task.priority}
                   </Badge>
-                </div>
+                </div>  
               </div>
             </CardHeader>
 
-            <CardContent className="text-sm space-y-2.5">
+            <CardContent className="p-0 text-sm space-y-2.5">
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-muted-foreground" />
                 <span>
