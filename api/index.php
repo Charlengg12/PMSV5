@@ -1901,6 +1901,95 @@ function handle_create_material(PDO $pdo): void
 }
 
 
+function get_emails_by_roles(PDO $pdo, array $targetRoles): array
+{
+    // If "all" is selected, fetch everyone active
+    if (in_array('all', $targetRoles)) {
+        $stmt = $pdo->query("SELECT email, name FROM users WHERE is_active = 1 AND email IS NOT NULL AND email != ''");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // Safety check: if roles array is empty, return empty list
+    if (empty($targetRoles)) {
+        return [];
+    }
+
+    // Filter by specific roles
+    // Create placeholders for the IN clause (e.g., ?, ?, ?)
+    $placeholders = implode(',', array_fill(0, count($targetRoles), '?'));
+    
+    $sql = "SELECT email, name FROM users WHERE is_active = 1 AND role IN ($placeholders) AND email IS NOT NULL AND email != ''";
+    
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($targetRoles);
+    
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+ function send_announcement_notification(array $recipients, string $title, string $content, string $authorName)
+{
+    if (empty($recipients)) return;
+
+    // We instantiate PHPMailer inside the function to ensure a fresh instance
+    $mail = new PHPMailer(true);
+
+    try {
+        // --- SERVER SETTINGS ---
+        $mail->SMTPDebug = 0;                     
+        $mail->isSMTP();                                            
+        $mail->Host       = 'smtp.gmail.com';     
+        $mail->SMTPAuth   = true;                                   
+        $mail->Username   = 'arkquestdev@gmail.com';  
+        $mail->Password   = 'hhjgxeprnxljiqdm';       
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
+        $mail->Port       = 587;                                    
+
+        // --- SENDER ---
+        $mail->setFrom($mail->Username, 'Elektronik Hub');
+        // Add sender as 'To' address to satisfy strict SMTP servers, while real recipients are BCC
+        $mail->addAddress($mail->Username, 'Announcement Bot');
+
+        // --- RECIPIENTS (BCC) ---
+        foreach ($recipients as $user) {
+            if (!empty($user['email'])) {
+                $mail->addBCC($user['email'], $user['name']);
+            }
+        }
+
+        // --- CONTENT ---
+        $mail->isHTML(true);                                  
+        $mail->Subject = 'New Announcement: ' . $title;
+        
+        // Format the content (newlines to HTML breaks)
+        $htmlContent = nl2br(htmlspecialchars($content));
+        
+        $emailBody = "
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 8px;'>
+            <h2 style='color: #2563eb; border-bottom: 2px solid #f0f0f0; padding-bottom: 10px;'>Elektronik Hub</h2>
+            <p style='font-size: 14px; color: #555;'><strong>$authorName</strong> posted a new announcement:</p>
+            
+            <div style='background-color: #f8fafc; padding: 15px; border-left: 4px solid #2563eb; margin: 20px 0;'>
+                <h3 style='margin-top: 0; color: #1e293b;'>$title</h3>
+                <div style='color: #334155; line-height: 1.6;'>$htmlContent</div>
+            </div>
+            
+            <p style='font-size: 12px; color: #94a3b8; margin-top: 30px;'>
+                Log in to the portal to view full details.
+            </p>
+        </div>";
+
+        $mail->Body    = $emailBody;
+        $mail->AltBody = "New Announcement: $title \n\n $content \n\n - Posted by $authorName";
+
+        $mail->send();
+        return true;
+
+    } catch (\Throwable $e) { 
+        // Catch ANY error (Authentication, Network, Class not found)
+        error_log("MAILER ERROR: " . $e->getMessage());
+        return false;
+    }
+}
 
 function handle_update_material(PDO $pdo, string $id): void
 {
@@ -2210,27 +2299,54 @@ function handle_create_announcement(PDO $pdo): void
     }
 
     $body = sanitize_recursive(json_input());
-    
-    if (empty($body['title']) || empty($body['content'])) {
-        json_response(['error' => 'Title and content are required'], 400);
-    }
-
-    // Expecting an array of roles from frontend, e.g., ["admin", "fabricator"]
     $roles = $body['targetRoles'] ?? ['all'];
     $rolesJson = json_encode($roles);
 
-    $stmt = $pdo->prepare("INSERT INTO announcements (title, content, created_by, target_role) VALUES (:title, :content, :uid, :roles)");
-    $stmt->execute([
-        ':title' => $body['title'],
-        ':content' => $body['content'],
-        ':uid' => $_SESSION['user_id'],
-        ':roles' => $rolesJson
+    // 1. Insert into Database
+    try {
+        $stmt = $pdo->prepare("INSERT INTO announcements (title, content, created_by, target_role) VALUES (:title, :content, :uid, :roles)");
+        $stmt->execute([
+            ':title'   => $body['title'],
+            ':content' => $body['content'],
+            ':uid'     => $_SESSION['user_id'],
+            ':roles'   => $rolesJson
+        ]);
+        
+        log_activity($pdo, $_SESSION['user_id'], 'POST_ANNOUNCEMENT', "Posted: " . $body['title']);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+        return;
+    }
+
+    // 2. Debug Email Sending
+    $emailDebug = "Init";
+    try {
+        $stmtName = $pdo->prepare("SELECT name FROM users WHERE id = :id");
+        $stmtName->execute([':id' => $_SESSION['user_id']]);
+        $authorName = $stmtName->fetchColumn() ?: 'Management';
+
+        // Check if we actually found recipients
+        $recipients = get_emails_by_roles($pdo, $roles);
+        $recipientCount = count($recipients);
+
+        if ($recipientCount > 0) {
+            // Attempt to send
+            $sent = send_announcement_notification($recipients, $body['title'], $body['content'], $authorName);
+            $emailDebug = $sent ? "Success ($recipientCount recipients)" : "Failed to send (Mailer returned false)";
+        } else {
+            $emailDebug = "No recipients found in database for roles: " . implode(", ", $roles);
+        }
+    } catch (\Throwable $e) {
+        // Capture the specific error message
+        $emailDebug = "Exception: " . $e->getMessage();
+    }
+
+    // Return the debug info to the frontend
+    json_response([
+        'message' => 'Posted successfully', 
+        'email_status' => $emailDebug
     ]);
-
-    log_activity($pdo, $_SESSION['user_id'], 'POST_ANNOUNCEMENT', "Posted: " . $body['title']);
-    json_response(['message' => 'Posted successfully']);
 }
-
 function handle_update_announcement(PDO $pdo, string $path): void
 {
     require_login();
@@ -2373,4 +2489,11 @@ function send_client_credentials_email($recipientEmail, $recipientName, $plainPa
         error_log("MAILER ERROR: " . $e->getMessage());
         return false;
     }
+
+   
+
+/**
+ * Helper: Fetch emails based on target roles
+ */
+
 }
