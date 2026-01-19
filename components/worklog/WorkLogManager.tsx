@@ -148,6 +148,42 @@ export function WorkLogManager({
 
     //get all the input name values
     const { date, description, materialsUsed } = formData;
+
+    // if description is > 100 return sweet alert
+    if (description.length > 100) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Description Too Long',
+        text: 'Description must be less than 100 characters.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+      return;
+    }
+
+    // if hours work > 500 and progress is not 100 return sweet alert
+    if (hoursValue > 500 || progressValue !== 100) {
+      Swal.fire({
+      icon: 'error',
+        title: 'Hours Worked Too High',
+        text: 'Hours Worked cannot be greater than 500.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+      });
+      return;
+    }
     
     if (!date || !description || materialsUsed.length === 0) {
       Swal.fire({
@@ -314,6 +350,24 @@ export function WorkLogManager({
     const hoursValue = clampNumber(editFormData.hoursWorked, 0);
     // get all the input name value
     const { date, description, progressPercentage, hoursWorked, materialsUsed } = editFormData;
+
+    // if hourswork is > 500 show error
+    if (hoursValue > 500) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Hours Worked Too High',
+        text: 'Hours Worked cannot be greater than 500.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+      });
+      return;
+    }
 
     if (!date || !description || !progressPercentage || !hoursWorked || materialsUsed.length === 0 ) {
       Swal.fire({
@@ -680,6 +734,8 @@ export function WorkLogManager({
               <div className="space-y-2">
                 <Label htmlFor="description">Work Description</Label>
                 <Textarea
+                  minLength={1}
+                  maxLength={100}
                   id="description"
                   placeholder="Describe the work performed, challenges faced, and achievements..."
                   value={formData.description}
@@ -809,6 +865,8 @@ export function WorkLogManager({
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Work Description</Label>
                 <Textarea
+                  minLength={1}
+                  maxLength={100}
                   id="edit-description"
                   placeholder="Describe the work performed, challenges faced, and achievements..."
                   value={editFormData.description}
