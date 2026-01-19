@@ -875,7 +875,7 @@ function handle_create_project(PDO $pdo): void
         $pendingSupervisors = $supervisors;
     }
 
-    $statusInput = $body['status'] ?? 'planning';
+    $statusInput = $body['status'] === '1_Assigned_to_FAB' ? 'planning' : $body['status'];
     $status = normalize_project_status((string) $statusInput, $columns);
 
     $fabricatorIds = $body['fabricatorIds'] ?? $body['fabricator_ids'] ?? [];
