@@ -26,6 +26,13 @@
   max-width: 400px;
   padding-bottom: 30px;
 }
+@media (max-width: 640px) {
+  .swal-popup {
+    width: calc(100% - 2rem);
+    max-width: calc(100% - 2rem);
+    margin: 0 1rem;
+  }
+}
 .swal-title {
   font-weight: bold;
   color: #333333;   
