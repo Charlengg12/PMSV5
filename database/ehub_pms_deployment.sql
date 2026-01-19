@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS `work_logs` (
   `hours_worked` DECIMAL(5,2) NOT NULL,
   `description` TEXT DEFAULT NULL,
   `progress_percentage` DECIMAL(5,2) DEFAULT 0,
+  `materials_used` JSON DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_project_id` (`project_id`),
   INDEX `idx_user_id` (`user_id`),
@@ -142,6 +143,19 @@ CREATE TABLE IF NOT EXISTS `reports` (
   INDEX `idx_reports_type` (`type`),
   INDEX `idx_reports_project` (`project_id`),
   INDEX `idx_reports_creator` (`created_by`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Activity logs table
+CREATE TABLE IF NOT EXISTS `activity_logs` (
+  `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` VARCHAR(255) NOT NULL,
+  `action` VARCHAR(255) NOT NULL,
+  `description` TEXT DEFAULT NULL,
+  `ip_address` VARCHAR(45) DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_activity_user_id` (`user_id`),
+  INDEX `idx_activity_action` (`action`),
+  INDEX `idx_activity_created_at` (`created_at`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Insert default admin user

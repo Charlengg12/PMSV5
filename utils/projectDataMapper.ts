@@ -44,7 +44,7 @@ export function mapProjectFromBackend(raw: any): Project {
     priority: raw.priority || 'medium',
     startDate: normalizeDateString(start),
     endDate: normalizeDateString(end),
-    progress: Number.isFinite(raw.progress) ? raw.progress : 0,
+    progress: toNumberOrZero(raw.progress),
     supervisorId: raw.supervisor_id || raw.supervisorId || '',
     fabricatorIds,
     budget: toNumberOrZero(raw.budget),

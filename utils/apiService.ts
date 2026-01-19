@@ -96,6 +96,9 @@ class ApiService {
 
         return response;
     }
+    async getMe(): Promise<ApiResponse<any>> {
+        return this.request('/auth/me');
+    }
    async verifyPassword(password: string): Promise<ApiResponse<any>> {
     const response = await this.request('/auth/verify-password', {
         method: 'POST',
@@ -225,6 +228,19 @@ class ApiService {
         return this.request('/worklogs', {
             method: 'POST',
             body: JSON.stringify(workLogData),
+        });
+    }
+
+    async updateWorkLog(workLogId: string, updates: any): Promise<ApiResponse<any>> {
+        return this.request(`/worklogs/${workLogId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+
+    async deleteWorkLog(workLogId: string): Promise<ApiResponse<any>> {
+        return this.request(`/worklogs/${workLogId}`, {
+            method: 'DELETE',
         });
     }
 

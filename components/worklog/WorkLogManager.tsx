@@ -7,13 +7,30 @@ import { Textarea } from '../ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Badge } from '../ui/badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle
+} from '../ui/dialog';
+import {
   Calendar,
+  Edit,
   FileText,
   Plus,
   TrendingUp,
-  Package
+  Package,
+  Trash2
 } from 'lucide-react';
-import { Project, User, WorkLogEntry, Material } from '../../types';
+import { ProjectFileUpload } from '../projects/ProjectFileUpload';
+import {
+  Project,
+  User,
+  WorkLogEntry,
+  Material,
+  ProjectAttachment,
+} from '../../types';
 
 interface WorkLogManagerProps {
   currentUser: User;
@@ -32,15 +49,25 @@ export function WorkLogManager({
   workLogs,
   materials,
   onAddWorkLog,
+  onUpdateWorkLog,
+  onDeleteWorkLog,
   onUpdateProject
 }: WorkLogManagerProps) {
   const [selectedProject, setSelectedProject] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingLog, setEditingLog] = useState<WorkLogEntry | null>(null);
+  const [editFormData, setEditFormData] = useState({
+    date: '',
+    description: '',
+    progressPercentage: '',
+    hoursWorked: '',
+    materialsUsed: [] as string[]
+  });
   const [formData, setFormData] = useState({
     date: new Date().toISOString().split('T')[0],
     description: '',
     progressPercentage: '',
-    hoursWorked: '0',           // ← add default
+    hoursWorked: '0',
     materialsUsed: [] as string[]
   });
 
@@ -58,6 +85,33 @@ export function WorkLogManager({
   const projectMaterials = selectedProject
     ? materials.filter(m => m.projectId === selectedProject || !m.projectId)
     : materials;
+
+  const clampNumber = (value: string, min: number, max?: number) => {
+    const parsed = Number.parseFloat(value);
+    if (!Number.isFinite(parsed)) return null;
+    if (typeof max === 'number') {
+      return Math.min(max, Math.max(min, parsed));
+    }
+    return Math.max(min, parsed);
+  };
+
+  const buildMaterialOptions = (projectId: string, selected: string[]) => {
+    const base = materials
+      .filter(m => m.projectId === projectId || !m.projectId)
+      .map(material => ({ id: material.id, name: material.name }));
+    const existingNames = new Set(base.map((item) => item.name));
+    let customIndex = 0;
+
+    selected.forEach((name) => {
+      if (!existingNames.has(name)) {
+        base.push({ id: `custom-${customIndex}`, name });
+        existingNames.add(name);
+        customIndex += 1;
+      }
+    });
+
+    return base;
+  };
 
   const handleInputChange = (field: string, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -80,13 +134,21 @@ export function WorkLogManager({
       return;
     }
 
+    const progressValue = clampNumber(formData.progressPercentage, 0, 100);
+    const hoursValue = clampNumber(formData.hoursWorked, 0);
+
+    if (progressValue === null || hoursValue === null) {
+      alert('Please enter valid values for progress and hours.');
+      return;
+    }
+
     const newWorkLog: Omit<WorkLogEntry, 'id' | 'createdAt'> = {
       projectId: selectedProject,
       fabricatorId: currentUser.id,
       date: formData.date,
-      hoursWorked: Number(formData.hoursWorked) || 0,   // ← make sure it's number
       description: formData.description,
-      progressPercentage: parseInt(formData.progressPercentage),
+      progressPercentage: progressValue,
+      hoursWorked: hoursValue,
       materials: formData.materialsUsed.length > 0 ? formData.materialsUsed : undefined
     };
 
@@ -97,9 +159,63 @@ export function WorkLogManager({
       date: new Date().toISOString().split('T')[0],
       description: '',
       progressPercentage: '',
+      hoursWorked: '0',
       materialsUsed: []
     });
     setShowAddForm(false);
+  };
+
+  const openEditLog = (log: WorkLogEntry) => {
+    setEditingLog(log);
+    setEditFormData({
+      date: log.date,
+      description: log.description,
+      progressPercentage: String(log.progressPercentage ?? ''),
+      hoursWorked: String(log.hoursWorked ?? ''),
+      materialsUsed: Array.isArray(log.materials) ? [...log.materials] : []
+    });
+  };
+
+  const handleEditInputChange = (field: string, value: string | string[]) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditMaterialToggle = (materialName: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      materialsUsed: prev.materialsUsed.includes(materialName)
+        ? prev.materialsUsed.filter(m => m !== materialName)
+        : [...prev.materialsUsed, materialName]
+    }));
+  };
+
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingLog || !onUpdateWorkLog) return;
+
+    const progressValue = clampNumber(editFormData.progressPercentage, 0, 100);
+    const hoursValue = clampNumber(editFormData.hoursWorked, 0);
+
+    if (progressValue === null || hoursValue === null) {
+      alert('Please enter valid values for progress and hours.');
+      return;
+    }
+
+    onUpdateWorkLog(editingLog.id, {
+      date: editFormData.date,
+      description: editFormData.description,
+      progressPercentage: progressValue,
+      hoursWorked: hoursValue,
+      materials: editFormData.materialsUsed
+    });
+    setEditingLog(null);
+  };
+
+  const handleDeleteLog = (log: WorkLogEntry) => {
+    if (!onDeleteWorkLog) return;
+    const formattedDate = new Date(log.date).toLocaleDateString();
+    if (!window.confirm(`Delete work log from ${formattedDate}?`)) return;
+    onDeleteWorkLog(log.id);
   };
 
   const getProjectProgress = (projectId: string) => {
@@ -152,6 +268,21 @@ export function WorkLogManager({
 
     return hasStatus && !hasInvalidStatus && hasDocs && hasProgress;
   };
+  const canManageDocumentation = () => {
+    const proj = getSelectedProject();
+    if (!proj) return false;
+    if (currentUser.role === 'admin' || currentUser.role === 'supervisor') return true;
+    if (currentUser.role === 'fabricator') {
+      return proj.fabricatorIds.includes(currentUser.id);
+    }
+    return false;
+  };
+  const handleProjectFilesUploaded = (newAttachments: ProjectAttachment[]) => {
+    const proj = getSelectedProject();
+    if (!proj || !onUpdateProject) return;
+    const updatedAttachments = [...(proj.attachments || []), ...newAttachments];
+    onUpdateProject({ ...proj, attachments: updatedAttachments });
+  };
   const submitForSupervisorReview = () => {
     const proj = getSelectedProject();
     if (!proj || !onUpdateProject) return;
@@ -163,6 +294,10 @@ export function WorkLogManager({
     const project = projects.find(p => p.id === projectId);
     return project?.name || 'Unknown Project';
   };
+
+  const editMaterialOptions = editingLog
+    ? buildMaterialOptions(editingLog.projectId, editFormData.materialsUsed)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -245,75 +380,83 @@ export function WorkLogManager({
         </div>
       )}
 
-      {/* Add Work Log Form */}
-      {showAddForm && selectedProject && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Work Log Entry</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => handleInputChange('date', e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
+      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Work Log Entry</DialogTitle>
+            {selectedProject && (
+              <DialogDescription>
+                Project: {getProjectName(selectedProject)}
+              </DialogDescription>
+            )}
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="progress">Progress Contribution (%)</Label>
+                <Label htmlFor="date">Date</Label>
                 <Input
-                  id="progress"
-                  type="number"
-                  min="0"
-                  max="100"
-                  placeholder="5"
-                  value={formData.progressPercentage}
-                  onChange={(e) => handleInputChange('progressPercentage', e.target.value)}
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => handleInputChange('date', e.target.value)}
                   required
                 />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="progress">Progress Contribution (%)</Label>
+              <Input
+                id="progress"
+                type="number"
+                min="0"
+                max="100"
+                placeholder="5"
+                value={formData.progressPercentage}
+                onChange={(e) => handleInputChange('progressPercentage', e.target.value)}
+                required
+              />
+              <p className="text-sm text-muted-foreground">
+                How much of the project does this work session complete?
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="hours">Hours Worked</Label>
+              <Input
+                id="hours"
+                type="number"
+                min="0"
+                step="0.5"
+                placeholder="4.5"
+                value={formData.hoursWorked ?? ''}
+                onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
+                required
+              />
+              <p className="text-xs text-muted-foreground">
+                How many hours did you spend on this session?
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Work Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Describe the work performed, challenges faced, and achievements..."
+                value={formData.description}
+                onChange={(e) => handleInputChange('description', e.target.value)}
+                rows={4}
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Materials Used (Optional)</Label>
+              {projectMaterials.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  How much of the project does this work session complete?
+                  No materials available for this project.
                 </p>
-              </div>
-
-              <div className="space-y-2">
-  <Label htmlFor="hours">Hours Worked</Label>
-  <Input
-    id="hours"
-    type="number"
-    min="0"
-    step="0.5"
-    placeholder="4.5"
-    value={formData.hoursWorked ?? ''}
-    onChange={(e) => handleInputChange('hoursWorked', e.target.value)}
-    required
-  />
-  <p className="text-xs text-muted-foreground">
-    How many hours did you spend on this session?
-  </p>
-</div>
-
-              <div className="space-y-2">
-                <Label htmlFor="description">Work Description</Label>
-                <Textarea
-                  id="description"
-                  placeholder="Describe the work performed, challenges faced, and achievements..."
-                  value={formData.description}
-                  onChange={(e) => handleInputChange('description', e.target.value)}
-                  rows={4}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Materials Used (Optional)</Label>
+              ) : (
                 <div className="grid gap-2 md:grid-cols-3">
                   {projectMaterials.map(material => (
                     <div key={material.id} className="flex items-center space-x-2">
@@ -333,21 +476,143 @@ export function WorkLogManager({
                     </div>
                   ))}
                 </div>
-              </div>
+              )}
+            </div>
 
-              <div className="flex gap-2">
-                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Work Log
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
+                Cancel
+              </Button>
+              <Button type="submit">
+                <Plus className="h-4 w-4 mr-2" />
+                Add Work Log
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={Boolean(editingLog)}
+        onOpenChange={(open) => {
+          if (!open) setEditingLog(null);
+        }}
+      >
+        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
+          {editingLog && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Edit Work Log Entry</DialogTitle>
+                <DialogDescription>
+                  Project: {getProjectName(editingLog.projectId)}
+                </DialogDescription>
+              </DialogHeader>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-date">Date</Label>
+                    <Input
+                      id="edit-date"
+                      type="date"
+                      value={editFormData.date}
+                      onChange={(e) => handleEditInputChange('date', e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-progress">Progress Contribution (%)</Label>
+                  <Input
+                    id="edit-progress"
+                    type="number"
+                    min="0"
+                    max="100"
+                    placeholder="5"
+                    value={editFormData.progressPercentage}
+                    onChange={(e) =>
+                      handleEditInputChange('progressPercentage', e.target.value)
+                    }
+                    required
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    How much of the project does this work session complete?
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-hours">Hours Worked</Label>
+                  <Input
+                    id="edit-hours"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    placeholder="4.5"
+                    value={editFormData.hoursWorked}
+                    onChange={(e) =>
+                      handleEditInputChange('hoursWorked', e.target.value)
+                    }
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    How many hours did you spend on this session?
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Work Description</Label>
+                  <Textarea
+                    id="edit-description"
+                    placeholder="Describe the work performed, challenges faced, and achievements..."
+                    value={editFormData.description}
+                    onChange={(e) =>
+                      handleEditInputChange('description', e.target.value)
+                    }
+                    rows={4}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Materials Used (Optional)</Label>
+                  {editMaterialOptions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No materials available for this project.
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 md:grid-cols-3">
+                      {editMaterialOptions.map(material => (
+                        <div key={material.id} className="flex items-center space-x-2">
+                          <input
+                            type="checkbox"
+                            id={`edit-material-${material.id}`}
+                            checked={editFormData.materialsUsed.includes(material.name)}
+                            onChange={() => handleEditMaterialToggle(material.name)}
+                            className="rounded"
+                          />
+                          <Label
+                            htmlFor={`edit-material-${material.id}`}
+                            className="text-sm cursor-pointer"
+                          >
+                            {material.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <DialogFooter>
+                  <Button type="button" variant="outline" onClick={() => setEditingLog(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit">Save Changes</Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Submit for Supervisor Review */}
       {selectedProject && (
@@ -355,7 +620,7 @@ export function WorkLogManager({
           <CardContent className="pt-4">
             <div className="flex items-center justify-between">
               <div className="text-sm text-muted-foreground space-y-1">
-                <div>Upload files in the Project Details → Files or add a documentation link.</div>
+                <div>Upload files in the Project Details &gt; Files or add a documentation link.</div>
                 {(() => {
                   const proj = getSelectedProject();
                   if (!proj) return null;
@@ -409,7 +674,15 @@ export function WorkLogManager({
               </Button>
             </div>
           </CardContent>
-        </Card>
+      </Card>
+    )}
+
+      {selectedProject && canManageDocumentation() && onUpdateProject && (
+        <ProjectFileUpload
+          projectId={selectedProject}
+          currentUserId={currentUser.id}
+          onFilesUploaded={handleProjectFilesUploaded}
+        />
       )}
 
       {/* Work Log History */}
@@ -443,8 +716,8 @@ export function WorkLogManager({
                 .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                 .map((log) => (
                   <div key={log.id} className="border rounded-lg p-4">
-                    <div className="flex justify-between items-start mb-3">
-                      <div className="flex items-center gap-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                      <div className="flex flex-wrap items-center gap-3">
                         <div className="text-sm text-muted-foreground">
                           {new Date(log.date).toLocaleDateString()}
                         </div>
@@ -452,12 +725,38 @@ export function WorkLogManager({
                         <Badge variant="outline">
                           +{log.progressPercentage}% progress
                         </Badge>
-                      </div>
-                      {!selectedProject && (
-                        <Badge variant="outline">
-                          {getProjectName(log.projectId)}
+
+                        <Badge variant="secondary">
+                          {log.hoursWorked} hours
                         </Badge>
-                      )}
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        {!selectedProject && (
+                          <Badge variant="outline">
+                            {getProjectName(log.projectId)}
+                          </Badge>
+                        )}
+                        {onUpdateWorkLog && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditLog(log)}
+                          >
+                            <Edit className="h-3.5 w-3.5" />
+                            Edit
+                          </Button>
+                        )}
+                        {onDeleteWorkLog && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteLog(log)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
                     </div>
 
                     <p className="text-sm mb-3">{log.description}</p>

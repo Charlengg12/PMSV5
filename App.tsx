@@ -41,6 +41,7 @@ import { mapProjectsFromBackend } from "./utils/projectDataMapper";
 import { mapTasksFromBackend } from "./utils/taskDataMapper";
 import { mapUserDataFromBackend } from "./utils/userDataMapper";
 import { mapMaterialFromBackend, mapMaterialsFromBackend } from "./utils/materialDataMapper";
+import { mapWorkLogFromBackend, mapWorkLogsFromBackend } from "./utils/workLogDataMapper";
 import { emailService } from "./utils/emailService";
 import { apiService } from "./utils/apiService";
 import { useTimeBasedTheme } from "./hooks/useTimeBasedTheme";
@@ -94,16 +95,19 @@ export default function App() {
     const initializeApp = async () => {
       try {
         // Restore session
+        let storedUserRaw: string | null = null;
+        let hasHash = false;
         try {
-          const storedUser = localStorage.getItem("currentUser");
-          if (storedUser) {
-            const parsed = JSON.parse(storedUser) as User;
+          storedUserRaw = localStorage.getItem("currentUser");
+          if (storedUserRaw) {
+            const parsed = JSON.parse(storedUserRaw) as User;
             setCurrentUser(parsed);
           }
           const hash = (window.location.hash || "").slice(1);
+          hasHash = Boolean(hash);
           if (!hash) {
             // Default to dashboard for signed-in users
-            if (storedUser) {
+            if (storedUserRaw) {
               setCurrentView("dashboard");
               try {
                 window.location.hash = "dashboard";
@@ -121,6 +125,41 @@ export default function App() {
           setBackendHealthy(false);
           _setIsInitialized(true);
           return;
+        }
+
+        // Validate session against the backend before loading protected data
+        let sessionUser: User | null = null;
+        try {
+          const meResponse = await apiService.getMe();
+          const meUser = (meResponse.data as any)?.user;
+          if (meUser) {
+            sessionUser = mapUserDataFromBackend(meUser);
+          }
+        } catch (sessionError) {
+          console.warn("Failed to restore session:", sessionError);
+        }
+
+        if (!sessionUser) {
+          if (storedUserRaw) {
+            try {
+              localStorage.removeItem("currentUser");
+            } catch {}
+          }
+          setCurrentUser(null);
+          setBackendHealthy(true);
+          _setIsInitialized(true);
+          return;
+        }
+
+        setCurrentUser(sessionUser);
+        try {
+          localStorage.setItem("currentUser", JSON.stringify(sessionUser));
+        } catch {}
+        if (!hasHash) {
+          setCurrentView("dashboard");
+          try {
+            window.location.hash = "dashboard";
+          } catch {}
         }
 
         // Load data from database
@@ -206,7 +245,7 @@ export default function App() {
       }
 
       if (workLogsRes.data) {
-        setWorkLogs(workLogsRes.data);
+        setWorkLogs(mapWorkLogsFromBackend(workLogsRes.data));
       }
 
       if (materialsRes.data) {
@@ -376,6 +415,8 @@ export default function App() {
     }
   };
 
+  const clampProgress = (value: number) => Math.min(100, Math.max(0, value));
+
   const handleAddWorkLog = async (
     workLogData: Omit<WorkLogEntry, "id" | "createdAt">
   ) => {
@@ -392,7 +433,7 @@ export default function App() {
       }
 
       // 3. GET THE REAL LOG (With the ID from the database)
-      const savedLog = response.data;
+      const savedLog = response.data ? mapWorkLogFromBackend(response.data) : null;
 
       if (!savedLog) {
         alert("Server responded but returned no data.");
@@ -403,20 +444,168 @@ export default function App() {
       setWorkLogs((prevLogs) => [savedLog, ...prevLogs]);
 
       // Update project progress based on real work log data
-      const progressIncrease = savedLog.progressPercentage;
+      const progressIncrease = Number.isFinite(savedLog.progressPercentage)
+        ? savedLog.progressPercentage
+        : 0;
+      let updatedProgress: number | null = null;
       setProjects((prevProjects) =>
-        prevProjects.map((project) =>
-          project.id === savedLog.projectId
-            ? {
-                ...project,
-                progress: Math.min(100, project.progress + progressIncrease),
-              }
-            : project
-        )
+        prevProjects.map((project) => {
+          if (project.id !== savedLog.projectId) return project;
+          const nextProgress = clampProgress(project.progress + progressIncrease);
+          updatedProgress = nextProgress;
+          return {
+            ...project,
+            progress: nextProgress,
+          };
+        })
       );
     } catch (error) {
       console.error("Network crash:", error);
       alert("Network Error: Could not save work log.");
+    }
+  };
+
+  const handleUpdateWorkLog = async (
+    id: string,
+    updates: Partial<WorkLogEntry>
+  ) => {
+    const previousLog = workLogs.find((log) => log.id === id);
+    if (!previousLog) return;
+
+    const previousLogs = workLogs;
+    const previousProjectProgress =
+      projects.find((project) => project.id === previousLog.projectId)?.progress ??
+      0;
+
+    const normalizedUpdates: Partial<WorkLogEntry> = {
+      ...updates,
+    };
+
+    if (typeof updates.progressPercentage === "number") {
+      normalizedUpdates.progressPercentage = clampProgress(
+        updates.progressPercentage
+      );
+    }
+
+    if (typeof updates.hoursWorked === "number") {
+      normalizedUpdates.hoursWorked = Math.max(0, updates.hoursWorked);
+    }
+
+    const nextProgressValue =
+      typeof normalizedUpdates.progressPercentage === "number"
+        ? normalizedUpdates.progressPercentage
+        : previousLog.progressPercentage;
+    const progressDelta =
+      typeof normalizedUpdates.progressPercentage === "number"
+        ? nextProgressValue - previousLog.progressPercentage
+        : 0;
+    const nextProjectProgress =
+      progressDelta !== 0
+        ? clampProgress(previousProjectProgress + progressDelta)
+        : previousProjectProgress;
+
+    const nextMaterials = Array.isArray(normalizedUpdates.materials)
+      ? normalizedUpdates.materials
+      : previousLog.materials;
+
+    const updatedLog: WorkLogEntry = {
+      ...previousLog,
+      ...normalizedUpdates,
+      materials:
+        Array.isArray(nextMaterials) && nextMaterials.length > 0
+          ? nextMaterials
+          : undefined,
+    };
+
+    setWorkLogs((prevLogs) =>
+      prevLogs.map((log) => (log.id === id ? updatedLog : log))
+    );
+
+    if (progressDelta !== 0) {
+      setProjects((prevProjects) =>
+        prevProjects.map((project) =>
+          project.id === previousLog.projectId
+            ? { ...project, progress: nextProjectProgress }
+            : project
+        )
+      );
+    }
+
+    try {
+      const response = await apiService.updateWorkLog(id, {
+        date: normalizedUpdates.date,
+        description: normalizedUpdates.description,
+        progressPercentage: normalizedUpdates.progressPercentage,
+        hoursWorked: normalizedUpdates.hoursWorked,
+        materials: normalizedUpdates.materials,
+      });
+
+      if (response.data) {
+        const mapped = mapWorkLogFromBackend(response.data);
+        setWorkLogs((prevLogs) =>
+          prevLogs.map((log) => (log.id === id ? mapped : log))
+        );
+      }
+
+    } catch (error) {
+      console.error("Failed to update work log:", error);
+      setWorkLogs(previousLogs);
+      if (progressDelta !== 0) {
+        setProjects((prevProjects) =>
+          prevProjects.map((project) =>
+            project.id === previousLog.projectId
+              ? { ...project, progress: previousProjectProgress }
+              : project
+          )
+        );
+      }
+      alert("Failed to update work log.");
+    }
+  };
+
+  const handleDeleteWorkLog = async (id: string) => {
+    const previousLog = workLogs.find((log) => log.id === id);
+    if (!previousLog) return;
+
+    const previousLogs = workLogs;
+    const previousProjectProgress =
+      projects.find((project) => project.id === previousLog.projectId)?.progress ??
+      0;
+    const progressDelta = Number.isFinite(previousLog.progressPercentage)
+      ? -previousLog.progressPercentage
+      : 0;
+    const nextProjectProgress =
+      progressDelta !== 0
+        ? clampProgress(previousProjectProgress + progressDelta)
+        : previousProjectProgress;
+
+    setWorkLogs((prevLogs) => prevLogs.filter((log) => log.id !== id));
+
+    if (progressDelta !== 0) {
+      setProjects((prevProjects) =>
+        prevProjects.map((project) =>
+          project.id === previousLog.projectId
+            ? { ...project, progress: nextProjectProgress }
+            : project
+        )
+      );
+    }
+
+    try {
+      await apiService.deleteWorkLog(id);
+    } catch (error) {
+      console.error("Failed to delete work log:", error);
+      setWorkLogs(previousLogs);
+      if (progressDelta !== 0) {
+        setProjects((prevProjects) =>
+          prevProjects.map((project) =>
+            project.id === previousLog.projectId
+              ? { ...project, progress: previousProjectProgress }
+              : project
+          )
+        );
+      }
+      alert("Failed to delete work log.");
     }
   };
 
@@ -914,7 +1103,7 @@ export default function App() {
         if (!isMounted) return;
         setBackendHealthy((prev) => {
           // Transition from unhealthy -> healthy: reload data
-          if (prev === false && healthy) {
+          if (prev === false && healthy && currentUser) {
             loadDataFromDatabase()
               .then(() => setLastReloadAt(Date.now()))
               .catch(() => {});
@@ -931,12 +1120,12 @@ export default function App() {
       isMounted = false;
       clearInterval(interval);
     };
-  }, []);
+  }, [currentUser]);
 
   // Refresh when tab gains focus or when coming back online
   useEffect(() => {
     const handleVisibility = () => {
-      if (document.visibilityState === "visible" && backendHealthy) {
+      if (document.visibilityState === "visible" && backendHealthy && currentUser) {
         // Avoid excessive reloads: only if >10s since last reload
         if (Date.now() - lastReloadAt > 10000) {
           loadDataFromDatabase()
@@ -951,7 +1140,7 @@ export default function App() {
         const res = await apiService.healthCheck();
         const healthy = !res.error;
         setBackendHealthy(healthy);
-        if (healthy) {
+        if (healthy && currentUser) {
           loadDataFromDatabase()
             .then(() => setLastReloadAt(Date.now()))
             .catch(() => {});
@@ -964,7 +1153,7 @@ export default function App() {
       document.removeEventListener("visibilitychange", handleVisibility);
       window.removeEventListener("online", handleOnline);
     };
-  }, [backendHealthy, lastReloadAt]);
+  }, [backendHealthy, currentUser, lastReloadAt]);
 
   if (!currentUser) {
     switch (authView) {
@@ -1175,6 +1364,8 @@ case "activity-logs":
               workLogs={workLogs}
               materials={materials}
               onAddWorkLog={handleAddWorkLog}
+              onUpdateWorkLog={handleUpdateWorkLog}
+              onDeleteWorkLog={handleDeleteWorkLog}
               onUpdateProject={handleUpdateProject}
             />
           );
