@@ -340,6 +340,25 @@ export function WorkLogManager({
       return;
     }
 
+    // if progress value is > 100 return error
+
+    if (progressValue > 100) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Progress Value',
+        text: 'Progress value must be between 0 and 100.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+      });
+      return;
+    }
+
     // 2. Format validation
     if (progressValue === null || hoursValue === null) {
       Swal.fire({
@@ -649,7 +668,7 @@ export function WorkLogManager({
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-progress">Progress Contribution (%)</Label>
-                <Input id="edit-progress" type="number" value={editFormData.progressPercentage} onChange={(e) => handleEditInputChange('progressPercentage', e.target.value)} />
+                <Input id="edit-progress" min="0" max="100" type="number" value={editFormData.progressPercentage} onChange={(e) => handleEditInputChange('progressPercentage', e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="edit-hours">Hours Worked</Label>
