@@ -100,10 +100,25 @@ export function ProjectDetails({
     revenue: project.revenue?.toString() ?? "",
   }));
 
-  const clientUser = users.find(
-    (u) => u.role === "client" && u.clientProjectId === project.id,
+  // ────────────────────────────────────────────────
+  //  FIXED: Robust Client Detection Logic
+  // ────────────────────────────────────────────────
+  // 1. Try to find the user object by ID (most accurate)
+  const matchedUser = users.find((u) => u.id === project.clientId);
+
+  // 2. Fallback: Find by legacy clientProjectId link
+  const linkedUser = users.find(
+    (u) => u.role === "client" && u.clientProjectId === project.id
   );
-  const localClientAssigned = !!clientUser;
+
+  // 3. Construct a display object. If no user found, use project.clientName string.
+  const clientDisplay = matchedUser || linkedUser || (project.clientName ? {
+    name: project.clientName,
+    email: "", // Email might not be available if we only have the name string
+    id: project.clientId
+  } : null);
+
+  const localClientAssigned = !!clientDisplay;
 
   // ────────────────────────────────────────────────
   //  Validation constants
@@ -584,7 +599,8 @@ export function ProjectDetails({
                 </Button>
               )}
 
-              {canEdit && (localClientAssigned || backendClientAssigned) && (
+              {/* Check if ANY client is assigned (local or backend) */}
+              {canEdit && localClientAssigned && (
                 <Button variant="outline" disabled>
                   Client Assigned
                 </Button>
@@ -861,25 +877,30 @@ export function ProjectDetails({
                     </div>
                   </div>
 
+                  {/* ──────────────────────────────────────────────── */}
+                  {/* FIXED: Display clientDisplay instead of clientUser */}
+                  {/* ──────────────────────────────────────────────── */}
                   <div>
                     <Label className="flex items-center gap-2">
                       <Building className="h-4 w-4" />
                       Client
                     </Label>
-                    {clientUser ? (
+                    {clientDisplay ? (
                       <div className="mt-1.5 text-sm text-muted-foreground min-w-0">
                         <p
                           className="font-medium truncate"
-                          title={clientUser.name}
+                          title={clientDisplay.name}
                         >
-                          {clientUser.name}
+                          {clientDisplay.name}
                         </p>
-                        <p
-                          className="text-xs truncate"
-                          title={clientUser.email}
-                        >
-                          {clientUser.email}
-                        </p>
+                        {clientDisplay.email && (
+                          <p
+                            className="text-xs truncate"
+                            title={clientDisplay.email}
+                          >
+                            {clientDisplay.email}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <div className="mt-1.5 text-sm text-muted-foreground">
