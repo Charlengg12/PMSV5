@@ -223,7 +223,7 @@ export function UserManagement({
         text: "Full name is required",
         customClass: swalCustomClasses,
       });
-        return;
+      return;
     }
 
     if (!emailRegex.test(editingUser.email ?? "")) {
@@ -270,10 +270,7 @@ export function UserManagement({
       return;
     }
 
-    if (
-      editingUser.gcashNumber &&
-      editingUser.gcashNumber.length !== 11
-    ) {
+    if (editingUser.gcashNumber && editingUser.gcashNumber.length !== 11) {
       await Swal.fire({
         icon: "error",
         title: "Invalid GCash Length",
@@ -451,7 +448,7 @@ export function UserManagement({
     setTimeout(async () => {
       try {
         await Promise.all(
-          targetIds.map((userId) => apiService.makeUserInactive(userId))
+          targetIds.map((userId) => apiService.makeUserInactive(userId)),
         );
         const [activeRes, inactiveRes] = await Promise.all([
           apiService.getUsers(),
@@ -647,7 +644,7 @@ export function UserManagement({
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observerRef.current.observe(loadMoreTriggerRef.current);
@@ -723,7 +720,7 @@ export function UserManagement({
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {/* Filters */}
           <div className="flex flex-col-reverse lg:flex-row justify-between lg:items-end gap-5 mb-6">
             <div className="relative flex-1 max-w-lg">
@@ -735,7 +732,9 @@ export function UserManagement({
                 className="pl-10 bg-muted/40 border-muted-foreground/30"
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="font-medium text-[#e28a33]">Note:</span> Search by name, email, role, school, employee number, secure ID, phone, or GCash number.
+                <span className="font-medium text-[#e28a33]">Note:</span> Search
+                by name, email, role, school, employee number, secure ID, phone,
+                or GCash number.
               </p>
             </div>
 
@@ -767,8 +766,8 @@ export function UserManagement({
           </div>
 
           {/* Table */}
-          <div className="rounded-lg border overflow-hidden">
-            <Table>
+          <div className="rounded-lg border bg-white overflow-x-auto">
+            <Table className="min-w-[600px] w-full">
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   {canManageUsers && (
@@ -777,15 +776,15 @@ export function UserManagement({
                         checked={
                           displayedUsers.length > 0 &&
                           displayedUsers.every((u) =>
-                            selectedUserIds.includes(u.id)
+                            selectedUserIds.includes(u.id),
                           )
                         }
                         indeterminate={
                           displayedUsers.some((u) =>
-                            selectedUserIds.includes(u.id)
+                            selectedUserIds.includes(u.id),
                           ) &&
                           !displayedUsers.every((u) =>
-                            selectedUserIds.includes(u.id)
+                            selectedUserIds.includes(u.id),
                           )
                         }
                         onCheckedChange={(checked) => {
@@ -799,24 +798,39 @@ export function UserManagement({
                           } else {
                             setSelectedUserIds((prev) =>
                               prev.filter(
-                                (id) => !displayedUsers.some((u) => u.id === id)
-                              )
+                                (id) =>
+                                  !displayedUsers.some((u) => u.id === id),
+                              ),
                             );
                           }
                         }}
                       />
                     </TableHead>
                   )}
-                  <TableHead className="min-w-[200px] text-white">Name & Email</TableHead>
-                  <TableHead className="min-w-[110px] text-white">Role</TableHead>
-                  <TableHead className="min-w-[140px] text-white">School</TableHead>
-                  <TableHead className="min-w-[160px] text-white">Contact</TableHead>
+                  <TableHead className="min-w-[200px] text-white">
+                    Name & Email
+                  </TableHead>
+                  <TableHead className="min-w-[110px] text-white">
+                    Role
+                  </TableHead>
+                  <TableHead className="min-w-[140px] text-white">
+                    School
+                  </TableHead>
+                  <TableHead className="min-w-[160px] text-white">
+                    Contact
+                  </TableHead>
                   {showSecureIds && (
-                    <TableHead className="min-w-[160px] text-white">Secure ID</TableHead>
+                    <TableHead className="min-w-[160px] text-white">
+                      Secure ID
+                    </TableHead>
                   )}
-                  <TableHead className="min-w-[120px] text-white">Employee #</TableHead>
+                  <TableHead className="min-w-[120px] text-white">
+                    Employee #
+                  </TableHead>
                   {canManageUsers && (
-                    <TableHead className="w-28 text-right text-white">Actions</TableHead>
+                    <TableHead className="w-28 text-right text-white">
+                      Actions
+                    </TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -846,7 +860,7 @@ export function UserManagement({
                               setSelectedUserIds((prev) =>
                                 checked
                                   ? [...prev, user.id]
-                                  : prev.filter((id) => id !== user.id)
+                                  : prev.filter((id) => id !== user.id),
                               );
                             }}
                           />
