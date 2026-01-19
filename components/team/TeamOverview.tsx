@@ -396,7 +396,7 @@ export function TeamOverview({
           </CardHeader>
           <CardContent className="text-center">
             <div className="text-2xl font-semibold">{totalMembers}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mb-7">
               Visible in your scope
             </p>
           </CardContent>
@@ -409,7 +409,7 @@ export function TeamOverview({
           </CardHeader>
           <CardContent className="text-center">
             <div className="text-2xl font-semibold">{totalProjects}</div>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-xs text-muted-foreground mb-7">
               Projects in progress
             </p>
           </CardContent>
@@ -422,7 +422,7 @@ export function TeamOverview({
           </CardHeader>
           <CardContent className="text-center">
             <div className="text-2xl font-semibold">{openTasks}</div>
-            <p className="text-xs text-muted-foreground">Pending or active</p>
+            <p className="text-xs text-muted-foreground mb-7">Pending or active</p>
           </CardContent>
         </Card>
 
