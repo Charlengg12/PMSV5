@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS `work_logs` (
   `hours_worked` DECIMAL(5,2) NOT NULL,
   `description` TEXT DEFAULT NULL,
   `progress_percentage` DECIMAL(5,2) DEFAULT 0,
+  `materials_used` JSON DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   INDEX `idx_project_id` (`project_id`),
   INDEX `idx_user_id` (`user_id`),

@@ -41,6 +41,7 @@ import { mapProjectsFromBackend } from "./utils/projectDataMapper";
 import { mapTasksFromBackend } from "./utils/taskDataMapper";
 import { mapUserDataFromBackend } from "./utils/userDataMapper";
 import { mapMaterialFromBackend, mapMaterialsFromBackend } from "./utils/materialDataMapper";
+import { mapWorkLogFromBackend, mapWorkLogsFromBackend } from "./utils/workLogDataMapper";
 import { emailService } from "./utils/emailService";
 import { apiService } from "./utils/apiService";
 import { useTimeBasedTheme } from "./hooks/useTimeBasedTheme";
@@ -244,7 +245,7 @@ export default function App() {
       }
 
       if (workLogsRes.data) {
-        setWorkLogs(workLogsRes.data);
+        setWorkLogs(mapWorkLogsFromBackend(workLogsRes.data));
       }
 
       if (materialsRes.data) {
@@ -430,7 +431,7 @@ export default function App() {
       }
 
       // 3. GET THE REAL LOG (With the ID from the database)
-      const savedLog = response.data;
+      const savedLog = response.data ? mapWorkLogFromBackend(response.data) : null;
 
       if (!savedLog) {
         alert("Server responded but returned no data.");
@@ -441,17 +442,28 @@ export default function App() {
       setWorkLogs((prevLogs) => [savedLog, ...prevLogs]);
 
       // Update project progress based on real work log data
-      const progressIncrease = savedLog.progressPercentage;
+      const progressIncrease = Number.isFinite(savedLog.progressPercentage)
+        ? savedLog.progressPercentage
+        : 0;
+      let updatedProgress: number | null = null;
       setProjects((prevProjects) =>
-        prevProjects.map((project) =>
-          project.id === savedLog.projectId
-            ? {
-                ...project,
-                progress: Math.min(100, project.progress + progressIncrease),
-              }
-            : project
-        )
+        prevProjects.map((project) => {
+          if (project.id !== savedLog.projectId) return project;
+          const nextProgress = Math.min(100, project.progress + progressIncrease);
+          updatedProgress = nextProgress;
+          return {
+            ...project,
+            progress: nextProgress,
+          };
+        })
       );
+      if (updatedProgress !== null && progressIncrease > 0) {
+        apiService
+          .updateProject(savedLog.projectId, { progress: updatedProgress })
+          .catch((error) => {
+            console.warn("Failed to persist project progress:", error);
+          });
+      }
     } catch (error) {
       console.error("Network crash:", error);
       alert("Network Error: Could not save work log.");

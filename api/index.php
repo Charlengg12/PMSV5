@@ -1505,7 +1505,18 @@ function handle_get_worklogs(PDO $pdo): void
 {
     require_login();
     $stmt = $pdo->query('SELECT * FROM work_logs ORDER BY created_at DESC');
-    $logs = $stmt->fetchAll();
+    $logs = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+    foreach ($logs as &$log) {
+        $log['projectId'] = $log['project_id'] ?? null;
+        $log['fabricatorId'] = $log['user_id'] ?? null;
+        $log['hoursWorked'] = $log['hours_worked'] ?? null;
+        $log['progressPercentage'] = $log['progress_percentage'] ?? null;
+        if (array_key_exists('materials_used', $log)) {
+            $decoded = json_decode($log['materials_used'] ?? '[]', true);
+            $log['materials'] = is_array($decoded) ? $decoded : [];
+        }
+    }
+    unset($log);
     json_response($logs);
 }
 
