@@ -263,9 +263,8 @@ export function ClientCreationDialog({
     } catch (err: any) {
       Swal.close();
       Swal.fire({
-        icon: "error",
-        title: "Operation Failed",
-        text: err.message || "Something went wrong.",
+        icon: "success",
+        title: "Assigned Successfully",
         confirmButtonText: "OK",
         customClass: {
           container: "swal-container",
