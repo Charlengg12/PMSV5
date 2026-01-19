@@ -371,8 +371,8 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
 
   return (
     <>
-      <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden">
-        <CardHeader className="w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 px-0 sm:px-6">
+      <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden p-0 sm:p-6">
+        <CardHeader className="w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 p-0">
           {/* Left Side: Title & Counter */}
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Megaphone className="h-5 w-5 text-primary dark:text-white" />

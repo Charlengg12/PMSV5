@@ -158,10 +158,10 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
         {stats.map((stat, index) => (
           <Card
             key={stat.title}
-            className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all cursor-pointer md:hover:scale-105 active:scale-95"
+            className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all cursor-pointer md:hover:scale-105 active:scale-95 p-4 sm:p-6"
             onClick={stat.onClick}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-br from-primary/5 to-transparent px-4 md:px-6">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-br from-primary/5 to-transparent px-0">
               <CardTitle className="text-xs md:text-sm font-medium">{stat.title}</CardTitle>
               <div className={`p-1.5 md:p-2 rounded-lg ${index === 0 ? 'bg-primary/10 text-primary' :
                 index === 1 ? 'bg-accent/10 text-accent' :
@@ -171,7 +171,7 @@ export function DashboardStats({ projects, tasks, users, currentUser }: Dashboar
                 <stat.icon className="h-4 w-4 md:h-5 md:w-5 dark:text-white" />
               </div>
             </CardHeader>
-            <CardContent className="pt-4 px-4 md:px-6">
+            <CardContent className="pt-4 px-0">
               <div className="text-2xl md:text-3xl font-bold">
                 {stat.value}
               </div>
