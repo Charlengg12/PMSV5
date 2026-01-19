@@ -198,6 +198,10 @@ case 'GET /announcements':
         handle_update_task($pdo, $matches[1]);
     } elseif (preg_match('#^DELETE /tasks/([^/]+)$#', $method . ' ' . $path, $matches)) {
         handle_delete_task($pdo, $matches[1]);
+    } elseif (preg_match('#^PUT /worklogs/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_update_worklog($pdo, $matches[1]);
+    } elseif (preg_match('#^DELETE /worklogs/([^/]+)$#', $method . ' ' . $path, $matches)) {
+        handle_delete_worklog($pdo, $matches[1]);
     } elseif (preg_match('#^PUT /projects/([^/]+)$#', $method . ' ' . $path, $matches)) {
         handle_update_project($pdo, $matches[1]);
     } elseif (preg_match('#^PUT /users/([^/]+)$#', $method . ' ' . $path, $matches)) {
@@ -819,6 +823,27 @@ function ensure_materials_schema(PDO $pdo): array
         'status' => "ALTER TABLE materials ADD COLUMN status ENUM('ordered','delivered','in-use','depleted') DEFAULT 'ordered'",
         'supplier' => "ALTER TABLE materials ADD COLUMN supplier VARCHAR(255) DEFAULT NULL",
         'category' => "ALTER TABLE materials ADD COLUMN category VARCHAR(255) DEFAULT NULL"
+    ];
+
+    foreach ($addColumns as $name => $sql) {
+        if (!isset($columns[$name])) {
+            try {
+                $pdo->exec($sql);
+                $columns[$name] = ['Field' => $name];
+            } catch (PDOException $e) {
+                // Ignore schema updates if the environment doesn't allow ALTER TABLE.
+            }
+        }
+    }
+
+    return $columns;
+}
+
+function ensure_work_logs_schema(PDO $pdo): array
+{
+    $columns = get_table_columns($pdo, 'work_logs');
+    $addColumns = [
+        'materials_used' => "ALTER TABLE work_logs ADD COLUMN materials_used JSON NULL"
     ];
 
     foreach ($addColumns as $name => $sql) {
@@ -1553,24 +1578,49 @@ function handle_create_worklog(PDO $pdo): void
     }
 
     $workLogId = 'wl-' . time() . '-' . substr(md5(microtime()), 0, 6);
+    $columns = ensure_work_logs_schema($pdo);
+    $hasMaterialsColumn = isset($columns['materials_used']);
 
     try {
-        $stmt = $pdo->prepare("
-            INSERT INTO work_logs 
-            (id, project_id, user_id, date, hours_worked, description, progress_percentage, materials_used)
-            VALUES (:id, :project_id, :user_id, :date, :hours_worked, :description, :progress_percentage, :materials_used)
-        ");
+        $insertColumns = [
+            'id',
+            'project_id',
+            'user_id',
+            'date',
+            'hours_worked',
+            'description',
+            'progress_percentage'
+        ];
+        $placeholders = [
+            ':id',
+            ':project_id',
+            ':user_id',
+            ':date',
+            ':hours_worked',
+            ':description',
+            ':progress_percentage'
+        ];
+        $params = [
+            ':id' => $workLogId,
+            ':project_id' => $projectId,
+            ':user_id' => $userId,
+            ':date' => $date,
+            ':hours_worked' => $hours,
+            ':description' => $description,
+            ':progress_percentage' => $progressPercentage
+        ];
 
-        $stmt->execute([
-            ':id'                => $workLogId,
-            ':project_id'        => $projectId,
-            ':user_id'           => $userId,
-            ':date'              => $date,
-            ':hours_worked'      => $hours,
-            ':description'       => $description,
-            ':progress_percentage' => $progressPercentage,
-            ':materials_used'    => $materialsUsed,
-        ]);
+        if ($hasMaterialsColumn) {
+            $insertColumns[] = 'materials_used';
+            $placeholders[] = ':materials_used';
+            $params[':materials_used'] = $materialsUsed;
+        }
+
+        $stmt = $pdo->prepare(
+            "INSERT INTO work_logs (" . implode(', ', $insertColumns) . ")
+             VALUES (" . implode(', ', $placeholders) . ")"
+        );
+        $stmt->execute($params);
 
         // LOGGING
         log_activity($pdo, $_SESSION['user_id'], 'CREATE_WORKLOG', "Added $hours hours to project $projectId");
@@ -1580,13 +1630,134 @@ function handle_create_worklog(PDO $pdo): void
         $log = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
 
         $log['fabricatorId'] = $log['user_id'];
-        $log['materials'] = json_decode($log['materials_used'] ?? '[]', true);
+        if (array_key_exists('materials_used', $log)) {
+            $log['materials'] = json_decode($log['materials_used'] ?? '[]', true);
+        }
 
         json_response($log);
 
     } catch (PDOException $e) {
         json_response(['error' => 'Database SQL Error: ' . $e->getMessage()], 500);
     }
+}
+
+function handle_update_worklog(PDO $pdo, string $id): void
+{
+    require_login();
+    $body = sanitize_recursive(json_input());
+
+    $fields = [];
+    $params = [':id' => $id];
+    $columns = ensure_work_logs_schema($pdo);
+    $hasMaterialsColumn = isset($columns['materials_used']);
+
+    if (array_key_exists('date', $body)) {
+        $date = $body['date'];
+        if (is_string($date) && trim($date) === '') {
+            json_response(['error' => 'date is required'], 400);
+        }
+        $fields[] = 'date = :date';
+        $params[':date'] = $date;
+    }
+
+    if (
+        array_key_exists('hoursWorked', $body) ||
+        array_key_exists('hours_worked', $body) ||
+        array_key_exists('hoursworked', $body)
+    ) {
+        $hoursInput = $body['hoursWorked'] ?? $body['hours_worked'] ?? $body['hoursworked'] ?? 0;
+        $hoursValue = ($hoursInput === '' || $hoursInput === null) ? 0 : floatval($hoursInput);
+        $fields[] = 'hours_worked = :hours_worked';
+        $params[':hours_worked'] = $hoursValue;
+    }
+
+    if (array_key_exists('description', $body)) {
+        $fields[] = 'description = :description';
+        $params[':description'] = $body['description'];
+    }
+
+    if (array_key_exists('progressPercentage', $body) || array_key_exists('progress_percentage', $body)) {
+        $progressInput = $body['progressPercentage'] ?? $body['progress_percentage'] ?? 0;
+        $fields[] = 'progress_percentage = :progress_percentage';
+        $params[':progress_percentage'] = floatval($progressInput);
+    }
+
+    if (
+        array_key_exists('materials', $body) ||
+        array_key_exists('materialsUsed', $body) ||
+        array_key_exists('materials_used', $body)
+    ) {
+        if ($hasMaterialsColumn) {
+            $materialsInput = $body['materials'] ?? $body['materialsUsed'] ?? $body['materials_used'] ?? null;
+            if ($materialsInput === null) {
+                $materialsJson = null;
+            } elseif (is_array($materialsInput)) {
+                $materialsJson = json_encode($materialsInput);
+            } else {
+                $materialsJson = json_encode([$materialsInput]);
+            }
+            $fields[] = 'materials_used = :materials_used';
+            $params[':materials_used'] = $materialsJson;
+        }
+    }
+
+    if (empty($fields)) {
+        json_response(['message' => 'No changes provided'], 400);
+    }
+
+    $sql = "UPDATE work_logs SET " . implode(', ', $fields) . " WHERE id = :id";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+
+        $stmt = $pdo->prepare('SELECT * FROM work_logs WHERE id = :id LIMIT 1');
+        $stmt->execute([':id' => $id]);
+        $log = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$log) {
+            json_response(['error' => 'Work log not found or update failed'], 404);
+        }
+
+        // LOGGING
+        log_activity($pdo, $_SESSION['user_id'], 'UPDATE_WORKLOG', "Updated work log: $id");
+
+        $log['projectId'] = $log['project_id'] ?? null;
+        $log['fabricatorId'] = $log['user_id'] ?? null;
+        $log['hoursWorked'] = $log['hours_worked'] ?? null;
+        $log['progressPercentage'] = $log['progress_percentage'] ?? null;
+        if (array_key_exists('materials_used', $log)) {
+            $log['materials'] = json_decode($log['materials_used'] ?? '[]', true);
+        }
+
+        json_response($log);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database SQL Error: ' . $e->getMessage()], 500);
+    }
+}
+
+function handle_delete_worklog(PDO $pdo, string $id): void
+{
+    require_login();
+
+    $stmt = $pdo->prepare('SELECT project_id FROM work_logs WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $log = $stmt->fetch(PDO::FETCH_ASSOC);
+    if (!$log) {
+        json_response(['error' => 'Work log not found'], 404);
+    }
+
+    $stmt = $pdo->prepare('DELETE FROM work_logs WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_WORKLOG', "Deleted work log: $id");
+
+    json_response([
+        'message' => 'Work log deleted',
+        'id' => $id,
+        'projectId' => $log['project_id'] ?? null
+    ]);
 }
 
 function handle_get_materials(PDO $pdo): void

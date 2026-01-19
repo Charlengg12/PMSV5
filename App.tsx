@@ -415,6 +415,8 @@ export default function App() {
     }
   };
 
+  const clampProgress = (value: number) => Math.min(100, Math.max(0, value));
+
   const handleAddWorkLog = async (
     workLogData: Omit<WorkLogEntry, "id" | "createdAt">
   ) => {
@@ -449,7 +451,7 @@ export default function App() {
       setProjects((prevProjects) =>
         prevProjects.map((project) => {
           if (project.id !== savedLog.projectId) return project;
-          const nextProgress = Math.min(100, project.progress + progressIncrease);
+          const nextProgress = clampProgress(project.progress + progressIncrease);
           updatedProgress = nextProgress;
           return {
             ...project,
@@ -467,6 +469,164 @@ export default function App() {
     } catch (error) {
       console.error("Network crash:", error);
       alert("Network Error: Could not save work log.");
+    }
+  };
+
+  const handleUpdateWorkLog = async (
+    id: string,
+    updates: Partial<WorkLogEntry>
+  ) => {
+    const previousLog = workLogs.find((log) => log.id === id);
+    if (!previousLog) return;
+
+    const previousLogs = workLogs;
+    const previousProjectProgress =
+      projects.find((project) => project.id === previousLog.projectId)?.progress ??
+      0;
+
+    const normalizedUpdates: Partial<WorkLogEntry> = {
+      ...updates,
+    };
+
+    if (typeof updates.progressPercentage === "number") {
+      normalizedUpdates.progressPercentage = clampProgress(
+        updates.progressPercentage
+      );
+    }
+
+    if (typeof updates.hoursWorked === "number") {
+      normalizedUpdates.hoursWorked = Math.max(0, updates.hoursWorked);
+    }
+
+    const nextProgressValue =
+      typeof normalizedUpdates.progressPercentage === "number"
+        ? normalizedUpdates.progressPercentage
+        : previousLog.progressPercentage;
+    const progressDelta =
+      typeof normalizedUpdates.progressPercentage === "number"
+        ? nextProgressValue - previousLog.progressPercentage
+        : 0;
+    const nextProjectProgress =
+      progressDelta !== 0
+        ? clampProgress(previousProjectProgress + progressDelta)
+        : previousProjectProgress;
+
+    const nextMaterials = Array.isArray(normalizedUpdates.materials)
+      ? normalizedUpdates.materials
+      : previousLog.materials;
+
+    const updatedLog: WorkLogEntry = {
+      ...previousLog,
+      ...normalizedUpdates,
+      materials:
+        Array.isArray(nextMaterials) && nextMaterials.length > 0
+          ? nextMaterials
+          : undefined,
+    };
+
+    setWorkLogs((prevLogs) =>
+      prevLogs.map((log) => (log.id === id ? updatedLog : log))
+    );
+
+    if (progressDelta !== 0) {
+      setProjects((prevProjects) =>
+        prevProjects.map((project) =>
+          project.id === previousLog.projectId
+            ? { ...project, progress: nextProjectProgress }
+            : project
+        )
+      );
+    }
+
+    try {
+      const response = await apiService.updateWorkLog(id, {
+        date: normalizedUpdates.date,
+        description: normalizedUpdates.description,
+        progressPercentage: normalizedUpdates.progressPercentage,
+        hoursWorked: normalizedUpdates.hoursWorked,
+        materials: normalizedUpdates.materials,
+      });
+
+      if (response.data) {
+        const mapped = mapWorkLogFromBackend(response.data);
+        setWorkLogs((prevLogs) =>
+          prevLogs.map((log) => (log.id === id ? mapped : log))
+        );
+      }
+
+      if (progressDelta !== 0) {
+        apiService
+          .updateProject(previousLog.projectId, { progress: nextProjectProgress })
+          .catch((error) => {
+            console.warn("Failed to persist project progress:", error);
+          });
+      }
+    } catch (error) {
+      console.error("Failed to update work log:", error);
+      setWorkLogs(previousLogs);
+      if (progressDelta !== 0) {
+        setProjects((prevProjects) =>
+          prevProjects.map((project) =>
+            project.id === previousLog.projectId
+              ? { ...project, progress: previousProjectProgress }
+              : project
+          )
+        );
+      }
+      alert("Failed to update work log.");
+    }
+  };
+
+  const handleDeleteWorkLog = async (id: string) => {
+    const previousLog = workLogs.find((log) => log.id === id);
+    if (!previousLog) return;
+
+    const previousLogs = workLogs;
+    const previousProjectProgress =
+      projects.find((project) => project.id === previousLog.projectId)?.progress ??
+      0;
+    const progressDelta = Number.isFinite(previousLog.progressPercentage)
+      ? -previousLog.progressPercentage
+      : 0;
+    const nextProjectProgress =
+      progressDelta !== 0
+        ? clampProgress(previousProjectProgress + progressDelta)
+        : previousProjectProgress;
+
+    setWorkLogs((prevLogs) => prevLogs.filter((log) => log.id !== id));
+
+    if (progressDelta !== 0) {
+      setProjects((prevProjects) =>
+        prevProjects.map((project) =>
+          project.id === previousLog.projectId
+            ? { ...project, progress: nextProjectProgress }
+            : project
+        )
+      );
+    }
+
+    try {
+      await apiService.deleteWorkLog(id);
+      if (progressDelta !== 0) {
+        apiService
+          .updateProject(previousLog.projectId, { progress: nextProjectProgress })
+          .catch((error) => {
+            console.warn("Failed to persist project progress:", error);
+          });
+      }
+    } catch (error) {
+      console.error("Failed to delete work log:", error);
+      setWorkLogs(previousLogs);
+      if (progressDelta !== 0) {
+        setProjects((prevProjects) =>
+          prevProjects.map((project) =>
+            project.id === previousLog.projectId
+              ? { ...project, progress: previousProjectProgress }
+              : project
+          )
+        );
+      }
+      alert("Failed to delete work log.");
     }
   };
 
@@ -1160,6 +1320,8 @@ case "activity-logs":
               workLogs={workLogs}
               materials={materials}
               onAddWorkLog={handleAddWorkLog}
+              onUpdateWorkLog={handleUpdateWorkLog}
+              onDeleteWorkLog={handleDeleteWorkLog}
               onUpdateProject={handleUpdateProject}
             />
           );

@@ -231,6 +231,19 @@ class ApiService {
         });
     }
 
+    async updateWorkLog(workLogId: string, updates: any): Promise<ApiResponse<any>> {
+        return this.request(`/worklogs/${workLogId}`, {
+            method: 'PUT',
+            body: JSON.stringify(updates),
+        });
+    }
+
+    async deleteWorkLog(workLogId: string): Promise<ApiResponse<any>> {
+        return this.request(`/worklogs/${workLogId}`, {
+            method: 'DELETE',
+        });
+    }
+
     // Materials methods
     async getMaterials(): Promise<ApiResponse<any[]>> {
         return this.request('/materials');
