@@ -128,22 +128,22 @@ export function TaskList({
   };
 
   return (
-    <Card>
+    <Card className="gap-3">
       <CardHeader>
         <CardTitle>Recent Tasks</CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
+      <CardContent className="p-4 sm:p-6">
+        <div className="space-y-4 sm:space-y-6">
           {filteredTasks.map((task) => (
             <div
               key={task.id}
-              className="flex items-center justify-between space-x-4"
+              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
             >
-              <div className="flex items-center space-x-3 flex-1">
+              <div className="flex items-start gap-3 sm:items-center sm:gap-3 flex-1 min-w-0">
                 {getStatusIcon(task.status)}
-                <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm">{task.title}</p>
+                <div className="flex-1 min-w-0 space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm break-words">{task.title}</p>
                     <Badge variant={getStatusColor(task.status)}>
                       {task.status}
                     </Badge>
@@ -151,7 +151,7 @@ export function TaskList({
                       {task.priority}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground break-words">
                     {getProjectName(task.projectId)} • Due:{" "}
                     {task.dueDate
                       ? new Date(task.dueDate).toLocaleDateString()
@@ -160,11 +160,12 @@ export function TaskList({
                 </div>
               </div>
               {onUpdateTaskStatus && (
-                <div className="flex gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   {canUpdateTask(task) && task.status !== "completed" && (
                     <Button
                       size="sm"
                       variant="outline"
+                      className="w-full sm:w-auto"
                       onClick={() => {
                         handleStatusUpdate(task.id, getNextStatus(task.status));
                       }}
@@ -178,7 +179,7 @@ export function TaskList({
                     <Button
                       size="sm"
                       variant="default"
-                      className="bg-green-600 hover:bg-green-700"
+                      className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
                       onClick={() => handleStatusUpdate(task.id, "completed")}
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
