@@ -32,7 +32,7 @@ function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <h4
       data-slot="card-title"
-      className={cn("leading-none w-full max-w-46 truncate", className)}
+      className={cn("leading-none w-full", className)}
       {...props}
     />
   );
