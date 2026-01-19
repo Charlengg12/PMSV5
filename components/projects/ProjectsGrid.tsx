@@ -369,10 +369,10 @@ export function ProjectsGrid({
             className="hover:shadow-lg transition-all duration-200 border-0 shadow-md overflow-hidden group"
           >
             <div className="h-2 bg-gradient-to-r from-primary to-accent"></div>
-            <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent">
-              <div className="flex justify-between items-start">
+            <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent p-4 sm:p-6">
+              <div className="space-y-2">
                 <CardTitle className="text-lg">{project.name}</CardTitle>
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap gap-2">
                   <Badge
                     variant={getStatusColor(project.status)}
                     className="text-xs"
@@ -388,7 +388,7 @@ export function ProjectsGrid({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 p-4 sm:p-6">
               <p className="text-sm text-muted-foreground">
                 {project.description}
               </p>
@@ -760,7 +760,7 @@ export function ProjectsGrid({
                                   <Button
                                     size="sm"
                                     variant="outline"
-                                    className="flex-1"
+                                    className="flex-1 dark:text-white"
                                     onClick={() => {
                                       setSelectedAssignment(null);
                                     }}
@@ -770,7 +770,7 @@ export function ProjectsGrid({
                                   <Button
                                     size="sm"
                                     variant="destructive"
-                                    className="flex-1"
+                                    className="flex-1 dark:text-white"
                                     onClick={() => {
                                       if (onDeclineAssignment) {
                                         onDeclineAssignment(assignment.id);
@@ -790,7 +790,7 @@ export function ProjectsGrid({
                   </div>
                 )}
 
-              <div className="grid grid-cols-2 lg:flex gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-2 gap-2 sm:gap-3">
                 <Button
                   variant="outline"
                   size="sm"
@@ -824,8 +824,8 @@ export function ProjectsGrid({
                         setShowClientDialog(true);
                       }}
                     >
-                      <UserPlus className="h-3 w-3 mr-1" />
-                      <span className="truncate">Client</span>
+                      <UserPlus className="h-3 w-3 mr-1 dark:text-white" />
+                      <span className="truncate dark:text-white">Client</span>
                     </Button>
                   ))}
 
@@ -864,7 +864,7 @@ export function ProjectsGrid({
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full lg:flex-1 col-span-2 lg:col-auto bg-primary"
+                      className="w-full sm:col-span-2 md:col-span-2 lg:col-span-2 bg-primary whitespace-normal"
                       onClick={() =>
                         handleTransition(project, "1_Assigned_to_FAB")
                       }

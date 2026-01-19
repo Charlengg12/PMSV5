@@ -459,31 +459,31 @@ export function ActivityLogs() {
                     <tr>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
                       >
                         Timestamp
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
                       >
                         User
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
                       >
                         Action
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
                       >
                         Description
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-right text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider"
+                        className="px-4 py-3.5 text-right text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
                       >
                         IP Address
                       </th>

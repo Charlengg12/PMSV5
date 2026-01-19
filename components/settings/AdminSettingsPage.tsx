@@ -72,11 +72,11 @@ function InfoItem({
 }) {
   return (
     <div className="space-y-0.5">
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground dark:text-slate-400">
         {label}
       </p>
-      <div className="flex items-center gap-2 text-sm font-medium">
-        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground" />}
+      <div className="flex items-center gap-2 text-sm font-medium dark:text-slate-200">
+        {Icon && <Icon className="h-3.5 w-3.5 text-muted-foreground dark:text-slate-400" />}
         <span>{value}</span>
       </div>
     </div>
@@ -416,7 +416,7 @@ export function AdminSettingsPage({
     <>
       {/* Main Profile Card */}
       <Card className="border-none shadow-lg rounded-xl overflow-hidden">
-        <CardHeader className="bg-gradient-to-r from-slate-50 to-white pb-6 pt-8 px-6 md:px-8">
+        <CardHeader className="bg-gradient-to-r from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 pb-6 pt-8 px-6 md:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
             <div className="flex items-center gap-5">
               <Avatar className="h-20 w-20 border-4 border-[#e1862d] shadow-xl">
@@ -428,18 +428,18 @@ export function AdminSettingsPage({
 
               <div>
                 <div className="flex items-center gap-3 flex-wrap">
-                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900">
+                  <h2 className="text-2xl md:text-3xl font-bold tracking-tight text-gray-900 dark:text-slate-50">
                     {currentUser.name}
                   </h2>
                   <Badge
                     variant="secondary"
-                    className="text-xs font-medium px-3 py-1 bg-indigo-100 text-indigo-700 border border-indigo-200 flex items-center gap-1"
+                    className="text-xs font-medium px-3 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-700/50 flex items-center gap-1"
                   >
                     <UserIcon className="h-4 w-4" />
                     {displayRole}
                   </Badge>
                 </div>
-                <p className="text-sm text-gray-600 mt-1.5 font-medium flex items-center">
+                <p className="text-sm text-gray-600 dark:text-slate-400 mt-1.5 font-medium flex items-center">
                   <span className="inline-block w-2 h-2 bg-green-500 rounded-full mr-2"></span>
                   Active account
                 </p>
@@ -465,9 +465,9 @@ export function AdminSettingsPage({
         <CardContent className="pt-8 px-6 md:px-8 pb-10">
           <div className="space-y-10">
             {/* Personal Information Section */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-6">
+            <div className="bg-white dark:bg-slate-800 rounded-xl border border-gray-100 dark:border-slate-700 shadow-sm p-6">
               <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-slate-50">
                   Personal Information
                 </h3>
 
@@ -517,13 +517,13 @@ export function AdminSettingsPage({
               </div>
 
               {/* GCash QR Section */}
-              <div className="mt-8 pt-6 border-t border-gray-100">
+              <div className="mt-8 pt-6 border-t border-gray-100 dark:border-slate-700">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                   <div>
-                    <p className="text-sm font-semibold text-gray-900">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-slate-50">
                       GCash QR Code
                     </p>
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-slate-400 mt-1">
                       Upload your QR code for easy payment sharing.
                     </p>
                   </div>
@@ -544,12 +544,12 @@ export function AdminSettingsPage({
                     <img
                       src={gcashQr}
                       alt="GCash QR code"
-                      className="h-48 w-48 rounded-lg border border-gray-200 bg-white object-contain shadow-sm"
+                      className="h-48 w-48 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 object-contain shadow-sm"
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-6 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                    <p className="text-sm text-gray-500">
+                  <div className="text-center py-6 bg-gray-50 dark:bg-slate-900 rounded-lg border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
                       No QR code uploaded yet.
                     </p>
                     {isEditing && (
@@ -575,17 +575,17 @@ export function AdminSettingsPage({
       {isEditing && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div
-            className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
+            className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b">
-              <h2 className="text-2xl font-bold text-gray-900">Edit Profile</h2>
+            <div className="flex items-center justify-between p-6 border-b dark:border-slate-700">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50">Edit Profile</h2>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleCancel}
-                className="rounded-full hover:bg-gray-100"
+                className="rounded-full hover:bg-gray-100 dark:hover:bg-slate-800"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -597,7 +597,7 @@ export function AdminSettingsPage({
                 <div className="space-y-2">
                   <Label
                     htmlFor="first-name"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 dark:text-slate-300"
                   >
                     First Name
                   </Label>
@@ -617,7 +617,7 @@ export function AdminSettingsPage({
                 <div className="space-y-2">
                   <Label
                     htmlFor="last-name"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 dark:text-slate-300"
                   >
                     Last Name
                   </Label>
@@ -637,7 +637,7 @@ export function AdminSettingsPage({
                 <div className="space-y-2">
                   <Label
                     htmlFor="email"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 dark:text-slate-300"
                   >
                     Email
                   </Label>
@@ -665,7 +665,7 @@ export function AdminSettingsPage({
                 <div className="space-y-2">
                   <Label
                     htmlFor="phone"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 dark:text-slate-300"
                   >
                     Phone Number
                   </Label>
@@ -688,7 +688,7 @@ export function AdminSettingsPage({
                 <div className="space-y-2">
                   <Label
                     htmlFor="gcash-number"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 dark:text-slate-300"
                   >
                     GCash Number
                   </Label>
@@ -713,7 +713,7 @@ export function AdminSettingsPage({
                 <div className="space-y-2">
                   <Label
                     htmlFor="department"
-                    className="text-sm font-medium text-gray-700"
+                    className="text-sm font-medium text-gray-700 dark:text-slate-300"
                   >
                     Department / School
                   </Label>
@@ -732,13 +732,13 @@ export function AdminSettingsPage({
               </div>
 
               {/* GCash QR in Modal */}
-              <div className="pt-6 border-t">
+              <div className="pt-6 border-t dark:border-slate-700">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
                   <div>
-                    <p className="text-base font-semibold text-gray-900">
+                    <p className="text-base font-semibold text-gray-900 dark:text-slate-50">
                       GCash QR Code
                     </p>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-gray-600 dark:text-slate-400">
                       Upload or update your payment QR code
                     </p>
                   </div>
@@ -770,12 +770,12 @@ export function AdminSettingsPage({
                     <img
                       src={gcashQr}
                       alt="GCash QR code"
-                      className="h-48 w-48 rounded-lg border border-gray-200 bg-white object-contain shadow-sm"
+                      className="h-48 w-48 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 object-contain shadow-sm"
                     />
                   </div>
                 ) : (
-                  <div className="text-center py-8 bg-gray-50 rounded-lg border border-dashed border-gray-300">
-                    <p className="text-sm text-gray-500">
+                  <div className="text-center py-8 bg-gray-50 dark:bg-slate-900 rounded-lg border border-dashed border-gray-300 dark:border-slate-600">
+                    <p className="text-sm text-gray-500 dark:text-slate-400">
                       No QR code uploaded yet
                     </p>
                   </div>
@@ -784,12 +784,12 @@ export function AdminSettingsPage({
             </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end gap-3 px-6 py-5 border-t bg-gray-50 rounded-b-2xl">
+            <div className="flex justify-end gap-3 px-6 py-5 border-t dark:border-slate-700 bg-gray-50 dark:bg-slate-800 rounded-b-2xl">
               <Button
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isSaving}
-                className="border-gray-300 hover:bg-gray-50"
+                className="border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
               >
                 Cancel
               </Button>

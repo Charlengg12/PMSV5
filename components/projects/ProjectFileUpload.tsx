@@ -134,13 +134,13 @@ export function ProjectFileUpload({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
         <CardTitle className="flex items-center gap-2">
           <Upload className="h-5 w-5" />
           Upload Project Files
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-4 px-4 pb-6 sm:px-6">
         <div className="space-y-2">
           <Label htmlFor="file-upload">Select Files</Label>
           <Input
@@ -196,11 +196,11 @@ export function ProjectFileUpload({
           </Alert>
         )}
 
-        <div className="flex gap-2">
+        <div className="flex flex-col gap-2 sm:flex-row">
           <Button
             onClick={handleUpload}
             disabled={files.length === 0 || uploading}
-            className="flex-1"
+            className="w-full sm:flex-1"
           >
             {uploading ? (
               <>
@@ -224,6 +224,7 @@ export function ProjectFileUpload({
                 setError('');
               }}
               disabled={uploading}
+              className="w-full sm:w-auto"
             >
               Clear All
             </Button>
