@@ -374,6 +374,17 @@ class ApiService {
             method: 'DELETE',
         });
     }
+
+    async broadcastToFabricators(projectId: string, message: string = ""): Promise<ApiResponse<any>> {
+        return this.request('/projects/broadcast-fabricators', {
+            method: 'POST',
+            body: JSON.stringify({ projectId, message }),
+        });
+    }
+
+    
 }
+
+
 
 export const apiService = new ApiService();
