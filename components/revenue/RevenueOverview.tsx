@@ -279,15 +279,15 @@ export function RevenueOverview({
       <div className="space-y-6">
         <h2>My Revenue & Projects</h2>
 
-        <Card className="bg-accent/10 border-accent">
+        <Card className={`border-2 ${totalAllocatedRevenue >= 0 ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'}`}>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PhilippinePeso className="h-5 w-5 text-accent" />
+              <PhilippinePeso className={`h-5 w-5 ${totalAllocatedRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
               Total Allocated Revenue
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl text-accent">
+            <div className={`text-3xl ${totalAllocatedRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
               {peso}
               {formatCompactAmount(totalAllocatedRevenue)}
             </div>
@@ -315,7 +315,7 @@ export function RevenueOverview({
                   <CardTitle className="text-lg flex items-center justify-between">
                     <span>{project.name}</span>
                     {myRevenue > 0 && (
-                      <span className="text-accent text-base">
+                      <span className={`text-base ${myRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {peso}
                         {myRevenue.toLocaleString()}
                       </span>
@@ -341,7 +341,7 @@ export function RevenueOverview({
                           Total Project Value
                         </span>
                       </div>
-                      <p className="text-lg">
+                      <p className={`text-lg ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {peso}
                         {project.revenue.toLocaleString()}
                       </p>
@@ -349,13 +349,13 @@ export function RevenueOverview({
                   </div>
 
                   {myRevenue > 0 && (
-                    <div className="mt-4 p-3 bg-accent/10 rounded-lg border border-accent/30">
+                    <div className={`mt-4 p-3 rounded-lg border ${myRevenue >= 0 ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'}`}>
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">
                             Your Allocated Revenue
                           </p>
-                          <p className="text-xl text-accent">
+                          <p className={`text-xl ${myRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                             {peso}
                             {myRevenue.toLocaleString()}
                           </p>
@@ -404,10 +404,10 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Revenue</CardTitle>
-              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
+              <PhilippinePeso className={`h-10 w-4 ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl">
+              <div className={`text-2xl ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectRevenue)}
               </div>
@@ -420,10 +420,10 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Budget</CardTitle>
-              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
+              <PhilippinePeso className={`h-10 w-4 ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl">
+              <div className={`text-2xl ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectBudget)}
               </div>
@@ -434,10 +434,10 @@ export function RevenueOverview({
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Spent</CardTitle>
-              <PhilippinePeso className="h-10 w-4 text-muted-foreground" />
+              <PhilippinePeso className={`h-10 w-4 ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl">
+              <div className={`text-2xl ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectSpent)}
               </div>
@@ -455,7 +455,7 @@ export function RevenueOverview({
                 <div className="flex-1 min-w-0">
                   <CardTitle className="text-sm">Company Profit</CardTitle>
                   <div className="mt-8">
-                    <p className="text-2xl text-green-500">
+                    <p className={`text-2xl ${filteredProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                       {peso}
                       {formatCompactAmount(filteredProfit)}
                     </p>
@@ -530,7 +530,7 @@ export function RevenueOverview({
                 {filteredProjects.map((project) => (
                   <div
                     key={project.id}
-                    className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4"
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4 ${project.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
                   >
                     <div className="space-y-1">
                       <h4 className="font-medium">{project.name}</h4>
@@ -540,7 +540,7 @@ export function RevenueOverview({
                     </div>
 
                     <div className="text-right space-y-2 sm:space-y-1">
-                      <p className="text-sm">
+                      <p className={`text-sm ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         Revenue: {peso}
                         {formatCompactAmount(project.revenue)}
                       </p>
