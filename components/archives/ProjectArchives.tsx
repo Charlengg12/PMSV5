@@ -481,8 +481,9 @@ export function ProjectArchives({
       )}
 
       {/* Project Details Dialog */}
+      {/* Project Details Dialog */}
       <Dialog open={showDetailsDialog} onOpenChange={setShowDetailsDialog}>
-        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-w-[calc(100%-2rem)] sm:max-w-2xl max-h-[80vh] p-6 sm:p-8">
           <DialogHeader>
             <DialogTitle>{selectedProject?.name}</DialogTitle>
             <DialogDescription>
@@ -493,11 +494,23 @@ export function ProjectArchives({
           {selectedProject && (
             <div className="space-y-6">
               <Tabs defaultValue="overview" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="overview">Overview</TabsTrigger>
-                  <TabsTrigger value="documentation">Documentation</TabsTrigger>
-                  <TabsTrigger value="costs">Cost Analysis</TabsTrigger>
-                  <TabsTrigger value="team">Team</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-4 gap-2 sm:gap-6">
+                  <TabsTrigger value="overview">
+                    <Eye className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Overview</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="documentation">
+                    <FileText className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Documentation</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="costs">
+                    <DollarSign className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Cost Analysis</span>
+                  </TabsTrigger>
+                  <TabsTrigger value="team">
+                    <User className="h-4 w-4 sm:hidden" />
+                    <span className="hidden sm:inline">Team</span>
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="overview" className="space-y-4">
