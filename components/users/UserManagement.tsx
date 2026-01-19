@@ -59,7 +59,6 @@ const swalCustomClasses = {
   htmlContainer: "swal-content",
   confirmButton: "swal-confirm-button",
   cancelButton: "swal-cancel-button",
-  icon: "swal-icon",
 };
 
 export function UserManagement({
@@ -80,10 +79,6 @@ export function UserManagement({
   const [showInactiveModal, setShowInactiveModal] = useState(false);
   const [inactiveUsers, setInactiveUsers] = useState<User[]>([]);
   const [loadingInactive, setLoadingInactive] = useState(false);
-
-  const [editEmailError, setEditEmailError] = useState("");
-  const [editPhoneError, setEditPhoneError] = useState("");
-  const [editGcashError, setEditGcashError] = useState("");
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedRole, setSelectedRole] = useState<string>("all"); // "all" | "admin" | "supervisor" | "fabricator" | "client"
@@ -179,9 +174,6 @@ export function UserManagement({
 
   const handleEditUser = (user: User) => {
     setEditingUser({ ...user });
-    setEditEmailError("");
-    setEditPhoneError("");
-    setEditGcashError("");
     setShowEditModal(true);
   };
 
@@ -192,45 +184,104 @@ export function UserManagement({
     const phoneRegex = /^(\+639|09)\d{9}$/;
     const gcashRegex = /^09\d{9}$/;
 
-    let hasError = false;
+    // Check for empty required fields
+    if (!editingUser.name.trim()) {
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Full name is required",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (!editingUser.email.trim()) {
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Email is required",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (!editingUser.phone.trim()) {
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Phone number is required",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if full name is empty return the sweet alert
+    if (!editingUser.name.trim()) {
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Name",
+        text: "Full name is required",
+        customClass: swalCustomClasses,
+      });
+        return;
+    }
 
     if (!emailRegex.test(editingUser.email ?? "")) {
-      setEditEmailError(
-        "Please enter a valid Gmail address (example@gmail.com)"
-      );
-      hasError = true;
-    } else {
-      setEditEmailError("");
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Email",
+        text: "Please enter a valid Gmail address (example@gmail.com)",
+        customClass: swalCustomClasses,
+      });
+      return;
     }
 
     if (editingUser.phone && !phoneRegex.test(editingUser.phone)) {
-      setEditPhoneError("Phone must be +639xxxxxxxxx or 09xxxxxxxxx");
-      hasError = true;
-    } else if (
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Phone",
+        text: "Phone must be +639xxxxxxxxx or 09xxxxxxxxx",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (
       editingUser.phone &&
       editingUser.phone.length !== 13 &&
       editingUser.phone.length !== 11
     ) {
-      setEditPhoneError("Phone must be 11 or 13 digits");
-      hasError = true;
-    } else {
-      setEditPhoneError("");
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Phone Length",
+        text: "Phone must be 11 or 13 digits",
+        customClass: swalCustomClasses,
+      });
+      return;
     }
 
     if (editingUser.gcashNumber && !gcashRegex.test(editingUser.gcashNumber)) {
-      setEditGcashError("GCash must start with 09 and be 11 digits");
-      hasError = true;
-    } else if (
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid GCash Number",
+        text: "GCash must start with 09 and be 11 digits",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    if (
       editingUser.gcashNumber &&
       editingUser.gcashNumber.length !== 11
     ) {
-      setEditGcashError("GCash number must be exactly 11 digits");
-      hasError = true;
-    } else {
-      setEditGcashError("");
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid GCash Length",
+        text: "GCash number must be exactly 11 digits",
+        customClass: swalCustomClasses,
+      });
+      return;
     }
-
-    if (hasError) return;
 
     const original = users.find((u) => u.id === editingUser.id);
     if (original && JSON.stringify(original) === JSON.stringify(editingUser)) {
@@ -756,16 +807,16 @@ export function UserManagement({
                       />
                     </TableHead>
                   )}
-                  <TableHead className="min-w-[200px]">Name & Email</TableHead>
-                  <TableHead className="min-w-[110px]">Role</TableHead>
-                  <TableHead className="min-w-[140px]">School</TableHead>
-                  <TableHead className="min-w-[160px]">Contact</TableHead>
+                  <TableHead className="min-w-[200px] text-white">Name & Email</TableHead>
+                  <TableHead className="min-w-[110px] text-white">Role</TableHead>
+                  <TableHead className="min-w-[140px] text-white">School</TableHead>
+                  <TableHead className="min-w-[160px] text-white">Contact</TableHead>
                   {showSecureIds && (
-                    <TableHead className="min-w-[160px]">Secure ID</TableHead>
+                    <TableHead className="min-w-[160px] text-white">Secure ID</TableHead>
                   )}
-                  <TableHead className="min-w-[120px]">Employee #</TableHead>
+                  <TableHead className="min-w-[120px] text-white">Employee #</TableHead>
                   {canManageUsers && (
-                    <TableHead className="w-28 text-right">Actions</TableHead>
+                    <TableHead className="w-28 text-right text-white">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
@@ -1132,6 +1183,8 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Name</Label>
                   <Input
+                    minLength={1}
+                    maxLength={30}
                     value={editingUser.name || ""}
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, name: e.target.value })
@@ -1142,21 +1195,19 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input
+                    minLength={1}
+                    maxLength={30}
                     value={editingUser.email || ""}
                     onChange={(e) => {
                       setEditingUser({ ...editingUser, email: e.target.value });
-                      setEditEmailError("");
                     }}
-                    className={editEmailError ? "border-destructive" : ""}
                   />
-                  {editEmailError && (
-                    <p className="text-sm text-destructive">{editEmailError}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>Phone</Label>
                   <Input
+                    minLength={1}
                     value={editingUser.phone || ""}
                     maxLength={13}
                     onChange={(e) => {
@@ -1166,37 +1217,30 @@ export function UserManagement({
                         ? val.slice(0, 13)
                         : val.slice(0, 11);
                       setEditingUser({ ...editingUser, phone: val });
-                      setEditPhoneError("");
                     }}
-                    className={editPhoneError ? "border-destructive" : ""}
                   />
-                  {editPhoneError && (
-                    <p className="text-sm text-destructive">{editPhoneError}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>GCash Number</Label>
                   <Input
                     value={editingUser.gcashNumber || ""}
+                    minLength={1}
                     maxLength={11}
                     onChange={(e) => {
                       const val = e.target.value
                         .replace(/[^\d]/g, "")
                         .slice(0, 11);
                       setEditingUser({ ...editingUser, gcashNumber: val });
-                      setEditGcashError("");
                     }}
-                    className={editGcashError ? "border-destructive" : ""}
                   />
-                  {editGcashError && (
-                    <p className="text-sm text-destructive">{editGcashError}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
                   <Label>School / Institution</Label>
                   <Input
+                    minLength={1}
+                    maxLength={30}
                     value={editingUser.school || ""}
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, school: e.target.value })
@@ -1230,6 +1274,8 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Secure ID</Label>
                   <Input
+                    minLength={1}
+                    maxLength={20}
                     value={editingUser.secureId || ""}
                     onChange={(e) =>
                       setEditingUser({
@@ -1243,6 +1289,8 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Employee #</Label>
                   <Input
+                    minLength={1}
+                    maxLength={20}
                     value={editingUser.employeeNumber || ""}
                     onChange={(e) =>
                       setEditingUser({
