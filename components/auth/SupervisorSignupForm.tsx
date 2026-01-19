@@ -43,7 +43,6 @@ export function SupervisorSignupForm({
     department: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
 
   const departments = [
@@ -62,40 +61,91 @@ export function SupervisorSignupForm({
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-])[A-Za-z\d@$!%*?&_\-]{8,}$/;
   const phoneRegex = /^(\+639|09)\d{9}$/; // Format: +639123456789 or 09123456789
 
-  const validateForm = () => {
-    const newErrors: Record<string, string> = {};
+  const validateForm = async () => {
+    const swalCustomClasses = {
+      container: "swal-container",
+      popup: "swal-popup !max-w-md",
+      title: "swal-title",
+      htmlContainer: "swal-content",
+      confirmButton: "swal-confirm-button",
+      cancelButton: "swal-cancel-button",
+    };
 
     if (!formData.name.trim()) {
-      newErrors.name = "Full name is required";
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Full name is required",
+        customClass: swalCustomClasses,
+      });
+      return false;
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = "Email is required";
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Email is required",
+        customClass: swalCustomClasses,
+      });
+      return false;
     } else if (!emailRegex.test(formData.email)) {
-      newErrors.email =
-        "Please enter a valid Gmail address (e.g., example@gmail.com)";
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Email",
+        text: "Please enter a valid Gmail address (e.g., example@gmail.com)",
+        customClass: swalCustomClasses,
+      });
+      return false;
     }
 
     if (!formData.password.trim()) {
-      newErrors.password = "Password is required";
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Password is required",
+        customClass: swalCustomClasses,
+      });
+      return false;
     } else if (!passwordRegex.test(formData.password)) {
-      newErrors.password =
-        "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&_-)";
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Password",
+        text: "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&_-)",
+        customClass: swalCustomClasses,
+      });
+      return false;
     }
 
     if (!formData.phone.trim()) {
-      newErrors.phone = "Phone number is required";
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Phone number is required",
+        customClass: swalCustomClasses,
+      });
+      return false;
     } else if (!phoneRegex.test(formData.phone)) {
-      newErrors.phone =
-        "Phone must be +639XXXXXXXXX or 09XXXXXXXXX (12 or 11 digits)";
+      await Swal.fire({
+        icon: "error",
+        title: "Invalid Phone",
+        text: "Phone must be +639XXXXXXXXX or 09XXXXXXXXX (12 or 11 digits)",
+        customClass: swalCustomClasses,
+      });
+      return false;
     }
 
     if (!formData.department) {
-      newErrors.department = "Department selection is required";
+      await Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Department selection is required",
+        customClass: swalCustomClasses,
+      });
+      return false;
     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return true;
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -117,16 +167,12 @@ export function SupervisorSignupForm({
     }
 
     setFormData((prev) => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
-    if (errors[field]) {
-      setErrors((prev) => ({ ...prev, [field]: "" }));
-    }
   };
 
  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!(await validateForm())) {
       return;
     }
 
@@ -172,7 +218,6 @@ export function SupervisorSignupForm({
     });
 
     setIsLoading(true);
-    setErrors({});
 
     try {
       const response = await apiService.signup({
@@ -221,8 +266,6 @@ export function SupervisorSignupForm({
           ? err.message
           : "Failed to create supervisor account";
 
-      setErrors({ submit: errorMessage });
-
       await Swal.fire({
         title: "Error",
         text: errorMessage,
@@ -264,31 +307,27 @@ export function SupervisorSignupForm({
             <div className="space-y-2">
               <Label htmlFor="name">Full Name</Label>
               <Input
+                minLength={1}
+                maxLength={30}
                 id="name"
                 type="text"
                 placeholder="Enter supervisor's full name"
                 value={formData.name}
                 onChange={(e) => handleInputChange("name", e.target.value)}
-                className={errors.name ? "border-destructive" : ""}
               />
-              {errors.name && (
-                <p className="text-sm text-destructive">{errors.name}</p>
-              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email Address</Label>
               <Input
+                minLength={1}
+                maxLength={30}
                 id="email"
                 type="email"
                 placeholder="Enter supervisor's email"
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
-                className={errors.email ? "border-destructive" : ""}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -302,7 +341,6 @@ export function SupervisorSignupForm({
                   onChange={(e) =>
                     handleInputChange("password", e.target.value)
                   }
-                  className={errors.password ? "border-destructive" : ""}
                 />
                 <Button
                   type="button"
@@ -318,28 +356,22 @@ export function SupervisorSignupForm({
                   )}
                 </Button>
               </div>
-              {errors.password && (
-                <p className="text-sm text-destructive">{errors.password}</p>
-              )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number</Label>
               <Input
+                minLength={1}
+                maxLength={13}
                 id="phone"
                 type="tel"
                 placeholder="+639123456789 or 09123456789"
                 value={formData.phone}
                 onChange={(e) => handleInputChange("phone", e.target.value)}
-                maxLength={13}
-                className={errors.phone ? "border-destructive" : ""}
               />
               <p className="text-xs text-muted-foreground">
                 Format: +639XXXXXXXXX or 09XXXXXXXXX
               </p>
-              {errors.phone && (
-                <p className="text-sm text-destructive">{errors.phone}</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -350,9 +382,7 @@ export function SupervisorSignupForm({
                   handleInputChange("department", value)
                 }
               >
-                <SelectTrigger
-                  className={errors.department ? "border-destructive" : ""}
-                >
+                <SelectTrigger>
                   <SelectValue placeholder="Select department" />
                 </SelectTrigger>
                 <SelectContent>
@@ -363,9 +393,6 @@ export function SupervisorSignupForm({
                   ))}
                 </SelectContent>
               </Select>
-              {errors.department && (
-                <p className="text-sm text-destructive">{errors.department}</p>
-              )}
             </div>
 
             <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
@@ -388,12 +415,6 @@ export function SupervisorSignupForm({
                 </div>
               </div>
             </div>
-
-            {errors.submit && (
-              <Alert variant="destructive">
-                <AlertDescription>{errors.submit}</AlertDescription>
-              </Alert>
-            )}
 
             <div className="flex gap-2">
               <Button
