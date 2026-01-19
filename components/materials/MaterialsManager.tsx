@@ -735,18 +735,18 @@ export function MaterialsManager({
       <div className="grid gap-4 md:grid-cols-4">
         {/* Total Items */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
               <Package className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Total Items</span>
             </div>
-            <p className="text-2xl">{filteredMaterials.length}</p>
+            <p className="text-2xl mb-6">{filteredMaterials.length}</p>
           </CardContent>
         </Card>
         
         {/* Total Value */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
               <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
               <span className="text-sm">Total Value</span>
@@ -759,29 +759,29 @@ export function MaterialsManager({
                 <TooltipContent>Sum of unit cost times quantity for the filtered items.</TooltipContent>
               </Tooltip>
             </div>
-            <p className="text-2xl">{formatCurrency(getTotalValue(), true)}</p>
+            <p className="text-2xl mb-6">{formatCurrency(getTotalValue(), true)}</p>
           </CardContent>
         </Card>
 
         {/* In Use */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <span className="text-sm">In Use</span>
             </div>
-            <p className="text-2xl">{filteredMaterials.filter(m => m.status === 'in-use').length}</p>
+            <p className="text-2xl mb-6">{filteredMaterials.filter(m => m.status === 'in-use').length}</p>
           </CardContent>
         </Card>
 
         {/* Depleted */}
         <Card>
-          <CardContent className="pt-6">
+          <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
               <XCircle className="h-4 w-4 text-red-600" />
               <span className="text-sm">Depleted</span>
             </div>
-            <p className="text-2xl">{filteredMaterials.filter(m => m.status === 'depleted').length}</p>
+            <p className="text-2xl mb-6">{filteredMaterials.filter(m => m.status === 'depleted').length}</p>
           </CardContent>
         </Card>
       </div>
@@ -797,7 +797,7 @@ export function MaterialsManager({
 
       {/* Filters Section (Unchanged logic, just keeping structure) */}
       <Card>
-        <CardContent className="pt-6">
+        <CardContent className="pt-6 px-5 pb-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
              {/* Search */}
             <div className="space-y-2">
@@ -931,7 +931,7 @@ export function MaterialsManager({
             <Badge variant="outline">{filteredMaterials.length} items</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className='px-5 mb-5'>
           {filteredMaterials.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
