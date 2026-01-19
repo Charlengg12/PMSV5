@@ -406,7 +406,7 @@ export function RevenueOverview({
               <CardTitle className="text-sm">Project Revenue</CardTitle>
               <PhilippinePeso className={`h-10 w-4 ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
               <div className={`text-2xl ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectRevenue)}
@@ -422,7 +422,7 @@ export function RevenueOverview({
               <CardTitle className="text-sm">Project Budget</CardTitle>
               <PhilippinePeso className={`h-10 w-4 ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
               <div className={`text-2xl ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectBudget)}
@@ -436,7 +436,7 @@ export function RevenueOverview({
               <CardTitle className="text-sm">Project Spent</CardTitle>
               <PhilippinePeso className={`h-10 w-4 ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 pt-0">
               <div className={`text-2xl ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectSpent)}
@@ -513,7 +513,7 @@ export function RevenueOverview({
                   </select>
                 </div>
               </CardHeader>
-              <CardContent />
+              <CardContent className="p-4 pt-0" />
             </Card>
           )}
         </div>
@@ -525,12 +525,12 @@ export function RevenueOverview({
             <CardHeader>
               <CardTitle>Project Financial Details</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <div className="space-y-4">
                 {filteredProjects.map((project) => (
                   <div
                     key={project.id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg gap-4 ${project.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
+                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-4 ${project.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
                   >
                     <div className="space-y-1">
                       <h4 className="font-medium">{project.name}</h4>
@@ -539,7 +539,7 @@ export function RevenueOverview({
                       </p>
                     </div>
 
-                    <div className="text-right space-y-2 sm:space-y-1">
+                    <div className="text-left sm:text-right space-y-2 sm:space-y-1">
                       <p className={`text-sm ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         Revenue: {peso}
                         {formatCompactAmount(project.revenue)}
@@ -551,7 +551,7 @@ export function RevenueOverview({
                       </p>
 
                       {canEditSpent && (
-                        <div className="flex items-center gap-2 justify-end">
+                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
                           <Input
                             type="text"
                             value={spentEdits[project.id] || ""}
@@ -566,7 +566,7 @@ export function RevenueOverview({
                               }));
                             }}
                             placeholder="Spent"
-                            className="w-28 text-right"
+                            className="w-full sm:w-28 text-right"
                           />
                           <Button
                             size="sm"
@@ -575,6 +575,7 @@ export function RevenueOverview({
                               !spentEdits[project.id]?.trim() ||
                               spentEdits[project.id] === project.spent?.toString()
                             }
+                            className="w-full sm:w-auto"
                           >
                             Update
                           </Button>
