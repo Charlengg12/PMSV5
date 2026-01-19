@@ -229,6 +229,13 @@ case 'GET /announcements':
         handle_delete_announcement($pdo, $path);
 
     } elseif ($method === 'DELETE' && preg_match('#^/reports/([^/]+)$#', $path, $m)) {
+
+    // --- ADD THESE NEW ROUTES FOR MATERIALS ---
+        } elseif (preg_match('#^PUT /materials/([^/]+)$#', $method . ' ' . $path, $matches)) {
+            handle_update_material($pdo, $matches[1]);
+        } elseif (preg_match('#^DELETE /materials/([^/]+)$#', $method . ' ' . $path, $matches)) {
+            handle_delete_material($pdo, $matches[1]);
+        // --
     } else {
         json_response(['error' => 'Not found'], 404);
     }
@@ -1664,6 +1671,115 @@ function handle_create_material(PDO $pdo): void
     json_response($material);
 }
 
+
+
+function handle_update_material(PDO $pdo, string $id): void
+{
+    require_login();
+    $body = sanitize_recursive(json_input());
+    $columns = ensure_materials_schema($pdo);
+
+    // 1. Fetch existing material to ensure it exists and to get current values for recalculation
+    $stmt = $pdo->prepare("SELECT * FROM materials WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$existing) {
+        json_response(['error' => 'Material not found'], 404);
+    }
+
+    $updates = [];
+
+    // 2. Map Frontend Fields to Database Columns
+    if (array_key_exists('name', $body)) $updates['name'] = trim($body['name']);
+    if (array_key_exists('description', $body)) $updates['description'] = $body['description'];
+    if (array_key_exists('unit', $body)) $updates['unit'] = $body['unit'];
+    if (array_key_exists('supplier', $body)) $updates['supplier'] = $body['supplier'];
+    if (array_key_exists('category', $body)) $updates['category'] = $body['category'];
+    if (array_key_exists('status', $body)) $updates['status'] = $body['status'];
+    
+    // Handle Project ID logic (similar to create)
+    if (array_key_exists('projectId', $body) || array_key_exists('project_id', $body)) {
+        $pid = $body['projectId'] ?? $body['project_id'];
+        if ($pid === '' || in_array(strtolower((string)$pid), ['general', 'none'], true)) {
+            $updates['project_id'] = 'general';
+        } else {
+            $updates['project_id'] = $pid;
+        }
+    }
+
+    // 3. Handle Cost and Quantity Recalculation
+    // We determine the *new* quantity and cost, using existing values if not provided in body
+    $newQuantity = isset($body['quantity']) ? (float)$body['quantity'] : (float)$existing['quantity'];
+    
+    // Frontend sends 'cost', backend stores 'cost_per_unit'
+    $inputCost = $body['cost'] ?? $body['costPerUnit'] ?? $body['cost_per_unit'] ?? null;
+    $newCostPerUnit = $inputCost !== null ? (float)$inputCost : (float)$existing['cost_per_unit'];
+
+    // If either changed, update the fields and the total
+    if (isset($body['quantity']) || $inputCost !== null) {
+        $updates['quantity'] = $newQuantity;
+        $updates['cost_per_unit'] = $newCostPerUnit;
+        $updates['total_cost'] = $newQuantity * $newCostPerUnit;
+    }
+
+    // 4. Build SQL Query
+    $fields = [];
+    $params = [':id' => $id];
+
+    foreach ($updates as $field => $value) {
+        if (!isset($columns[$field])) continue; // Safety check against schema
+        $fields[] = "$field = :$field";
+        $params[":$field"] = $value;
+    }
+
+    if (empty($fields)) {
+        json_response(['message' => 'No changes provided']);
+    }
+
+    $sql = "UPDATE materials SET " . implode(', ', $fields) . " WHERE id = :id";
+
+    try {
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'UPDATE_MATERIAL', "Updated material: " . ($updates['name'] ?? $existing['name']));
+
+    // Return the updated object
+    $stmt = $pdo->prepare('SELECT * FROM materials WHERE id = :id LIMIT 1');
+    $stmt->execute([':id' => $id]);
+    json_response($stmt->fetch(PDO::FETCH_ASSOC));
+}
+
+function handle_delete_material(PDO $pdo, string $id): void
+{
+    require_login();
+
+    // Fetch name for logging purposes before deletion
+    $stmt = $pdo->prepare("SELECT name FROM materials WHERE id = :id LIMIT 1");
+    $stmt->execute([':id' => $id]);
+    $material = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$material) {
+        json_response(['error' => 'Material not found'], 404);
+    }
+
+    try {
+        $stmt = $pdo->prepare("DELETE FROM materials WHERE id = :id");
+        $stmt->execute([':id' => $id]);
+    } catch (PDOException $e) {
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+
+    // LOGGING
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_MATERIAL', "Deleted material: " . $material['name']);
+
+    json_response(['success' => true, 'id' => $id]);
+}
 function handle_get_users(PDO $pdo): void
 {
     require_login();
