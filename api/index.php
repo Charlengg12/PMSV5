@@ -192,6 +192,9 @@ case 'GET /announcements':
         handle_delete_report($pdo, $path);
         break;
 
+    case 'GET /reports/:id/analytics':
+        handle_get_report_analytics($pdo, $path);
+        break;
     // We need to handle dynamic routes manually in the default or before switch
    default:
     if (preg_match('#^PUT /tasks/([^/]+)$#', $method . ' ' . $path, $matches)) {
@@ -235,6 +238,8 @@ case 'GET /announcements':
     } elseif ($method === 'DELETE' && preg_match('#^/reports/([^/]+)$#', $path, $m)) {
 
     // --- ADD THESE NEW ROUTES FOR MATERIALS ---
+        } elseif ($method === 'GET' && preg_match('#^/reports/([^/]+)/analytics$#', $path, $matches)) {
+        handle_get_report_analytics($pdo, $matches[1]);
         } elseif (preg_match('#^PUT /materials/([^/]+)$#', $method . ' ' . $path, $matches)) {
             handle_update_material($pdo, $matches[1]);
         } elseif (preg_match('#^DELETE /materials/([^/]+)$#', $method . ' ' . $path, $matches)) {
@@ -249,6 +254,115 @@ case 'GET /announcements':
 // ----------------------------------------------------------------------
 // HELPER: Activity Logger
 // ----------------------------------------------------------------------
+function handle_get_report_analytics(PDO $pdo, string $reportId): void
+{
+    require_login();
+
+    // 1. Kunin ang report details
+    $stmt = $pdo->prepare("
+        SELECT id, type, project_id, created_by, status 
+        FROM reports 
+        WHERE id = :id
+    ");
+    $stmt->execute([':id' => $reportId]);
+    $report = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$report) {
+        json_response(['error' => 'Report not found'], 404);
+        return;
+    }
+
+    // 2. Permission check
+    $userId = $_SESSION['user_id'];
+    $role = $_SESSION['role'];
+
+    if ($role !== 'admin' && $report['created_by'] !== $userId && $report['status'] !== 'published') {
+        json_response(['error' => 'Unauthorized to view this report analytics'], 403);
+        return;
+    }
+
+    // 3. Initialize analytics data
+    $analytics = [
+        'budget'       => 0.0,
+        'totalCost'    => 0.0,
+        'totalRevenue' => 0.0,
+        'monthlyData'  => []
+    ];
+
+    // 4. Alamin kung aling projects ang isasama
+    $projectIds = [];
+
+    if ($report['project_id']) {
+        // Specific project lang
+        $projectIds[] = $report['project_id'];
+    } else {
+        // ALL PROJECTS na pwede makita ng user
+        if ($role === 'admin') {
+            // Admin sees ALL projects
+            $stmt = $pdo->query("SELECT id FROM projects");
+            $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } else {
+            // Supervisor sees only projects they supervise
+            $stmt = $pdo->prepare("SELECT id FROM projects WHERE supervisorId = :uid");
+            $stmt->execute([':uid' => $userId]);
+            $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        }
+    }
+
+    // Kung walang project na pwede makita
+    if (empty($projectIds)) {
+        json_response($analytics);
+        return;
+    }
+
+    // 5. Aggregate totals mula sa projects table
+    $placeholders = implode(',', array_fill(0, count($projectIds), '?'));
+    $stmt = $pdo->prepare("
+        SELECT 
+            COALESCE(SUM(budget), 0)   AS total_budget,
+            COALESCE(SUM(spent), 0)    AS total_cost,
+            COALESCE(SUM(revenue), 0)  AS total_revenue
+        FROM projects 
+        WHERE id IN ($placeholders)
+    ");
+    $stmt->execute($projectIds);
+    $totals = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    $analytics['budget']       = (float)$totals['total_budget'];
+    $analytics['totalCost']    = (float)$totals['total_cost'];
+    $analytics['totalRevenue'] = (float)$totals['total_revenue'];
+
+    // 6. Monthly breakdown — aggregated across ALL selected projects
+    $stmt = $pdo->prepare("
+        SELECT 
+            DATE_FORMAT(wl.date, '%b %Y') AS month,
+            COALESCE(SUM(wl.hours_worked * 1000), 0) AS cost,          -- adjust rate as needed
+            COALESCE(SUM(wl.progress_percentage * 5000), 0) AS revenue -- adjust rate as needed
+        FROM work_logs wl
+        WHERE wl.project_id IN ($placeholders)
+        GROUP BY DATE_FORMAT(wl.date, '%Y-%m')
+        ORDER BY MIN(wl.date) ASC
+        LIMIT 12
+    ");
+    $stmt->execute($projectIds);
+    $monthly = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Distribute total budget evenly across the months (or improve this logic)
+    $monthCount = count($monthly) > 0 ? count($monthly) : 6;
+    $monthlyBudgetPerMonth = $analytics['budget'] / $monthCount;
+
+    foreach ($monthly as &$m) {
+        $m['budget']  = round($monthlyBudgetPerMonth, 2);
+        $m['cost']    = round((float)$m['cost'], 2);
+        $m['revenue'] = round((float)$m['revenue'], 2);
+    }
+    unset($m);
+
+    $analytics['monthlyData'] = $monthly;
+
+    // 7. Return the final analytics
+    json_response($analytics);
+}
 function log_activity(PDO $pdo, string $userId, string $action, ?string $description = null): void
 {
     try {

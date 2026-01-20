@@ -384,6 +384,13 @@ class ApiService {
             body: JSON.stringify({ projectId, message }),
         });
     }
+
+    async getReportAnalytics(reportId: string): Promise<ApiResponse<any>> {
+        return this.request(`/reports/${reportId}/analytics`, {
+            method: 'GET',
+            credentials: 'include',
+        });
+    }
 }
 
 export const apiService = new ApiService();
