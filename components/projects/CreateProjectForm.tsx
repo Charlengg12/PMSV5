@@ -110,6 +110,7 @@ export function CreateProjectForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showStartCalendar, setShowStartCalendar] = useState(false);
   const [showEndCalendar, setShowEndCalendar] = useState(false);
+  const [selectedFabricator, setSelectedFabricator] = useState("");
   const calendarWeekdayLabels = [
     "Sun",
     "Mon",
@@ -243,7 +244,11 @@ export function CreateProjectForm({
         fabricatorId,
       ]);
     }
+
+    // reset select so it visually clears
+    setSelectedFabricator("");
   };
+
 
   const handleRemoveFabricator = (fabricatorId: string) => {
     handleInputChange(
@@ -781,7 +786,13 @@ export function CreateProjectForm({
                 !formData.broadcastToSupervisors && (
                   <div className="space-y-2">
                     <Label>Fabricators *</Label>
-                    <Select onValueChange={handleAddFabricator}>
+                    <Select
+                      value={selectedFabricator}
+                      onValueChange={(value) => {
+                        setSelectedFabricator(value);
+                        handleAddFabricator(value);
+                      }}
+                    >
                       <SelectTrigger>
                         <SelectValue placeholder="Add fabricators" />
                       </SelectTrigger>
@@ -810,10 +821,17 @@ export function CreateProjectForm({
                             className="flex items-center gap-1"
                           >
                             {getFabricatorName(id)}
-                            <X
-                              className="h-3 w-3 cursor-pointer"
-                              onClick={() => handleRemoveFabricator(id)}
-                            />
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleRemoveFabricator(id);
+                              }}
+                              className="ml-1 rounded hover:text-bold p-0.5"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
                           </Badge>
                         ))}
                       </div>
