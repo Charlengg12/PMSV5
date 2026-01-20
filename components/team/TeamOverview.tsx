@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Eye } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -36,7 +37,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { Project, Task, User, WorkLogEntry } from "../../types";
-import Swal from 'sweetalert2';
+import Swal from "sweetalert2";
 
 interface TeamOverviewProps {
   users: User[];
@@ -47,7 +48,7 @@ interface TeamOverviewProps {
   onAssignFabricator?: (
     projectId: string,
     fabricatorId: string,
-    message?: string
+    message?: string,
   ) => Promise<void> | void;
 }
 
@@ -124,21 +125,24 @@ export function TeamOverview({
   const scopedProjects = useMemo(() => {
     if (currentUser.role === "admin") return projects;
     if (currentUser.role === "supervisor") {
-      return projects.filter((project) => project.supervisorId === currentUser.id);
+      return projects.filter(
+        (project) => project.supervisorId === currentUser.id,
+      );
     }
     if (currentUser.role === "fabricator") {
-      return projects.filter((project) =>
-        project.fabricatorIds.includes(currentUser.id) ||
-        project.pendingAssignments?.some(
-          (assignment) =>
-            assignment.fabricatorId === currentUser.id &&
-            assignment.status === "pending"
-        )
+      return projects.filter(
+        (project) =>
+          project.fabricatorIds.includes(currentUser.id) ||
+          project.pendingAssignments?.some(
+            (assignment) =>
+              assignment.fabricatorId === currentUser.id &&
+              assignment.status === "pending",
+          ),
       );
     }
     if (currentUser.role === "client" && currentUser.clientProjectId) {
       return projects.filter(
-        (project) => project.id === currentUser.clientProjectId
+        (project) => project.id === currentUser.clientProjectId,
       );
     }
     return [];
@@ -146,17 +150,17 @@ export function TeamOverview({
 
   const scopedProjectIds = useMemo(
     () => new Set(scopedProjects.map((project) => project.id)),
-    [scopedProjects]
+    [scopedProjects],
   );
 
   const scopedTasks = useMemo(
     () => tasks.filter((task) => scopedProjectIds.has(task.projectId)),
-    [tasks, scopedProjectIds]
+    [tasks, scopedProjectIds],
   );
 
   const scopedWorkLogs = useMemo(
     () => workLogs.filter((log) => scopedProjectIds.has(log.projectId)),
-    [workLogs, scopedProjectIds]
+    [workLogs, scopedProjectIds],
   );
 
   const scopedUsers = useMemo(() => {
@@ -197,7 +201,9 @@ export function TeamOverview({
       });
       return ensureCurrentUser(users.filter((user) => teamIds.has(user.id)));
     }
-    return ensureCurrentUser(users.filter((user) => user.id === currentUser.id));
+    return ensureCurrentUser(
+      users.filter((user) => user.id === currentUser.id),
+    );
   }, [currentUser, scopedProjectIds, scopedProjects, users]);
 
   const teamMembers = useMemo<TeamMember[]>(() => {
@@ -207,19 +213,19 @@ export function TeamOverview({
       let acceptedProjects: Project[] = [];
       if (user.role === "supervisor") {
         assignedProjects = scopedProjects.filter(
-          (project) => project.supervisorId === user.id
+          (project) => project.supervisorId === user.id,
         );
         acceptedProjects = assignedProjects;
       } else if (user.role === "fabricator") {
         acceptedProjects = scopedProjects.filter((project) =>
-          project.fabricatorIds.includes(user.id)
+          project.fabricatorIds.includes(user.id),
         );
         pendingProjects = scopedProjects.filter((project) =>
           project.pendingAssignments?.some(
             (assignment) =>
               assignment.fabricatorId === user.id &&
-              assignment.status === "pending"
-          )
+              assignment.status === "pending",
+          ),
         );
         const combined = new Map<string, Project>();
         [...acceptedProjects, ...pendingProjects].forEach((project) => {
@@ -228,20 +234,20 @@ export function TeamOverview({
         assignedProjects = Array.from(combined.values());
       } else if (user.role === "client" && user.clientProjectId) {
         assignedProjects = scopedProjects.filter(
-          (project) => project.id === user.clientProjectId
+          (project) => project.id === user.clientProjectId,
         );
         acceptedProjects = assignedProjects;
       }
 
       const assignedTasks = scopedTasks.filter(
-        (task) => task.assignedTo === user.id
+        (task) => task.assignedTo === user.id,
       );
       const userLogs = scopedWorkLogs.filter(
-        (log) => log.fabricatorId === user.id
+        (log) => log.fabricatorId === user.id,
       );
       const totalHours = userLogs.reduce(
         (sum, log) => sum + (log.hoursWorked || 0),
-        0
+        0,
       );
 
       const activityTimes = [
@@ -277,8 +283,9 @@ export function TeamOverview({
         !project.fabricatorIds.includes(user.id) &&
         !project.pendingAssignments?.some(
           (assignment) =>
-            assignment.fabricatorId === user.id && assignment.status === "pending"
-        )
+            assignment.fabricatorId === user.id &&
+            assignment.status === "pending",
+        ),
     );
   };
 
@@ -286,28 +293,30 @@ export function TeamOverview({
     if (!onAssignFabricator) return;
     if (!selectedProjectId || !selectedFabricatorId) return;
 
-    const selectedProject = scopedProjects.find((p) => p.id === selectedProjectId);
+    const selectedProject = scopedProjects.find(
+      (p) => p.id === selectedProjectId,
+    );
     const selectedFabricator = users.find((u) => u.id === selectedFabricatorId);
 
     if (!selectedProject || !selectedFabricator) return;
 
     const result = await Swal.fire({
-      title: 'Assign Fabricator?',
+      title: "Assign Fabricator?",
       html: `
         <div class="text-left space-y-3">
           <p>Are you sure you want to assign:</p>
           <p class="font-semibold text-blue-600">${selectedFabricator.name}</p>
-          <p class="text-sm text-gray-500">(${selectedFabricator.secureId || 'ID'})</p>
+          <p class="text-sm text-gray-500">(${selectedFabricator.secureId || "ID"})</p>
           <p class="mt-4">to project:</p>
           <p class="font-semibold text-indigo-600">${selectedProject.name}</p>
         </div>
       `,
-      icon: 'question',
+      icon: "question",
       showCancelButton: true,
-      confirmButtonColor: '#3b82f6',
-      cancelButtonColor: '#6b7280',
-      confirmButtonText: 'Confirm',
-      cancelButtonText: 'Cancel',
+      confirmButtonColor: "#3b82f6",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Confirm",
+      cancelButtonText: "Cancel",
       customClass: {
         container: "swal-container",
         popup: "swal-popup !max-w-md",
@@ -321,9 +330,9 @@ export function TeamOverview({
     if (result.isConfirmed) {
       // Show loading for exactly 2 seconds
       const loadingSwal = Swal.fire({
-        title: 'Assigning...',
+        title: "Assigning...",
         allowOutsideClick: false,
-        timer: 2000,   
+        timer: 2000,
         customClass: {
           container: "swal-container",
           popup: "swal-popup !max-w-md",
@@ -331,10 +340,10 @@ export function TeamOverview({
           htmlContainer: "swal-content",
           confirmButton: "swal-confirm-button",
           cancelButton: "swal-cancel-button",
-        },           // Auto-close after 2 seconds
+        }, // Auto-close after 2 seconds
         didOpen: () => {
           Swal.showLoading();
-        }
+        },
       });
 
       try {
@@ -345,10 +354,10 @@ export function TeamOverview({
         await loadingSwal;
 
         Swal.fire({
-          title: 'Success!',
+          title: "Success!",
           text: `${selectedFabricator.name} has been assigned to ${selectedProject.name}`,
-          icon: 'success',
-          confirmButtonColor: '#3b82f6',
+          icon: "success",
+          confirmButtonColor: "#3b82f6",
           timer: 2500,
           customClass: {
             container: "swal-container",
@@ -368,10 +377,10 @@ export function TeamOverview({
         await loadingSwal;
 
         Swal.fire({
-          title: 'Error',
-          text: 'Failed to assign fabricator. Please try again.',
-          icon: 'error',
-          confirmButtonColor: '#ef4444',
+          title: "Error",
+          text: "Failed to assign fabricator. Please try again.",
+          icon: "error",
+          confirmButtonColor: "#ef4444",
           customClass: {
             container: "swal-container",
             popup: "swal-popup !max-w-md",
@@ -396,7 +405,7 @@ export function TeamOverview({
 
     if (projectFilter !== "all") {
       result = result.filter((member) =>
-        member.assignedProjects.some((project) => project.id === projectFilter)
+        member.assignedProjects.some((project) => project.id === projectFilter),
       );
     }
 
@@ -449,9 +458,11 @@ export function TeamOverview({
 
   const totalMembers = scopedUsers.length;
   const totalProjects = scopedProjects.length;
-  const openTasks = scopedTasks.filter((task) => task.status !== "completed").length;
+  const openTasks = scopedTasks.filter(
+    (task) => task.status !== "completed",
+  ).length;
   const totalFabricators = scopedUsers.filter(
-    (user) => user.role === "fabricator"
+    (user) => user.role === "fabricator",
   ).length;
 
   return (
@@ -510,7 +521,9 @@ export function TeamOverview({
           </CardHeader>
           <CardContent className="text-center">
             <div className="text-2xl font-semibold">{openTasks}</div>
-            <p className="text-xs text-muted-foreground mb-7">Pending or active</p>
+            <p className="text-xs text-muted-foreground mb-7">
+              Pending or active
+            </p>
           </CardContent>
         </Card>
 
@@ -521,13 +534,16 @@ export function TeamOverview({
           </CardHeader>
           <CardContent className="text-center">
             <div className="text-2xl font-semibold">{totalFabricators}</div>
-            <p className="text-xs text-muted-foreground">Available talent</p>
+            {/* Added mb-7 here to match other cards */}
+            <p className="text-xs text-muted-foreground mb-7">
+              Available talent
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-4 px-6">
+      <Card className="border shadow-sm w-full">
+        <CardHeader className="pb-4 px-4 sm:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <CardTitle className="text-lg font-semibold">
@@ -549,7 +565,7 @@ export function TeamOverview({
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search team"
-                  className="pl-9"
+                  className="pl-9 w-full"
                 />
               </div>
 
@@ -594,16 +610,20 @@ export function TeamOverview({
           </div>
         </CardHeader>
 
-        <CardContent>
+        <CardContent className="p-4 sm:p-6">
           {sortedMembers.length === 0 ? (
             <div className="py-12 text-center text-muted-foreground">
               No team members match the current filters.
             </div>
           ) : (
             <>
+              {/* Mobile View: Card Grid */}
               <div className="space-y-4 md:hidden">
                 {sortedMembers.map((member) => (
-                  <Card key={member.user.id} className="border-muted">
+                  <Card
+                    key={member.user.id}
+                    className="border-muted hover:bg-muted/50 transition-colors"
+                  >
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-center justify-between gap-3">
                         <div className="flex items-center gap-3">
@@ -612,45 +632,50 @@ export function TeamOverview({
                               {getInitials(member.user.name)}
                             </AvatarFallback>
                           </Avatar>
-                          <div>
-                            <div className="font-semibold">
+                          <div className="overflow-hidden">
+                            <div className="font-semibold truncate">
                               {member.user.name}
                             </div>
                             <Badge
                               variant={getRoleBadgeVariant(member.user.role)}
-                              className="capitalize"
+                              className="capitalize mt-1"
                             >
                               {getRoleIcon(member.user.role)}
-                              {member.user.role}
+                              <span className="ml-1">{member.user.role}</span>
                             </Badge>
                           </div>
                         </div>
+
+                        {/* UPDATED BUTTON: Icon on mobile, Text on tablet */}
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => setSelectedMember(member)}
+                          className="h-8 w-8 p-0 sm:w-auto sm:px-3 sm:h-9"
                         >
-                          View
+                          <span className="hidden sm:inline">View</span>
+                          <Eye className="h-4 w-4 sm:hidden" />
+                          <span className="sr-only">View Details</span>
                         </Button>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="grid grid-cols-2 gap-2 text-sm pt-2 border-t">
                         <div className="text-muted-foreground">Projects</div>
-                        <div className="text-right">
+                        <div className="text-right font-medium">
                           {member.assignedProjects.length}
                         </div>
                         <div className="text-muted-foreground">Tasks</div>
-                        <div className="text-right">
+                        <div className="text-right font-medium">
                           {member.assignedTasks.length}
                         </div>
                         <div className="text-muted-foreground">Hours</div>
-                        <div className="text-right">
+                        <div className="text-right font-medium">
                           {member.user.role === "fabricator"
                             ? member.totalHours.toLocaleString()
                             : "-"}
                         </div>
                         <div className="text-muted-foreground">Activity</div>
-                        <div className="text-right">
+                        <div className="text-right font-medium">
                           {formatDate(member.lastActivity)}
                         </div>
                       </div>
@@ -659,28 +684,19 @@ export function TeamOverview({
                 ))}
               </div>
 
-              <div className="hidden md:block overflow-x-auto">
+              {/* Desktop View: Table */}
+              <div className="hidden md:block overflow-x-auto rounded-md border">
                 <Table>
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="min-w-[220px] text-white">
-                        Member
-                      </TableHead>
-                      <TableHead className="text-white">Role</TableHead>
-                      <TableHead className="text-center text-white">
-                        Projects
-                      </TableHead>
-                      <TableHead className="text-center text-white">
-                        Tasks
-                      </TableHead>
-                      <TableHead className="text-center text-white">
-                        Hours
-                      </TableHead>
-                      <TableHead className="text-white">Last Activity</TableHead>
-                      <TableHead className="text-white">Status</TableHead>
-                      <TableHead className="text-right text-white">
-                        Action
-                      </TableHead>
+                    <TableRow className="bg-muted/50">
+                      <TableHead className="min-w-[200px]">Member</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead className="text-center">Projects</TableHead>
+                      <TableHead className="text-center">Tasks</TableHead>
+                      <TableHead className="text-center">Hours</TableHead>
+                      <TableHead>Last Activity</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Action</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -690,16 +706,20 @@ export function TeamOverview({
                       const statusLabel = hasAccepted
                         ? "Assigned"
                         : hasPending
-                        ? "Pending"
-                        : "Unassigned";
+                          ? "Pending"
+                          : "Unassigned";
                       const statusVariant = hasAccepted
                         ? "default"
                         : hasPending
-                        ? "secondary"
-                        : "outline";
+                          ? "secondary"
+                          : "outline";
 
                       return (
-                        <TableRow key={member.user.id} className="hover:bg-muted/40">
+                        <TableRow
+                          key={member.user.id}
+                          className="hover:bg-muted/40 cursor-pointer"
+                          onClick={() => setSelectedMember(member)}
+                        >
                           <TableCell>
                             <div className="flex items-center gap-3">
                               <Avatar className="h-9 w-9">
@@ -724,7 +744,7 @@ export function TeamOverview({
                               className="capitalize"
                             >
                               {getRoleIcon(member.user.role)}
-                              {member.user.role}
+                              <span className="ml-1">{member.user.role}</span>
                             </Badge>
                           </TableCell>
                           <TableCell className="text-center">
@@ -738,15 +758,20 @@ export function TeamOverview({
                               ? member.totalHours.toLocaleString()
                               : "-"}
                           </TableCell>
-                          <TableCell>{formatDate(member.lastActivity)}</TableCell>
+                          <TableCell>
+                            {formatDate(member.lastActivity)}
+                          </TableCell>
                           <TableCell>
                             <Badge variant={statusVariant}>{statusLabel}</Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button
-                              variant="outline"
+                              variant="ghost"
                               size="sm"
-                              onClick={() => setSelectedMember(member)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedMember(member);
+                              }}
                             >
                               View
                             </Button>
@@ -865,7 +890,7 @@ export function TeamOverview({
                     <div className="flex flex-wrap gap-2">
                       {selectedMember.assignedProjects.map((project) => {
                         const isPending = selectedMember.pendingProjects.some(
-                          (pending) => pending.id === project.id
+                          (pending) => pending.id === project.id,
                         );
                         return (
                           <Badge
@@ -893,7 +918,9 @@ export function TeamOverview({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-semibold">Add Fabricator to Project</h2>
+                  <h2 className="text-xl font-semibold">
+                    Add Fabricator to Project
+                  </h2>
                   <p className="text-sm text-muted-foreground mt-1">
                     Pick a project and assign a fabricator to join the team.
                   </p>
@@ -953,11 +980,13 @@ export function TeamOverview({
                     <SelectContent>
                       {selectedProjectId &&
                       getAvailableFabricators(selectedProjectId).length > 0 ? (
-                        getAvailableFabricators(selectedProjectId).map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.name} ({user.secureId})
-                          </SelectItem>
-                        ))
+                        getAvailableFabricators(selectedProjectId).map(
+                          (user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name} ({user.secureId})
+                            </SelectItem>
+                          ),
+                        )
                       ) : (
                         <SelectItem value="none" disabled>
                           No available fabricators
