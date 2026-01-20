@@ -19,13 +19,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import {
   Briefcase,
@@ -43,6 +36,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { Project, Task, User, WorkLogEntry } from "../../types";
+import Swal from 'sweetalert2';
 
 interface TeamOverviewProps {
   users: User[];
@@ -54,7 +48,7 @@ interface TeamOverviewProps {
     projectId: string,
     fabricatorId: string,
     message?: string
-  ) => void;
+  ) => Promise<void> | void;
 }
 
 type TeamMember = {
@@ -288,13 +282,107 @@ export function TeamOverview({
     );
   };
 
-  const handleAssignFabricator = () => {
+  const handleAssignFabricator = async () => {
     if (!onAssignFabricator) return;
     if (!selectedProjectId || !selectedFabricatorId) return;
-    onAssignFabricator(selectedProjectId, selectedFabricatorId);
-    setShowAssignDialog(false);
-    setSelectedProjectId("");
-    setSelectedFabricatorId("");
+
+    const selectedProject = scopedProjects.find((p) => p.id === selectedProjectId);
+    const selectedFabricator = users.find((u) => u.id === selectedFabricatorId);
+
+    if (!selectedProject || !selectedFabricator) return;
+
+    const result = await Swal.fire({
+      title: 'Assign Fabricator?',
+      html: `
+        <div class="text-left space-y-3">
+          <p>Are you sure you want to assign:</p>
+          <p class="font-semibold text-blue-600">${selectedFabricator.name}</p>
+          <p class="text-sm text-gray-500">(${selectedFabricator.secureId || 'ID'})</p>
+          <p class="mt-4">to project:</p>
+          <p class="font-semibold text-indigo-600">${selectedProject.name}</p>
+        </div>
+      `,
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonColor: '#3b82f6',
+      cancelButtonColor: '#6b7280',
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup !max-w-md",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+      },
+    });
+
+    if (result.isConfirmed) {
+      // Show loading for exactly 2 seconds
+      const loadingSwal = Swal.fire({
+        title: 'Assigning...',
+        allowOutsideClick: false,
+        timer: 2000,   
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },           // Auto-close after 2 seconds
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
+      try {
+        // Perform the actual assignment (may take longer than 2s)
+        await onAssignFabricator(selectedProjectId, selectedFabricatorId);
+
+        // Wait for loading to finish (if assignment is faster than 2s)
+        await loadingSwal;
+
+        Swal.fire({
+          title: 'Success!',
+          text: `${selectedFabricator.name} has been assigned to ${selectedProject.name}`,
+          icon: 'success',
+          confirmButtonColor: '#3b82f6',
+          timer: 2500,
+          customClass: {
+            container: "swal-container",
+            popup: "swal-popup !max-w-md",
+            title: "swal-title",
+            htmlContainer: "swal-content",
+            confirmButton: "swal-confirm-button",
+            cancelButton: "swal-cancel-button",
+          },
+        });
+
+        setShowAssignDialog(false);
+        setSelectedProjectId("");
+        setSelectedFabricatorId("");
+      } catch (error) {
+        // Wait for loading to finish even on error
+        await loadingSwal;
+
+        Swal.fire({
+          title: 'Error',
+          text: 'Failed to assign fabricator. Please try again.',
+          icon: 'error',
+          confirmButtonColor: '#ef4444',
+          customClass: {
+            container: "swal-container",
+            popup: "swal-popup !max-w-md",
+            title: "swal-title",
+            htmlContainer: "swal-content",
+            confirmButton: "swal-confirm-button",
+            cancelButton: "swal-cancel-button",
+          },
+        });
+      }
+    }
   };
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -674,32 +762,36 @@ export function TeamOverview({
         </CardContent>
       </Card>
 
-      <Dialog
-        open={Boolean(selectedMember)}
-        onOpenChange={(open) => {
-          if (!open) setSelectedMember(null);
-        }}
-      >
-        <DialogContent className="sm:max-w-2xl">
-          {selectedMember && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-3">
+      {/* Member Details Modal (using div instead of Dialog) */}
+      {selectedMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal bg-background rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold flex items-center gap-3">
                   <Avatar className="h-10 w-10">
                     <AvatarFallback>
                       {getInitials(selectedMember.user.name)}
                     </AvatarFallback>
                   </Avatar>
                   <span>{selectedMember.user.name}</span>
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedMember.user.role.charAt(0).toUpperCase() +
-                    selectedMember.user.role.slice(1)}{" "}
-                  profile and assignments
-                </DialogDescription>
-              </DialogHeader>
+                </h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setSelectedMember(null)}
+                >
+                  ×
+                </Button>
+              </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <p className="text-sm text-muted-foreground mb-6">
+                {selectedMember.user.role.charAt(0).toUpperCase() +
+                  selectedMember.user.role.slice(1)}{" "}
+                profile and assignments
+              </p>
+
+              <div className="grid gap-4 sm:grid-cols-2 mb-6">
                 <Card className="border-muted">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
@@ -707,8 +799,8 @@ export function TeamOverview({
                       Contact Details
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
+                  <CardContent className="space-y-2 text-sm p-4">
+                    <div className="flex items-center gap">
                       <Mail className="h-4 w-4 text-muted-foreground" />
                       <span>{selectedMember.user.email}</span>
                     </div>
@@ -732,7 +824,7 @@ export function TeamOverview({
                       Activity Snapshot
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
+                  <CardContent className="space-y-2 text-sm p-4">
                     <div className="flex items-center justify-between">
                       <span className="text-muted-foreground">Projects</span>
                       <span>{selectedMember.assignedProjects.length}</span>
@@ -764,7 +856,7 @@ export function TeamOverview({
                     Assigned Projects
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
+                <CardContent className="space-y-2 p-4">
                   {selectedMember.assignedProjects.length === 0 ? (
                     <p className="text-sm text-muted-foreground">
                       No assigned projects.
@@ -789,101 +881,116 @@ export function TeamOverview({
                   )}
                 </CardContent>
               </Card>
-
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
-
-        <Dialog
-          open={showAssignDialog}
-          onOpenChange={(open) => {
-            setShowAssignDialog(open);
-            if (!open) {
-              setSelectedProjectId("");
-              setSelectedFabricatorId("");
-            }
-          }}
-        >
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Add Fabricator to Project</DialogTitle>
-            <DialogDescription>
-              Pick a project and assign a fabricator to join the team.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="team-project">Project</Label>
-              <Select
-                value={selectedProjectId}
-                onValueChange={(value) => {
-                  setSelectedProjectId(value);
-                  setSelectedFabricatorId("");
-                }}
-              >
-                <SelectTrigger id="team-project">
-                  <SelectValue placeholder="Select project" />
-                </SelectTrigger>
-                <SelectContent>
-                  {scopedProjects.length === 0 ? (
-                    <SelectItem value="none" disabled>
-                      No projects available
-                    </SelectItem>
-                  ) : (
-                    scopedProjects.map((project) => (
-                      <SelectItem key={project.id} value={project.id}>
-                        {project.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="team-fabricator">Fabricator</Label>
-              <Select
-                value={selectedFabricatorId}
-                onValueChange={setSelectedFabricatorId}
-                disabled={!selectedProjectId}
-              >
-                <SelectTrigger id="team-fabricator">
-                  <SelectValue placeholder="Select fabricator" />
-                </SelectTrigger>
-                <SelectContent>
-                  {selectedProjectId &&
-                  getAvailableFabricators(selectedProjectId).length > 0 ? (
-                    getAvailableFabricators(selectedProjectId).map((user) => (
-                      <SelectItem key={user.id} value={user.id}>
-                        {user.name} ({user.secureId})
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>
-                      No available fabricators
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setShowAssignDialog(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleAssignFabricator}
-                disabled={!selectedProjectId || !selectedFabricatorId}
-              >
-                <UserPlus className="h-4 w-4" />
-                Assign
-              </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
+
+      {/* Assign Fabricator Modal (using div instead of Dialog) */}
+      {showAssignDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="modal bg-background rounded-lg shadow-xl w-full max-w-lg">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-semibold">Add Fabricator to Project</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Pick a project and assign a fabricator to join the team.
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowAssignDialog(false);
+                    setSelectedProjectId("");
+                    setSelectedFabricatorId("");
+                  }}
+                >
+                  ×
+                </Button>
+              </div>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="team-project">Project</Label>
+                  <Select
+                    value={selectedProjectId}
+                    onValueChange={(value) => {
+                      setSelectedProjectId(value);
+                      setSelectedFabricatorId("");
+                    }}
+                  >
+                    <SelectTrigger id="team-project">
+                      <SelectValue placeholder="Select project" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {scopedProjects.length === 0 ? (
+                        <SelectItem value="none" disabled>
+                          No projects available
+                        </SelectItem>
+                      ) : (
+                        scopedProjects.map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="team-fabricator">Fabricator</Label>
+                  <Select
+                    value={selectedFabricatorId}
+                    onValueChange={setSelectedFabricatorId}
+                    disabled={!selectedProjectId}
+                  >
+                    <SelectTrigger id="team-fabricator">
+                      <SelectValue placeholder="Select fabricator" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedProjectId &&
+                      getAvailableFabricators(selectedProjectId).length > 0 ? (
+                        getAvailableFabricators(selectedProjectId).map((user) => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.name} ({user.secureId})
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="none" disabled>
+                          No available fabricators
+                        </SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-6">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowAssignDialog(false);
+                      setSelectedProjectId("");
+                      setSelectedFabricatorId("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleAssignFabricator}
+                    disabled={!selectedProjectId || !selectedFabricatorId}
+                  >
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Assign
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
