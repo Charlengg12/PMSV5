@@ -326,6 +326,14 @@ export function ProjectDetails({
         text: `Project name cannot exceed ${MAX_NAME_LENGTH} characters.`,
         icon: "warning",
         confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
       return;
     }
@@ -339,6 +347,14 @@ export function ProjectDetails({
         text: `Description cannot exceed ${MAX_DESCRIPTION_LENGTH} characters.`,
         icon: "warning",
         confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
       return;
     }
@@ -353,6 +369,14 @@ export function ProjectDetails({
         )}</strong>`,
         icon: "warning",
         confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
       return;
     }
@@ -372,6 +396,14 @@ export function ProjectDetails({
         icon: "info",
         title: "No changes detected",
         text: "Nothing to save.",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
         timer: 1800,
         showConfirmButton: false,
       });
@@ -387,6 +419,14 @@ export function ProjectDetails({
       showCancelButton: true,
       confirmButtonText: "Yes, save",
       cancelButtonText: "Cancel",
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
     });
 
     if (!result.isConfirmed) return;
@@ -397,6 +437,14 @@ export function ProjectDetails({
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
       didOpen: () => {
         Swal.showLoading();
       },
@@ -414,6 +462,14 @@ export function ProjectDetails({
         text: "Project has been updated successfully.",
         icon: "success",
         timer: 1800,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
         showConfirmButton: false,
       });
     }, 1200);
