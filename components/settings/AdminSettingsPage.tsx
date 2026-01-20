@@ -595,7 +595,7 @@ export function AdminSettingsPage({
                 variant="ghost"
                 size="icon"
                 onClick={handleCancel}
-                className="rounded-full hover:bg-gray-100 dark:hover:bg-slate-800"
+                className="rounded-full hover:bg-accent hover:text-accent-foreground"
               >
                 <X className="h-5 w-5" />
               </Button>
@@ -811,7 +811,7 @@ export function AdminSettingsPage({
                 variant="outline"
                 onClick={handleCancel}
                 disabled={isSaving}
-                className="border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700"
+                className="border-gray-300 dark:border-slate-600 hover:bg-accent hover:text-accent-foreground"
               >
                 Cancel
               </Button>
