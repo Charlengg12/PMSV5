@@ -258,7 +258,15 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
 {
     require_login();
 
-    // 1. Kunin ang report details
+    $userId = $_SESSION['user_id'] ?? null;
+    $role   = $_SESSION['role']   ?? null;
+
+    if (!$userId || !$role) {
+        json_response(['error' => 'Please login first'], 401);
+        return;
+    }
+
+    // 1. Kunin ang report
     $stmt = $pdo->prepare("
         SELECT id, type, project_id, created_by, status 
         FROM reports 
@@ -273,50 +281,95 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
     }
 
     // 2. Permission check
-    $userId = $_SESSION['user_id'];
-    $role = $_SESSION['role'];
+    $canView = false;
 
-    if ($role !== 'admin' && $report['created_by'] !== $userId && $report['status'] !== 'published') {
-        json_response(['error' => 'Unauthorized to view this report analytics'], 403);
+    if ($role === 'admin') {
+        $canView = true;
+    } elseif ($report['created_by'] === $userId) {
+        $canView = true;
+    } elseif ($report['status'] === 'published') {
+        $canView = true;
+    } elseif ($role === 'supervisor') {
+        // Supervisor check: may project ba siyang kasama sa report?
+        if ($report['project_id']) {
+            // Specific project report
+            $stmt = $pdo->prepare("
+                SELECT 1 
+                FROM projects 
+                WHERE id = :pid AND supervisorId = :uid
+            ");
+            $stmt->execute([':pid' => $report['project_id'], ':uid' => $userId]);
+            if ($stmt->fetchColumn() > 0) {
+                $canView = true;
+            }
+        } else {
+            // All projects report — basta may project siyang sinusupervise
+            $stmt = $pdo->prepare("
+                SELECT COUNT(*) 
+                FROM projects 
+                WHERE supervisorId = :uid
+            ");
+            $stmt->execute([':uid' => $userId]);
+            if ($stmt->fetchColumn() > 0) {
+                $canView = true;
+            }
+        }
+    }
+
+    if (!$canView) {
+        json_response([
+            'error' => 'Hindi mo maa-access ang analytics ng report na ito',
+            'details' => 'Only admin, creator, or supervisors of included projects can view (or if published)'
+        ], 403);
         return;
     }
 
-    // 3. Initialize analytics data
-    $analytics = [
-        'budget'       => 0.0,
-        'totalCost'    => 0.0,
-        'totalRevenue' => 0.0,
-        'monthlyData'  => []
-    ];
-
-    // 4. Alamin kung aling projects ang isasama
+    // 3. Alamin kung aling projects ang isasama (filtered by role)
     $projectIds = [];
 
     if ($report['project_id']) {
-        // Specific project lang
-        $projectIds[] = $report['project_id'];
+        // Specific project lang — pero siguraduhin na allowed siya
+        if ($role === 'supervisor') {
+            $stmt = $pdo->prepare("
+                SELECT id 
+                FROM projects 
+                WHERE id = :pid AND supervisorId = :uid
+            ");
+            $stmt->execute([':pid' => $report['project_id'], ':uid' => $userId]);
+            $allowedId = $stmt->fetchColumn();
+            if ($allowedId) {
+                $projectIds[] = $allowedId;
+            }
+        } else {
+            // Admin or creator — pwede lahat
+            $projectIds[] = $report['project_id'];
+        }
     } else {
-        // ALL PROJECTS na pwede makita ng user
+        // All projects — pero filtered by role
         if ($role === 'admin') {
-            // Admin sees ALL projects
             $stmt = $pdo->query("SELECT id FROM projects");
             $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-        } else {
-            // Supervisor sees only projects they supervise
-            $stmt = $pdo->prepare("SELECT id FROM projects WHERE supervisorId = :uid");
-            $stmt->execute([':uid' => $userId]);
+        } elseif ($role === 'supervisor') {
+            $stmt = $pdo->query("SELECT id FROM projects");
             $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
     }
 
     // Kung walang project na pwede makita
     if (empty($projectIds)) {
-        json_response($analytics);
+        json_response([
+            'budget'       => 0.0,
+            'totalCost'    => 0.0,
+            'totalRevenue' => 0.0,
+            'monthlyData'  => [],
+            'message'      => 'Walang project na naka-assign sa iyo o kasama sa report na ito'
+        ]);
         return;
     }
 
-    // 5. Aggregate totals mula sa projects table
+    // 4. Total aggregates
     $placeholders = implode(',', array_fill(0, count($projectIds), '?'));
+    
     $stmt = $pdo->prepare("
         SELECT 
             COALESCE(SUM(budget), 0)   AS total_budget,
@@ -328,16 +381,19 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
     $stmt->execute($projectIds);
     $totals = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $analytics['budget']       = (float)$totals['total_budget'];
-    $analytics['totalCost']    = (float)$totals['total_cost'];
-    $analytics['totalRevenue'] = (float)$totals['total_revenue'];
+    $analytics = [
+        'budget'       => (float)($totals['total_budget'] ?? 0),
+        'totalCost'    => (float)($totals['total_cost'] ?? 0),
+        'totalRevenue' => (float)($totals['total_revenue'] ?? 0),
+        'monthlyData'  => []
+    ];
 
-    // 6. Monthly breakdown — aggregated across ALL selected projects
+    // 5. Monthly breakdown
     $stmt = $pdo->prepare("
         SELECT 
             DATE_FORMAT(wl.date, '%b %Y') AS month,
-            COALESCE(SUM(wl.hours_worked * 1000), 0) AS cost,          -- adjust rate as needed
-            COALESCE(SUM(wl.progress_percentage * 5000), 0) AS revenue -- adjust rate as needed
+            ROUND(COALESCE(SUM(wl.hours_worked * 1000), 0), 2) AS cost,
+            ROUND(COALESCE(SUM(wl.progress_percentage * 5000), 0), 2) AS revenue
         FROM work_logs wl
         WHERE wl.project_id IN ($placeholders)
         GROUP BY DATE_FORMAT(wl.date, '%Y-%m')
@@ -347,20 +403,20 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
     $stmt->execute($projectIds);
     $monthly = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Distribute total budget evenly across the months (or improve this logic)
+    // Distribute budget evenly across months
     $monthCount = count($monthly) > 0 ? count($monthly) : 6;
     $monthlyBudgetPerMonth = $analytics['budget'] / $monthCount;
 
     foreach ($monthly as &$m) {
         $m['budget']  = round($monthlyBudgetPerMonth, 2);
-        $m['cost']    = round((float)$m['cost'], 2);
-        $m['revenue'] = round((float)$m['revenue'], 2);
+        $m['cost']    = (float)$m['cost'];
+        $m['revenue'] = (float)$m['revenue'];
     }
     unset($m);
 
     $analytics['monthlyData'] = $monthly;
 
-    // 7. Return the final analytics
+    // 6. Return success
     json_response($analytics);
 }
 function log_activity(PDO $pdo, string $userId, string $action, ?string $description = null): void
