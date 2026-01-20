@@ -298,31 +298,42 @@ export function ActivityLogs() {
   return (
     <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header Section */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg blur opacity-20"></div>
-            <div className="relative bg-white dark:bg-gray-800 rounded-lg p-3">
-              <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div className="flex flex-col items-start w-full">
+          <div className="flex items-center gap-3">
+            <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <div>
+              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                Activity Logs
+              </h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Track and monitor all system activities
+              </p>
             </div>
           </div>
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-              Activity Logs
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Track and monitor all system activities
-            </p>
+          <div className="w-full flex items-end justify-end mt-4 lg:hidden">
+            <button
+              onClick={handleRefresh}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
           </div>
         </div>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="hidden lg:flex">
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            <span className="hidden sm:inline">Refresh</span>
+          </button>
+        </div>
       </div>
 
       <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
