@@ -606,7 +606,7 @@ export function WorkLogManager({
 
       {/* EDIT FORM */}
       {editingLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="fixed inset-0 z-50 h-full flex items-center justify-center bg-black/50">
           <div className="modal bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
               <h2 className="text-lg font-semibold">Edit Work Log Entry</h2>
