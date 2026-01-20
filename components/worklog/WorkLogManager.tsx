@@ -70,6 +70,8 @@ export function WorkLogManager({
     hoursWorked: '0',
     materialsUsed: [] as string[]
   });
+  const [selectedLogFiles, setSelectedLogFiles] = useState<File[]>([]);
+  const [logFileError, setLogFileError] = useState('');
 
   // Filter projects for current fabricator
   const fabricatorProjects = projects.filter(p =>
@@ -126,7 +128,64 @@ export function WorkLogManager({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const resetAddFormFiles = () => {
+    setSelectedLogFiles([]);
+    setLogFileError('');
+  };
+
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error('Failed to read file'));
+      reader.readAsDataURL(file);
+    });
+
+  const handleLogFileSelection = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    const existingKeys = new Set(
+      selectedLogFiles.map(file => `${file.name}-${file.size}-${file.lastModified}`)
+    );
+
+    const uniqueFiles = files.filter(file => {
+      const key = `${file.name}-${file.size}-${file.lastModified}`;
+      if (existingKeys.has(key)) {
+        return false;
+      }
+      existingKeys.add(key);
+      return true;
+    });
+
+    if (uniqueFiles.length === 0) {
+      setLogFileError('All selected files are already queued.');
+    } else {
+      setSelectedLogFiles(prev => [...prev, ...uniqueFiles]);
+      setLogFileError('');
+    }
+
+    event.target.value = '';
+  };
+
+  const handleRemoveSelectedLogFile = (index: number) => {
+    setSelectedLogFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const buildLogAttachments = async (files: File[]): Promise<ProjectAttachment[]> =>
+    Promise.all(
+      files.map(async (file) => ({
+        id: `log-att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        uploadedBy: currentUser.id,
+        uploadedAt: new Date().toISOString(),
+        url: await readFileAsDataUrl(file)
+      })),
+    );
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedProject) {
@@ -142,6 +201,9 @@ export function WorkLogManager({
       return;
     }
 
+    const attachmentsForLog =
+      selectedLogFiles.length > 0 ? await buildLogAttachments(selectedLogFiles) : undefined;
+
     const newWorkLog: Omit<WorkLogEntry, 'id' | 'createdAt'> = {
       projectId: selectedProject,
       fabricatorId: currentUser.id,
@@ -149,10 +211,15 @@ export function WorkLogManager({
       description: formData.description,
       progressPercentage: progressValue,
       hoursWorked: hoursValue,
-      materials: formData.materialsUsed.length > 0 ? formData.materialsUsed : undefined
+      materials: formData.materialsUsed.length > 0 ? formData.materialsUsed : undefined,
+      attachments: attachmentsForLog?.length ? attachmentsForLog : undefined
     };
 
     onAddWorkLog(newWorkLog);
+
+    if (attachmentsForLog?.length) {
+      handleProjectFilesUploaded(attachmentsForLog);
+    }
 
     // Reset form
     setFormData({
@@ -162,7 +229,15 @@ export function WorkLogManager({
       hoursWorked: '0',
       materialsUsed: []
     });
+    resetAddFormFiles();
     setShowAddForm(false);
+  };
+
+  const handleAddDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      resetAddFormFiles();
+    }
+    setShowAddForm(open);
   };
 
   const openEditLog = (log: WorkLogEntry) => {
@@ -310,7 +385,13 @@ export function WorkLogManager({
           </h2>
           <p className="text-muted-foreground">Track your daily work progress and material usage</p>
         </div>
-        <Button onClick={() => setShowAddForm(true)} disabled={!selectedProject}>
+        <Button
+          onClick={() => {
+            resetAddFormFiles();
+            setShowAddForm(true);
+          }}
+          disabled={!selectedProject}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Work Log
         </Button>
@@ -380,7 +461,7 @@ export function WorkLogManager({
         </div>
       )}
 
-      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
+      <Dialog open={showAddForm} onOpenChange={handleAddDialogOpenChange}>
         <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Work Log Entry</DialogTitle>
@@ -479,8 +560,46 @@ export function WorkLogManager({
               )}
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="work-log-files">Attachments (Optional)</Label>
+              <Input
+                id="work-log-files"
+                type="file"
+                multiple
+                onChange={handleLogFileSelection}
+                className="cursor-pointer"
+              />
+              {logFileError && (
+                <p className="text-xs text-destructive-foreground">{logFileError}</p>
+              )}
+              {selectedLogFiles.length > 0 && (
+                <div className="space-y-2">
+                  {selectedLogFiles.map((file, index) => (
+                    <div
+                      key={`${file.name}-${file.size}-${file.lastModified}`}
+                      className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <span className="truncate">{file.name}</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        type="button"
+                        onClick={() => handleRemoveSelectedLogFile(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">
+                Files uploaded here will also appear on the client's documentation
+                page shared files section.
+              </p>
+            </div>
+
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAddForm(false)}>
+              <Button type="button" variant="outline" onClick={() => handleAddDialogOpenChange(false)}>
                 Cancel
               </Button>
               <Button type="submit">

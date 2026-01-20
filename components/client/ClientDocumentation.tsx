@@ -1,14 +1,21 @@
-import { Calendar, Clock, FileText, Download, Phone, Users } from "lucide-react";
+import { Calendar, Clock, FileText, Download, Trash2 } from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
-import { Separator } from "../ui/separator";
-import { Project, User as UserType } from "../../types";
+import Swal from "sweetalert2";
+import {
+  Project,
+  User as UserType,
+  WorkLogEntry,
+  ProjectAttachment,
+} from "../../types";
 
 interface ClientDocumentationProps {
   currentUser: UserType;
   projects: Project[];
   users: UserType[];
+  workLogs: WorkLogEntry[];
+  onUpdateProject?: (project: Project) => void;
 }
 
 const formatSize = (size: number) => {
@@ -31,6 +38,8 @@ export function ClientDocumentation({
   currentUser,
   projects,
   users,
+  workLogs,
+  onUpdateProject,
 }: ClientDocumentationProps) {
   const clientProject =
     projects.find((project) => project.id === currentUser.clientProjectId) ||
@@ -48,62 +57,99 @@ export function ClientDocumentation({
     );
   }
 
-  const documentationFiles = clientProject.attachments || [];
   const supervisors = users.filter(
     (user) => user.role === "supervisor" && user.id === clientProject.supervisorId
   );
 
   const contact = supervisors[0] || null;
 
+  type DocumentationEntry = {
+    attachment: ProjectAttachment;
+    source: "project" | "worklog";
+  };
+
+  const documentationFiles = (() => {
+    const entries = new Map<string, DocumentationEntry>();
+
+    (clientProject.attachments || []).forEach((attachment) => {
+      entries.set(attachment.id, { attachment, source: "project" });
+    });
+
+    const logAttachments = workLogs
+      .filter((log) => log.projectId === clientProject.id)
+      .flatMap((log) => log.attachments || []);
+
+    logAttachments.forEach((attachment) => {
+      if (!entries.has(attachment.id)) {
+        entries.set(attachment.id, { attachment, source: "worklog" });
+      }
+    });
+
+    return Array.from(entries.values());
+  })();
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    if (!onUpdateProject) return;
+    const result = await Swal.fire({
+      title: "Remove shared file?",
+      text: "This cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+    });
+
+    if (!result.isConfirmed) return;
+
+    const remainingAttachments = (clientProject.attachments || []).filter(
+      (attachment) => attachment.id !== attachmentId,
+    );
+    onUpdateProject({ ...clientProject, attachments: remainingAttachments });
+  };
+
   return (
     <div className="space-y-6">
-      <Card className="p-4 md:p-6">
-        <CardHeader className="flex flex-col gap-1">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-            Document Hub
-          </p>
-          <h1 className="text-2xl font-semibold">Project Documentation</h1>
-          <p className="text-sm text-muted-foreground">
-            {clientProject.name} — latest shared specifications and progress materials.
+      <Card className="px-6 py-7 md:px-8 md:py-10 bg-white border border-slate-200 shadow-md">
+        <CardHeader className="space-y-3">
+          <div className="flex flex-col gap-1 font-semibold tracking-[0.4em] text-[0.65rem] uppercase text-slate-500">
+            <span>Document Hub</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+              Project Documentation
+            </h1>
+            <Badge variant="outline" className="text-[0.6rem] px-3 py-1 rounded-full uppercase tracking-[0.35em]">
+              {clientProject.status.replace("_", " ")}
+            </Badge>
+          </div>
+          <p className="text-base text-slate-600 max-w-2xl">
+            {clientProject.name} — up-to-date specs, progress photos, and approval materials prepared for your review.
           </p>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-1">
-              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
-                Status
-              </p>
-              <Badge variant="outline" className="text-xs">
-                {clientProject.status.replace("_", " ")}
-              </Badge>
+        <CardContent className="pt-5">
+          <div className="flex flex-wrap gap-6 text-sm text-slate-500">
+            <div className="flex flex-col gap-1">
+              <span className="uppercase tracking-[0.3em] text-[0.65rem]">Last Updated</span>
+              <span className="text-base font-semibold text-slate-900">{formatDate(clientProject.createdAt)}</span>
             </div>
-            <div className="space-y-1">
-              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
-                Last Update
-              </p>
-              <p className="text-sm font-semibold">
-                {formatDate(clientProject.createdAt)}
-              </p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
-                Supervisor
-              </p>
-              <p className="text-sm font-semibold">
+            <div className="flex flex-col gap-1">
+              <span className="uppercase tracking-[0.3em] text-[0.65rem]">Supervisor</span>
+              <span className="text-base font-semibold text-slate-900">
                 {contact ? contact.name : "Unassigned"}
-              </p>
+              </span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4 md:p-6">
           <CardHeader className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2 text-lg">
-              <FileText className="h-5 w-5" />
-              Shared Files
-            </CardTitle>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <FileText className="h-5 w-5" />
+            Shared Files
+          </CardTitle>
             <Badge variant="outline" className="text-xs">
               {documentationFiles.length} files
             </Badge>
@@ -114,28 +160,58 @@ export function ClientDocumentation({
                 No files uploaded yet. Ask your team to add the latest documents.
               </p>
             ) : (
-              documentationFiles.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between rounded-xl border px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{doc.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatSize(doc.size)} · uploaded {formatDate(doc.uploadedAt)}
-                    </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => doc.url && window.open(doc.url, "_blank")}
+              documentationFiles.map(({ attachment: doc, source }) => {
+                const isImage = doc.type?.startsWith("image");
+                const isDeletable = !!onUpdateProject;
+                return (
+                  <div
+                    key={doc.id}
+                    className="flex items-center justify-between rounded-xl border px-3 py-2"
                   >
-                    <Download className="h-3 w-3" />
-                  </Button>
-                </div>
-              ))
+                    <div className="flex items-center gap-3">
+                      {isImage ? (
+                        <div className="h-14 w-14 overflow-hidden rounded-lg bg-muted">
+                          <img
+                            src={doc.url}
+                            alt={doc.name}
+                            className="h-full w-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <FileText className="h-6 w-6 text-muted-foreground" />
+                      )}
+                      <div>
+                        <p className="text-sm font-medium">{doc.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatSize(doc.size)} · Uploaded {formatDate(doc.uploadedAt)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => doc.url && window.open(doc.url, "_blank")}
+                      >
+                        <Download className="h-3 w-3" />
+                      </Button>
+                      {isDeletable && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="bg-destructive text-destructive-foreground border border-destructive/50 rounded hover:bg-destructive/80"
+                          onClick={() => handleDeleteAttachment(doc.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
             )}
           </CardContent>
+
         </Card>
 
         <Card className="p-4 md:p-6">
@@ -166,37 +242,6 @@ export function ClientDocumentation({
           </CardContent>
         </Card>
 
-        <Card className="p-4 md:p-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <Users className="h-5 w-5" />
-              Contacts
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {contact ? (
-              <div className="space-y-1">
-                <p className="text-sm font-semibold">{contact.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  Supervisor · {contact.school}
-                </p>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Phone className="h-3 w-3" />
-                  <span>{contact.phone || "No phone provided"}</span>
-                </div>
-              </div>
-            ) : (
-              <p className="text-sm text-muted-foreground">No direct contact assigned yet.</p>
-            )}
-            <Separator />
-            <Button
-              className="w-full"
-              onClick={() => alert("Request for clarification sent.")}
-            >
-              Request Clarification
-            </Button>
-          </CardContent>
-        </Card>
       </div>
     </div>
   );

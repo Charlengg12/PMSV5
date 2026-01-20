@@ -238,38 +238,37 @@ export function ClientDashboard({
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4 md:p-6">
           <CardHeader className="flex items-center justify-between">
-            <CardTitle>Project Health</CardTitle>
-            <Badge variant="outline">{totalTasks} tasks</Badge>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              Project Documents
+            </CardTitle>
+            <Badge variant="outline">{clientProject.attachments?.length ?? 0} docs</Badge>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
-                Task Completion
-              </p>
-              <div className="flex items-center justify-between text-sm">
-                <span>
-                  {completedTasks} / {totalTasks} completed
-                </span>
-                <span className="text-primary font-semibold">
-                  {taskProgress.toFixed(0)}%
-                </span>
+          <CardContent className="space-y-3">
+            {clientProject.attachments && clientProject.attachments.length > 0 ? (
+              clientProject.attachments.map((doc) => (
+                <div
+                  key={doc.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
+                >
+                  <div className="space-y-1">
+                    <p className="text-sm font-medium">{doc.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {(doc.size / 1024 / 1024).toFixed(2)} MB - Uploaded{" "}
+                      {formatDate(doc.uploadedAt)}
+                    </p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => openLink(doc.url)}>
+                    Download
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-6 text-sm text-muted-foreground">
+                <FileText className="h-8 w-8 mx-auto mb-2" />
+                <p>No documentation shared yet.</p>
               </div>
-              <Progress value={taskProgress} className="h-2" />
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground">
-              <div>
-                <p>Recent updates</p>
-                <p className="text-foreground font-semibold">
-                  {projectWorkLogs.length}
-                </p>
-              </div>
-              <div>
-                <p>Fabricators</p>
-                <p className="text-foreground font-semibold">
-                  {fabricators.length}
-                </p>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -324,45 +323,6 @@ export function ClientDashboard({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-4 md:p-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Project Documents
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {clientProject.attachments && clientProject.attachments.length > 0 ? (
-              clientProject.attachments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{doc.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(doc.size / 1024 / 1024).toFixed(2)} MB - Uploaded{" "}
-                        {formatDate(doc.uploadedAt)}
-                      </p>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openLink(doc.url)}
-                  >
-                    Download
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6 text-sm text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2" />
-                <p>No documentation shared yet.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
         <Card className="p-4 md:p-6">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
