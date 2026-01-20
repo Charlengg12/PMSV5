@@ -192,8 +192,8 @@ export function FabricatorSignupForm({
           <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-accent/10 rounded-full blur-3xl"></div>
         </div>
 
-        <Card className="w-full max-w-md relative z-10 shadow-2xl border-0">
-          <CardHeader className="text-center space-y-4 pb-8">
+        <Card className="w-full max-w-md mx-4 sm:mx-auto relative z-10 shadow-2xl border-0 p-4 sm:p-6">
+          <CardHeader className="p-0 text-center space-y-4 pb-8">
             <div className="flex items-center justify-center mb-4">
               <CompanyLogo size="xl" showText={false} />
             </div>
