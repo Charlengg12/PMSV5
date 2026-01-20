@@ -609,7 +609,7 @@ export function MaterialsManager({
       {/* ADD FORM */}
       {showAddForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
+          <div className="modal bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-semibold">Add New Material</h2>
@@ -790,7 +790,7 @@ export function MaterialsManager({
       {/* EDIT FORM */}
       {editingMaterial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
+          <div className="modal bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-semibold">Edit Material</h2>
