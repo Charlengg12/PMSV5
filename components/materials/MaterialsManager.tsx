@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../ui/dialog';
 import { 
   Package, 
   Plus, 
@@ -20,7 +19,8 @@ import {
   AlertCircle,
   XCircle,
   Edit,
-  Trash2
+  Trash2,
+  X
 } from 'lucide-react';
 import { Material, User, Project } from '../../types';
 import Swal from 'sweetalert2';
@@ -204,19 +204,100 @@ export function MaterialsManager({
     e.preventDefault();
     if (!onAddMaterial) return;
 
-    if(!formData.name || !formData.quantity || !formData.cost || !formData.unit) {
-       // Target the add modal if it's open
-       const target = document.getElementById('add-dialog-content');
-       Swal.fire({
-         icon: 'error',
-         title: 'Missing Fields',
-         text: 'Please fill in all required fields (Name, Quantity, Unit, Cost).',
-         target: target || 'body', // Fallback to body if modal not found
-         customClass: { container: 'z-[99999]' } 
-       });
-       return;
+    // ================= VALIDATIONS =================
+    if (formData.name.length > 50 || formData.description?.length > 100) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Name or Description Too Long',
+        text: 'Name and description must be less than 50 and 100 characters respectively.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+      });
+      return;
     }
 
+    if (parseFloat(formData.quantity) > 500000 || parseFloat(formData.cost) > 500000) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Quantity or Cost Too High',
+        text: 'Quantity and cost per unit must be less than 500,000.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+      });
+      return;
+    }
+
+    if (!formData.name || !formData.quantity || !formData.cost || !formData.unit || !formData.supplier) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Missing Fields',
+        text: 'Please fill up the missing fields.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+      });
+      return;
+    }
+
+    // ================= CONFIRMATION =================
+    const result = await Swal.fire({
+      icon: 'question',
+      title: 'Confirm Submission',
+      text: 'Are you sure you want to add this material?',
+      showCancelButton: true,
+      confirmButtonText: 'Confirm',
+      cancelButtonText: 'Cancel',
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
+    });
+
+    if (!result.isConfirmed) return;
+
+    // ================= LOADING (2 SECONDS) =================
+    Swal.fire({
+      title: 'Submitting...',
+      text: 'Please wait',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      didOpen: () => {
+        Swal.showLoading();
+      }
+    });
+
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // ================= SUBMIT =================
     setIsSubmitting(true);
 
     const newMaterial: Omit<Material, 'id' | 'addedAt'> = {
@@ -227,40 +308,66 @@ export function MaterialsManager({
       cost: parseFloat(formData.cost) || 0,
       supplier: formData.supplier || undefined,
       status: formData.status,
-      projectId: (formData.projectId && formData.projectId !== 'none') ? formData.projectId : undefined,
+      projectId:
+        formData.projectId && formData.projectId !== 'none'
+          ? formData.projectId
+          : undefined,
       addedBy: currentUser.id,
-      category: formData.category || undefined
+      category: formData.category || undefined,
     };
 
     try {
       await onAddMaterial(newMaterial);
-      
+
       setFormData({
-        name: '', description: '', quantity: '', unit: '', cost: '', supplier: '',
-        status: 'ordered', projectId: 'none', category: ''
+        name: '',
+        description: '',
+        quantity: '',
+        unit: '',
+        cost: '',
+        supplier: '',
+        status: 'ordered',
+        projectId: 'none',
+        category: '',
       });
+
       setShowAddForm(false);
-      
+
       Swal.fire({
         icon: 'success',
         title: 'Added!',
         text: 'Material added to inventory.',
         timer: 1500,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
         showConfirmButton: false,
       });
     } catch (error) {
       console.error(error);
-      const target = document.getElementById('add-dialog-content');
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: 'Failed to add material',
-        target: target || 'body'
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
       });
     } finally {
       setIsSubmitting(false);
     }
   };
+
 
   const handleEditClick = (material: Material) => {
     setEditingMaterial(material);
@@ -285,51 +392,101 @@ export function MaterialsManager({
     e.preventDefault();
     if (!editingMaterial) return;
 
-    // Use specific ID to target the open modal
-    const modalTarget = document.getElementById('edit-dialog-content');
-
     if (!onUpdateMaterial) {
       Swal.fire({
         icon: 'error',
         title: 'System Error',
         text: 'Update function not connected.',
-        target: modalTarget || 'body'
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
       });
       return;
     }
 
-    if(!editFormData.name || !editFormData.quantity || !editFormData.cost) {
-        Swal.fire({
-            icon: 'warning',
-            title: 'Missing Details',
-            text: 'Name, Quantity, and Cost are required.',
-            target: modalTarget || 'body',
-            customClass: { container: 'z-[99999]' }
-        });
-        return;
+    // ================= VALIDATIONS =================
+    if (formData.name.length > 50 || formData.description?.length > 100) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Name or Description Too Long',
+        text: 'Name and description must be less than 50 and 100 characters respectively.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+      return;
     }
 
+    if (parseFloat(formData.quantity) > 500000 || parseFloat(formData.cost) > 500000) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Quantity or Cost Too High',
+        text: 'Quantity and cost per unit must be less than 500,000.',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+      return;
+    }
+
+    // ================= CONFIRM =================
     const result = await Swal.fire({
-      title: 'Save changes?',
-      text: `Update details for "${editFormData.name}"?`,
       icon: 'question',
+      title: 'Save Changes?',
+      text: `Update details for "${editFormData.name}"?`,
       showCancelButton: true,
       confirmButtonText: 'Yes, Save',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#0f172a',
-      target: modalTarget || 'body', // This forces the alert INSIDE the modal focus trap
-      customClass: { container: 'z-[99999]' }
+      reverseButtons: true,
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
     });
 
     if (!result.isConfirmed) return;
 
+    // ================= LOADING (2 SECONDS) =================
     Swal.fire({
       title: 'Updating...',
+      text: 'Please wait',
       allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-      target: modalTarget || 'body'
+      allowEscapeKey: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
     });
 
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // ================= SUBMIT =================
     const updatedData: Partial<Material> = {
       name: editFormData.name,
       description: editFormData.description || undefined,
@@ -338,69 +495,130 @@ export function MaterialsManager({
       cost: parseFloat(editFormData.cost) || 0,
       supplier: editFormData.supplier || undefined,
       status: editFormData.status,
-      projectId: (editFormData.projectId && editFormData.projectId !== 'none') ? editFormData.projectId : undefined,
-      category: editFormData.category || undefined
+      projectId:
+        editFormData.projectId && editFormData.projectId !== 'none'
+          ? editFormData.projectId
+          : undefined,
+      category: editFormData.category || undefined,
     };
 
     try {
       await onUpdateMaterial(editingMaterial.id, updatedData);
-      
+
       setEditingMaterial(null);
-      
-      // Since modal closes, we can show success on body
+
       Swal.fire({
         icon: 'success',
         title: 'Updated!',
         text: 'Material details have been saved.',
         timer: 1500,
         showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
       });
     } catch (error) {
       Swal.fire({
         icon: 'error',
         title: 'Error',
         text: 'Failed to update material',
-        target: modalTarget || 'body'
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
       });
     }
   };
 
-  const handleDeleteClick = async (id: string) => {
-    if(!onDeleteMaterial) return;
 
-    // Delete is not in a modal, so standard body target is fine
+  const handleDeleteClick = async (id: string) => {
+    if (!onDeleteMaterial) return;
+
+    // ================= CONFIRMATION =================
     const result = await Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#64748b',
       confirmButtonText: 'Yes, delete it!',
+      cancelButtonText: 'Cancel',
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
     });
 
-    if (result.isConfirmed) {
-      Swal.fire({
-        title: 'Deleting...',
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
+    if (!result.isConfirmed) return;
 
-      try {
-        await onDeleteMaterial(id);
-        
-        Swal.fire({
-          title: 'Deleted!',
-          text: 'The material has been removed.',
-          icon: 'success',
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } catch (error) {
-        Swal.fire('Error', 'Failed to delete material', 'error');
-      }
+    // ================= LOADING (2 SECONDS) =================
+    Swal.fire({
+      title: 'Deleting...',
+      text: 'Please wait',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading(),
+      customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+    });
+
+    // Wait 2 seconds before actual delete
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // ================= DELETE =================
+    try {
+      await onDeleteMaterial(id);
+
+      Swal.fire({
+        title: 'Deleted!',
+        text: 'The material has been removed.',
+        icon: 'success',
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to delete material',
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup !max-w-md",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
+      });
     }
   };
+
 
   // --- UI HELPERS ---
   const getStatusIcon = (status: Material['status']) => {
@@ -436,300 +654,337 @@ export function MaterialsManager({
   return (
     <div className="space-y-6">
       {/* ================================================================
-        ADD MATERIAL DIALOG 
+        ADD MATERIAL FORM (Normal Div instead of Dialog)
         ================================================================
       */}
-      <Dialog open={showAddForm} onOpenChange={setShowAddForm}>
-        <div className="flex justify-between items-center">
-          <div>
-            <h2 className="flex items-center gap-2">
-              <Package className="h-5 w-5" />
-              Materials Management
-            </h2>
-            <p className="text-muted-foreground">Manage materials and inventory for your projects</p>
-          </div>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Material
-            </Button>
-          </DialogTrigger>
-        </div>
-
-        {/* Added ID here to target for SweetAlert */}
-        <DialogContent id="add-dialog-content" className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Material</DialogTitle>
-            <DialogDescription>Fill out the form to add materials to inventory.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="name">Material Name *</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange('name', e.target.value)}
-                  placeholder="Enter material name"
-                  required
-                />
+      {showAddForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
+            <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold">Add New Material</h2>
+                <p className="text-sm text-muted-foreground">Fill out the form to add materials to inventory.</p>
               </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="category">Category</Label>
-                <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {materialCategories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
-                onChange={(e) => handleInputChange('description', e.target.value)}
-                placeholder="Optional material description"
-                rows={2}
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="quantity">Quantity *</Label>
-                <Input
-                  id="quantity"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.quantity}
-                  onChange={(e) => handleInputChange('quantity', e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="unit">Unit *</Label>
-                <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cost">Cost per Unit ({peso}) *</Label>
-                <Input
-                  id="cost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={formData.cost}
-                  onChange={(e) => handleInputChange('cost', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="supplier">Supplier</Label>
-                <Input
-                  id="supplier"
-                  value={formData.supplier}
-                  onChange={(e) => handleInputChange('supplier', e.target.value)}
-                  placeholder="Enter supplier name"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select value={formData.status} onValueChange={(value: Material['status']) => handleInputChange('status', value)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ordered">Ordered</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="in-use">In Use</SelectItem>
-                    <SelectItem value="depleted">Depleted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="projectId">Assign to Project</Label>
-              <Select value={formData.projectId} onValueChange={(value) => handleInputChange('projectId', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="General inventory (no project)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">General Inventory</SelectItem>
-                  {fabricatorProjects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>Cancel</Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? 'Adding...' : <><Plus className="h-4 w-4 mr-2" /> Add Material</>}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAddForm(false)}
+                disabled={isSubmitting}
+              >
+                <X className="h-4 w-4" />
               </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </div>
+            
+            <form onSubmit={handleSubmit} className="space-y-4 p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Material Name *</Label>
+                  <Input
+                    id="name"
+                    minLength={1}
+                    maxLength={50}
+                    value={formData.name}
+                    onChange={(e) => handleInputChange('name', e.target.value)}
+                    placeholder="Enter material name"
+                    
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="category">Category</Label>
+                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materialCategories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea
+                  id="description"
+                  minLength={1}
+                  maxLength={100}
+                  value={formData.description}
+                  onChange={(e) => handleInputChange('description', e.target.value)}
+                  placeholder="Optional material description"
+                  rows={2}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="quantity">Quantity *</Label>
+                  <Input
+                    id="quantity"
+                    type="number"
+                    minLength={1}
+                    maxLength={6}
+                    value={formData.quantity}
+                    onChange={(e) => handleInputChange('quantity', e.target.value)}
+                    
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="unit">Unit *</Label>
+                  <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map(unit => (
+                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cost">Cost per Unit ({peso}) *</Label>
+                  <Input
+                    id="cost"
+                    type="number"
+                    minLength={1}
+                    maxLength={6}
+                    value={formData.cost}
+                    onChange={(e) => handleInputChange('cost', e.target.value)}
+                    
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="supplier">Supplier</Label>
+                  <Input
+                    id="supplier"
+                    minLength={1}
+                    maxLength={50}
+                    value={formData.supplier}
+                    onChange={(e) => handleInputChange('supplier', e.target.value)}
+                    placeholder="Enter supplier name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="status">Status *</Label>
+                  <Select value={formData.status} onValueChange={(value: Material['status']) => handleInputChange('status', value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ordered">Ordered</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="in-use">In Use</SelectItem>
+                      <SelectItem value="depleted">Depleted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="projectId">Assign to Project</Label>
+                <Select value={formData.projectId} onValueChange={(value) => handleInputChange('projectId', value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="General inventory (no project)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">General Inventory</SelectItem>
+                    {fabricatorProjects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Adding...' : <><Plus className="h-4 w-4 mr-2" /> Add Material</>}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* ================================================================
-        EDIT MATERIAL DIALOG 
+        EDIT MATERIAL FORM (Normal Div instead of Dialog)
         ================================================================
       */}
-      <Dialog open={!!editingMaterial} onOpenChange={(open) => !open && setEditingMaterial(null)}>
-        {/* Added ID here to target for SweetAlert */}
-        <DialogContent id="edit-dialog-content" className="max-w-4xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Edit Material</DialogTitle>
-            <DialogDescription>Update the details of this material.</DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleEditSubmit} className="space-y-4">
-             {/* Reusing the form structure but binding to editFormData */}
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-name">Material Name *</Label>
-                <Input
-                  id="edit-name"
-                  value={editFormData.name}
-                  onChange={(e) => handleEditInputChange('name', e.target.value)}
-                  required
-                />
+      {editingMaterial && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
+            <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
+              <div>
+                <h2 className="text-lg font-semibold">Edit Material</h2>
+                <p className="text-sm text-muted-foreground">Update the details of this material.</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setEditingMaterial(null)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-name">Material Name *</Label>
+                  <Input
+                    minLength={1}
+                    maxLength={50}
+                    id="edit-name"
+                    value={editFormData.name}
+                    onChange={(e) => handleEditInputChange('name', e.target.value)}
+                    
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category">Category</Label>
+                  <Select value={editFormData.category} onValueChange={(value) => handleEditInputChange('category', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {materialCategories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="edit-category">Category</Label>
-                <Select value={editFormData.category} onValueChange={(value) => handleEditInputChange('category', value)}>
+                <Label htmlFor="edit-description">Description</Label>
+                <Textarea
+                  minLength={1}
+                  maxLength={100}
+                  id="edit-description"
+                  value={editFormData.description}
+                  onChange={(e) => handleEditInputChange('description', e.target.value)}
+                  rows={2}
+                />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-quantity">Quantity *</Label>
+                  <Input
+                    id="edit-quantity"
+                    type="number"
+                    minLength={1}
+                    maxLength={6}
+                    value={editFormData.quantity}
+                    onChange={(e) => handleEditInputChange('quantity', e.target.value)}
+                    
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-unit">Unit *</Label>
+                  <Select value={editFormData.unit} onValueChange={(value) => handleEditInputChange('unit', value)}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select unit" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {units.map(unit => (
+                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-cost">Cost per Unit ({peso}) *</Label>
+                  <Input
+                    id="edit-cost"
+                    type="number"
+                    minLength={1}
+                    maxLength={6}
+                    value={editFormData.cost}
+                    onChange={(e) => handleEditInputChange('cost', e.target.value)}
+                    
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-supplier">Supplier</Label>
+                  <Input
+                    minLength={1}
+                    maxLength={50}
+                    id="edit-supplier"
+                    value={editFormData.supplier}
+                    onChange={(e) => handleEditInputChange('supplier', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-status">Status *</Label>
+                  <Select value={editFormData.status} onValueChange={(value: Material['status']) => handleEditInputChange('status', value)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ordered">Ordered</SelectItem>
+                      <SelectItem value="delivered">Delivered</SelectItem>
+                      <SelectItem value="in-use">In Use</SelectItem>
+                      <SelectItem value="depleted">Depleted</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-projectId">Assign to Project</Label>
+                <Select value={editFormData.projectId} onValueChange={(value) => handleEditInputChange('projectId', value)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select category" />
+                    <SelectValue placeholder="General inventory" />
                   </SelectTrigger>
                   <SelectContent>
-                    {materialCategories.map(category => (
-                      <SelectItem key={category} value={category}>{category}</SelectItem>
+                    <SelectItem value="none">General Inventory</SelectItem>
+                    {fabricatorProjects.map(project => (
+                      <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="edit-description">Description</Label>
-              <Textarea
-                id="edit-description"
-                value={editFormData.description}
-                onChange={(e) => handleEditInputChange('description', e.target.value)}
-                rows={2}
-              />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="edit-quantity">Quantity *</Label>
-                <Input
-                  id="edit-quantity"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editFormData.quantity}
-                  onChange={(e) => handleEditInputChange('quantity', e.target.value)}
-                  required
-                />
+              <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button type="button" variant="outline" onClick={() => setEditingMaterial(null)}>
+                  Cancel
+                </Button>
+                <Button type="submit">Save Changes</Button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
 
-              <div className="space-y-2">
-                <Label htmlFor="edit-unit">Unit *</Label>
-                <Select value={editFormData.unit} onValueChange={(value) => handleEditInputChange('unit', value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select unit" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {units.map(unit => (
-                      <SelectItem key={unit} value={unit}>{unit}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-cost">Cost per Unit ({peso}) *</Label>
-                <Input
-                  id="edit-cost"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={editFormData.cost}
-                  onChange={(e) => handleEditInputChange('cost', e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="edit-supplier">Supplier</Label>
-                <Input
-                  id="edit-supplier"
-                  value={editFormData.supplier}
-                  onChange={(e) => handleEditInputChange('supplier', e.target.value)}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="edit-status">Status *</Label>
-                <Select value={editFormData.status} onValueChange={(value: Material['status']) => handleEditInputChange('status', value)}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ordered">Ordered</SelectItem>
-                    <SelectItem value="delivered">Delivered</SelectItem>
-                    <SelectItem value="in-use">In Use</SelectItem>
-                    <SelectItem value="depleted">Depleted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="edit-projectId">Assign to Project</Label>
-              <Select value={editFormData.projectId} onValueChange={(value) => handleEditInputChange('projectId', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="General inventory" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">General Inventory</SelectItem>
-                  {fabricatorProjects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setEditingMaterial(null)}>Cancel</Button>
-              <Button type="submit">Save Changes</Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {/* Header Section */}
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="flex items-center gap-2 text-2xl font-bold">
+            <Package className="h-6 w-6" />
+            Materials Management
+          </h2>
+          <p className="text-muted-foreground">Manage materials and inventory for your projects</p>
+        </div>
+        <Button onClick={() => setShowAddForm(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add Material
+        </Button>
+      </div>
 
       {/* Summary Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4">
@@ -795,7 +1050,7 @@ export function MaterialsManager({
         Totals and badges update based on the filters below.
       </p>
 
-      {/* Filters Section (Unchanged logic, just keeping structure) */}
+      {/* Filters Section */}
       <Card>
         <CardContent className="pt-6 px-5 pb-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
@@ -974,10 +1229,7 @@ export function MaterialsManager({
                     </div>
                   </div>
 
-                  {/* ================================================================
-                     ACTION BUTTONS (EDIT / DELETE) 
-                     ================================================================
-                  */}
+                  {/* Action Buttons */}
                   <div className="absolute top-4 right-4 flex gap-2">
                     <Button 
                         variant="ghost" 
