@@ -1,16 +1,31 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
-import { 
-  Package, 
-  Plus, 
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '../ui/tooltip';
+import {
+  Package,
+  Plus,
   Search,
   PhilippinePeso,
   CircleHelp,
@@ -20,7 +35,7 @@ import {
   XCircle,
   Edit,
   Trash2,
-  X
+  X,
 } from 'lucide-react';
 import { Material, User, Project } from '../../types';
 import Swal from 'sweetalert2';
@@ -37,44 +52,27 @@ interface MaterialsManagerProps {
 const peso = "\u20B1";
 type SortOption = 'recent' | 'name' | 'quantity' | 'unit-cost' | 'total-value';
 
-// --- Helper Functions ---
-const formatCompactAmount = (value: number) => {
-  if (!Number.isFinite(value)) return "0";
-  const absValue = Math.abs(value);
-  const formatScaled = (denominator: number, suffix: string) => {
-    const scaled = Math.trunc((value / denominator) * 10) / 10;
-    const formatted = scaled.toFixed(1).replace(/\.0$/, "");
-    return `${formatted} ${suffix}`;
-  };
-  if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
-  if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
-  if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
-  return Math.trunc(value).toLocaleString();
+const swalCustomClasses = {
+  container: "swal-container",
+  popup: "swal-popup !max-w-md",
+  title: "swal-title",
+  htmlContainer: "swal-content",
+  confirmButton: "swal-confirm-button",
+  cancelButton: "swal-cancel-button",
 };
 
-const formatCurrency = (value: number, compact = false) => {
-  if (!Number.isFinite(value)) return `${peso}0`;
-  if (compact && Math.abs(value) >= 1_000_000) {
-    return `${peso}${formatCompactAmount(value)}`;
-  }
-  return `${peso}${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-};
-
-export function MaterialsManager({ 
-  currentUser, 
-  projects, 
+export function MaterialsManager({
+  currentUser,
+  projects,
   materials,
   onAddMaterial,
   onUpdateMaterial,
-  onDeleteMaterial
+  onDeleteMaterial,
 }: MaterialsManagerProps) {
   const [showAddForm, setShowAddForm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [editingMaterial, setEditingMaterial] = useState<Material | null>(null);
-  
+
   const [selectedProject, setSelectedProject] = useState('');
   const [statusFilter, setStatusFilter] = useState<Material['status'] | 'all'>('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,7 +106,7 @@ export function MaterialsManager({
     category: ''
   });
 
-  const fabricatorProjects = projects.filter(p => 
+  const fabricatorProjects = projects.filter(p =>
     p.fabricatorIds.includes(currentUser.id) && p.status !== 'pending-assignment'
   );
 
@@ -140,9 +138,9 @@ export function MaterialsManager({
     const matchesSearch =
       normalizedSearch === '' ||
       m.name.toLowerCase().includes(normalizedSearch) ||
-      m.description?.toLowerCase().includes(normalizedSearch) ||
-      m.category?.toLowerCase().includes(normalizedSearch) ||
-      m.supplier?.toLowerCase().includes(normalizedSearch);
+      (m.description?.toLowerCase().includes(normalizedSearch) ?? false) ||
+      (m.category?.toLowerCase().includes(normalizedSearch) ?? false) ||
+      (m.supplier?.toLowerCase().includes(normalizedSearch) ?? false);
     const matchesLowStock = !lowStockOnly || m.quantity <= lowStockLimit;
 
     return (
@@ -184,190 +182,232 @@ export function MaterialsManager({
 
   const availableCategories = Array.from(new Set([
     ...materialCategories,
-    ...materials.map((material) => material.category).filter((category): category is string => Boolean(category)),
+    ...materials.map(m => m.category).filter((c): c is string => Boolean(c)),
   ])).sort((a, b) => a.localeCompare(b));
 
   const availableSuppliers = Array.from(new Set(
-    materials.map((material) => material.supplier).filter((supplier): supplier is string => Boolean(supplier))
+    materials.map(m => m.supplier).filter((s): s is string => Boolean(s))
   )).sort((a, b) => a.localeCompare(b));
 
-  const lowStockCount = filteredMaterials.filter((material) => material.quantity <= lowStockLimit).length;
-  const supplierCount = new Set(filteredMaterials.map((m) => m.supplier).filter(Boolean)).size;
-  const categoryCount = new Set(filteredMaterials.map((m) => m.category).filter(Boolean)).size;
+  const lowStockCount = filteredMaterials.filter(m => m.quantity <= lowStockLimit).length;
+  const supplierCount = new Set(filteredMaterials.map(m => m.supplier).filter(Boolean)).size;
+  const categoryCount = new Set(filteredMaterials.map(m => m.category).filter(Boolean)).size;
 
-  // --- HANDLERS ---
-  const handleInputChange = (field: string, value: string) => {
+  // ── Validation ─────────────────────────────────────────────────────────────
+
+  const validateMaterialForm = async (
+    data: typeof formData,
+    isEdit = false
+  ): Promise<boolean> => {
+    const prefix = isEdit ? 'edit-' : '';
+
+    if (!data.name.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Material name is required',
+        customClass: swalCustomClasses
+      });
+      document.getElementById(`${prefix}name`)?.focus();
+      return false;
+    }
+
+    if (data.name.trim().length > 50) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Too Long',
+        text: 'Material name must be 50 characters or less',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (data.description && data.description.trim().length > 100) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Too Long',
+        text: 'Description must be 100 characters or less',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (!data.quantity.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Quantity is required',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    const qty = parseFloat(data.quantity);
+    if (isNaN(qty) || qty <= 0) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Invalid Quantity',
+        text: 'Quantity must be a positive number',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+    if (qty > 500000) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Quantity Too High',
+        text: 'Maximum allowed quantity is 500,000',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (!data.unit.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Unit is required',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (!data.cost.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Cost per unit is required',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    const cost = parseFloat(data.cost);
+    if (isNaN(cost) || cost <= 0) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Invalid Cost',
+        text: 'Cost must be a positive number',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+    if (cost > 500000) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Cost Too High',
+        text: 'Maximum allowed cost per unit is ₱500,000',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    return true;
+  };
+
+  // ── Handlers ───────────────────────────────────────────────────────────────
+
+  const handleInputChange = (field: keyof typeof formData, value: string) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEditInputChange = (field: keyof typeof editFormData, value: string) => {
+    setEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!onAddMaterial) return;
 
-    // ================= VALIDATIONS =================
-    if (formData.name.length > 50 || formData.description?.length > 100) {
-      Swal.fire({
+    // Check if all inputs except assign to project have no value
+    if (!formData.name.trim() || !formData.description.trim() || !formData.quantity.trim() || !formData.unit.trim() || !formData.cost.trim() || !formData.supplier.trim() || !formData.category.trim()) {
+      await Swal.fire({
         icon: 'error',
-        title: 'Name or Description Too Long',
-        text: 'Name and description must be less than 50 and 100 characters respectively.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
+        title: 'Missing Input Fields',
+        text: 'Please fill in the required fields.',
+        customClass: swalCustomClasses
       });
       return;
     }
 
-    if (parseFloat(formData.quantity) > 500000 || parseFloat(formData.cost) > 500000) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Quantity or Cost Too High',
-        text: 'Quantity and cost per unit must be less than 500,000.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
-      });
-      return;
-    }
+    if (!(await validateMaterialForm(formData))) return;
 
-    if (!formData.name || !formData.quantity || !formData.cost || !formData.unit || !formData.supplier) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Missing Fields',
-        text: 'Please fill up the missing fields.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
-      });
-      return;
-    }
+    // if name description category quantity unit cost supplier has no value return the sweet alert
 
-    // ================= CONFIRMATION =================
     const result = await Swal.fire({
       icon: 'question',
       title: 'Confirm Submission',
-      text: 'Are you sure you want to add this material?',
+      text: `Add new material: "${formData.name.trim()}"?`,
       showCancelButton: true,
-      confirmButtonText: 'Confirm',
+      confirmButtonText: 'Yes, Add',
       cancelButtonText: 'Cancel',
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
+      customClass: swalCustomClasses
     });
 
     if (!result.isConfirmed) return;
 
-    // ================= LOADING (2 SECONDS) =================
     Swal.fire({
-      title: 'Submitting...',
-      text: 'Please wait',
+      title: 'Creating material...',
       allowOutsideClick: false,
       allowEscapeKey: false,
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      didOpen: () => {
-        Swal.showLoading();
-      }
+      didOpen: () => Swal.showLoading(),
+      customClass: swalCustomClasses
     });
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // ================= SUBMIT =================
     setIsSubmitting(true);
 
     const newMaterial: Omit<Material, 'id' | 'addedAt'> = {
-      name: formData.name,
-      description: formData.description || undefined,
-      quantity: parseFloat(formData.quantity) || 0,
-      unit: formData.unit,
-      cost: parseFloat(formData.cost) || 0,
-      supplier: formData.supplier || undefined,
+      name: formData.name.trim(),
+      description: formData.description?.trim() || undefined,
+      quantity: parseFloat(formData.quantity),
+      unit: formData.unit.trim(),
+      cost: parseFloat(formData.cost),
+      supplier: formData.supplier?.trim() || undefined,
       status: formData.status,
-      projectId:
-        formData.projectId && formData.projectId !== 'none'
-          ? formData.projectId
-          : undefined,
+      projectId: formData.projectId && formData.projectId !== 'none'
+        ? formData.projectId
+        : undefined,
       addedBy: currentUser.id,
-      category: formData.category || undefined,
+      category: formData.category?.trim() || undefined,
     };
 
-    try {
-      await onAddMaterial(newMaterial);
+    setTimeout(async () => {
+      try {
+        await onAddMaterial(newMaterial);
 
-      setFormData({
-        name: '',
-        description: '',
-        quantity: '',
-        unit: '',
-        cost: '',
-        supplier: '',
-        status: 'ordered',
-        projectId: 'none',
-        category: '',
-      });
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Material has been successfully added.',
+          timer: 1800,
+          showConfirmButton: false,
+          customClass: swalCustomClasses
+        });
 
-      setShowAddForm(false);
-
-      Swal.fire({
-        icon: 'success',
-        title: 'Added!',
-        text: 'Material added to inventory.',
-        timer: 1500,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-        showConfirmButton: false,
-      });
-    } catch (error) {
-      console.error(error);
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to add material',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+        setFormData({
+          name: '',
+          description: '',
+          quantity: '',
+          unit: '',
+          cost: '',
+          supplier: '',
+          status: 'ordered',
+          projectId: '',
+          category: ''
+        });
+        setShowAddForm(false);
+      } catch (error) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to add material. Please try again.',
+          customClass: swalCustomClasses
+        });
+      } finally {
+        setIsSubmitting(false);
+        Swal.close();
+      }
+    }, 2000);
   };
-
 
   const handleEditClick = (material: Material) => {
     setEditingMaterial(material);
@@ -384,243 +424,131 @@ export function MaterialsManager({
     });
   };
 
-  const handleEditInputChange = (field: string, value: string) => {
-    setEditFormData(prev => ({ ...prev, [field]: value }));
-  };
-
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingMaterial) return;
 
-    if (!onUpdateMaterial) {
-      Swal.fire({
+    // Check if all inputs except assign to project have no value
+    if (!editFormData.name.trim() || !editFormData.description.trim() || !editFormData.quantity.trim() || !editFormData.unit.trim() || !editFormData.cost.trim() || !editFormData.supplier.trim() || !editFormData.category.trim()) {
+      await Swal.fire({
         icon: 'error',
-        title: 'System Error',
-        text: 'Update function not connected.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+        title: 'Missing Input Fields',
+        text: 'Please fill in the required fields.',
+        customClass: swalCustomClasses
       });
       return;
     }
 
-    // ================= VALIDATIONS =================
-    if (formData.name.length > 50 || formData.description?.length > 100) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Name or Description Too Long',
-        text: 'Name and description must be less than 50 and 100 characters respectively.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
+    if (!(await validateMaterialForm(editFormData, true))) return;
 
-    if (parseFloat(formData.quantity) > 500000 || parseFloat(formData.cost) > 500000) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Quantity or Cost Too High',
-        text: 'Quantity and cost per unit must be less than 500,000.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
-
-    // ================= CONFIRM =================
     const result = await Swal.fire({
       icon: 'question',
       title: 'Save Changes?',
-      text: `Update details for "${editFormData.name}"?`,
+      text: `Update material: "${editFormData.name.trim()}"?`,
       showCancelButton: true,
       confirmButtonText: 'Yes, Save',
       cancelButtonText: 'Cancel',
-      reverseButtons: true,
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      customClass: swalCustomClasses
     });
 
     if (!result.isConfirmed) return;
 
-    // ================= LOADING (2 SECONDS) =================
     Swal.fire({
-      title: 'Updating...',
-      text: 'Please wait',
+      title: 'Updating material...',
       allowOutsideClick: false,
       allowEscapeKey: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      didOpen: () => Swal.showLoading(),
+      customClass: swalCustomClasses
     });
 
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // ================= SUBMIT =================
     const updatedData: Partial<Material> = {
-      name: editFormData.name,
-      description: editFormData.description || undefined,
-      quantity: parseFloat(editFormData.quantity) || 0,
-      unit: editFormData.unit,
-      cost: parseFloat(editFormData.cost) || 0,
-      supplier: editFormData.supplier || undefined,
+      name: editFormData.name.trim(),
+      description: editFormData.description?.trim() || undefined,
+      quantity: parseFloat(editFormData.quantity),
+      unit: editFormData.unit.trim(),
+      cost: parseFloat(editFormData.cost),
+      supplier: editFormData.supplier?.trim() || undefined,
       status: editFormData.status,
-      projectId:
-        editFormData.projectId && editFormData.projectId !== 'none'
-          ? editFormData.projectId
-          : undefined,
-      category: editFormData.category || undefined,
+      projectId: editFormData.projectId && editFormData.projectId !== 'none'
+        ? editFormData.projectId
+        : undefined,
+      category: editFormData.category?.trim() || undefined,
     };
 
-    try {
-      await onUpdateMaterial(editingMaterial.id, updatedData);
+    setTimeout(async () => {
+      try {
+        await onUpdateMaterial(editingMaterial.id, updatedData);
 
-      setEditingMaterial(null);
+        await Swal.fire({
+          icon: 'success',
+          title: 'Success!',
+          text: 'Material has been successfully updated.',
+          timer: 1800,
+          showConfirmButton: false,
+          customClass: swalCustomClasses
+        });
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Updated!',
-        text: 'Material details have been saved.',
-        timer: 1500,
-        showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to update material',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-    }
+        setEditingMaterial(null);
+      } catch (error) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to update material. Please try again.',
+          customClass: swalCustomClasses
+        });
+      } finally {
+        Swal.close();
+      }
+    }, 2000);
   };
 
-
   const handleDeleteClick = async (id: string) => {
-    if (!onDeleteMaterial) return;
-
-    // ================= CONFIRMATION =================
     const result = await Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonText: 'Yes, delete it!',
+      confirmButtonText: 'Yes, Delete',
       cancelButtonText: 'Cancel',
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      confirmButtonColor: '#ef4444',
+      customClass: swalCustomClasses
     });
 
     if (!result.isConfirmed) return;
 
-    // ================= LOADING (2 SECONDS) =================
     Swal.fire({
       title: 'Deleting...',
-      text: 'Please wait',
       allowOutsideClick: false,
       allowEscapeKey: false,
       didOpen: () => Swal.showLoading(),
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      customClass: swalCustomClasses
     });
 
-    // Wait 2 seconds before actual delete
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    setTimeout(async () => {
+      try {
+        await onDeleteMaterial(id);
 
-    // ================= DELETE =================
-    try {
-      await onDeleteMaterial(id);
-
-      Swal.fire({
-        title: 'Deleted!',
-        text: 'The material has been removed.',
-        icon: 'success',
-        timer: 1500,
-        showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-    } catch (error) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to delete material',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-    }
+        await Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Material has been successfully removed.',
+          timer: 1800,
+          showConfirmButton: false,
+          customClass: swalCustomClasses
+        });
+      } catch (error) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: 'Failed to delete material.',
+          customClass: swalCustomClasses
+        });
+      } finally {
+        Swal.close();
+      }
+    }, 2000);
   };
 
-
-  // --- UI HELPERS ---
   const getStatusIcon = (status: Material['status']) => {
     switch (status) {
       case 'ordered': return <Truck className="h-4 w-4" />;
@@ -651,19 +579,43 @@ export function MaterialsManager({
     return filteredMaterials.reduce((total, m) => total + (m.cost * m.quantity), 0);
   };
 
+  const formatCompactAmount = (value: number) => {
+    if (!Number.isFinite(value)) return "0";
+    const absValue = Math.abs(value);
+    const formatScaled = (denominator: number, suffix: string) => {
+      const scaled = Math.trunc((value / denominator) * 10) / 10;
+      const formatted = scaled.toFixed(1).replace(/\.0$/, "");
+      return `${formatted} ${suffix}`;
+    };
+    if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
+    if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
+    if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
+    return Math.trunc(value).toLocaleString();
+  };
+
+  const formatCurrency = (value: number, compact = false) => {
+    if (!Number.isFinite(value)) return `${peso}0`;
+    if (compact && Math.abs(value) >= 1_000_000) {
+      return `${peso}${formatCompactAmount(value)}`;
+    }
+    return `${peso}${value.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`;
+  };
+
   return (
     <div className="space-y-6">
-      {/* ================================================================
-        ADD MATERIAL FORM (Normal Div instead of Dialog)
-        ================================================================
-      */}
+      {/* ADD FORM */}
       {showAddForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-semibold">Add New Material</h2>
-                <p className="text-sm text-muted-foreground">Fill out the form to add materials to inventory.</p>
+                <p className="text-sm text-muted-foreground">
+                  Fill out the form to add materials to inventory.
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -674,31 +626,32 @@ export function MaterialsManager({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-4 p-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="name">Material Name *</Label>
                   <Input
                     id="name"
-                    minLength={1}
-                    maxLength={50}
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
                     placeholder="Enter material name"
-                    
+                    maxLength={50}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="category">Category</Label>
-                  <Select value={formData.category} onValueChange={(value) => handleInputChange('category', value)}>
+                  <Select
+                    value={formData.category}
+                    onValueChange={(v) => handleInputChange('category', v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {materialCategories.map(category => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      {materialCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -709,11 +662,10 @@ export function MaterialsManager({
                 <Label htmlFor="description">Description</Label>
                 <Textarea
                   id="description"
-                  minLength={1}
-                  maxLength={100}
                   value={formData.description}
                   onChange={(e) => handleInputChange('description', e.target.value)}
                   placeholder="Optional material description"
+                  maxLength={100}
                   rows={2}
                 />
               </div>
@@ -724,23 +676,26 @@ export function MaterialsManager({
                   <Input
                     id="quantity"
                     type="number"
-                    minLength={1}
-                    maxLength={6}
                     value={formData.quantity}
                     onChange={(e) => handleInputChange('quantity', e.target.value)}
-                    
+                    placeholder="0"
+                    min="0"
+                    step="any"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="unit">Unit *</Label>
-                  <Select value={formData.unit} onValueChange={(value) => handleInputChange('unit', value)}>
+                  <Select
+                    value={formData.unit}
+                    onValueChange={(v) => handleInputChange('unit', v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
-                      {units.map(unit => (
-                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      {units.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -751,11 +706,11 @@ export function MaterialsManager({
                   <Input
                     id="cost"
                     type="number"
-                    minLength={1}
-                    maxLength={6}
                     value={formData.cost}
                     onChange={(e) => handleInputChange('cost', e.target.value)}
-                    
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
                   />
                 </div>
               </div>
@@ -765,18 +720,22 @@ export function MaterialsManager({
                   <Label htmlFor="supplier">Supplier</Label>
                   <Input
                     id="supplier"
-                    minLength={1}
-                    maxLength={50}
                     value={formData.supplier}
                     onChange={(e) => handleInputChange('supplier', e.target.value)}
                     placeholder="Enter supplier name"
+                    maxLength={50}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="status">Status *</Label>
-                  <Select value={formData.status} onValueChange={(value: Material['status']) => handleInputChange('status', value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(v: Material['status']) => handleInputChange('status', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ordered">Ordered</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
@@ -789,25 +748,38 @@ export function MaterialsManager({
 
               <div className="space-y-2">
                 <Label htmlFor="projectId">Assign to Project</Label>
-                <Select value={formData.projectId} onValueChange={(value) => handleInputChange('projectId', value)}>
+                <Select
+                  value={formData.projectId}
+                  onValueChange={(v) => handleInputChange('projectId', v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="General inventory (no project)" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">General Inventory</SelectItem>
-                    {fabricatorProjects.map(project => (
-                      <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                    {fabricatorProjects.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddForm(false)}
+                  disabled={isSubmitting}
+                >
                   Cancel
                 </Button>
                 <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? 'Adding...' : <><Plus className="h-4 w-4 mr-2" /> Add Material</>}
+                  {isSubmitting ? 'Adding...' : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Material
+                    </>
+                  )}
                 </Button>
               </div>
             </form>
@@ -815,17 +787,16 @@ export function MaterialsManager({
         </div>
       )}
 
-      {/* ================================================================
-        EDIT MATERIAL FORM (Normal Div instead of Dialog)
-        ================================================================
-      */}
+      {/* EDIT FORM */}
       {editingMaterial && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-background rounded-lg shadow-lg w-full max-w-4xl max-h-[85vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-semibold">Edit Material</h2>
-                <p className="text-sm text-muted-foreground">Update the details of this material.</p>
+                <p className="text-sm text-muted-foreground">
+                  Update the details of this material.
+                </p>
               </div>
               <Button
                 variant="ghost"
@@ -835,30 +806,31 @@ export function MaterialsManager({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="edit-name">Material Name *</Label>
                   <Input
-                    minLength={1}
-                    maxLength={50}
                     id="edit-name"
                     value={editFormData.name}
-                    onChange={(e) => handleEditInputChange('name', e.target.value)}
-                    
+                    onChange={e => handleEditInputChange('name', e.target.value)}
+                    maxLength={50}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-category">Category</Label>
-                  <Select value={editFormData.category} onValueChange={(value) => handleEditInputChange('category', value)}>
+                  <Select
+                    value={editFormData.category}
+                    onValueChange={v => handleEditInputChange('category', v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {materialCategories.map(category => (
-                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      {materialCategories.map(cat => (
+                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -868,11 +840,10 @@ export function MaterialsManager({
               <div className="space-y-2">
                 <Label htmlFor="edit-description">Description</Label>
                 <Textarea
-                  minLength={1}
-                  maxLength={100}
                   id="edit-description"
                   value={editFormData.description}
-                  onChange={(e) => handleEditInputChange('description', e.target.value)}
+                  onChange={e => handleEditInputChange('description', e.target.value)}
+                  maxLength={100}
                   rows={2}
                 />
               </div>
@@ -883,23 +854,25 @@ export function MaterialsManager({
                   <Input
                     id="edit-quantity"
                     type="number"
-                    minLength={1}
-                    maxLength={6}
                     value={editFormData.quantity}
-                    onChange={(e) => handleEditInputChange('quantity', e.target.value)}
-                    
+                    onChange={e => handleEditInputChange('quantity', e.target.value)}
+                    min="0"
+                    step="any"
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-unit">Unit *</Label>
-                  <Select value={editFormData.unit} onValueChange={(value) => handleEditInputChange('unit', value)}>
+                  <Select
+                    value={editFormData.unit}
+                    onValueChange={v => handleEditInputChange('unit', v)}
+                  >
                     <SelectTrigger>
                       <SelectValue placeholder="Select unit" />
                     </SelectTrigger>
                     <SelectContent>
-                      {units.map(unit => (
-                        <SelectItem key={unit} value={unit}>{unit}</SelectItem>
+                      {units.map(u => (
+                        <SelectItem key={u} value={u}>{u}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -910,11 +883,10 @@ export function MaterialsManager({
                   <Input
                     id="edit-cost"
                     type="number"
-                    minLength={1}
-                    maxLength={6}
                     value={editFormData.cost}
-                    onChange={(e) => handleEditInputChange('cost', e.target.value)}
-                    
+                    onChange={e => handleEditInputChange('cost', e.target.value)}
+                    min="0"
+                    step="0.01"
                   />
                 </div>
               </div>
@@ -923,18 +895,22 @@ export function MaterialsManager({
                 <div className="space-y-2">
                   <Label htmlFor="edit-supplier">Supplier</Label>
                   <Input
-                    minLength={1}
-                    maxLength={50}
                     id="edit-supplier"
                     value={editFormData.supplier}
-                    onChange={(e) => handleEditInputChange('supplier', e.target.value)}
+                    onChange={e => handleEditInputChange('supplier', e.target.value)}
+                    maxLength={50}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="edit-status">Status *</Label>
-                  <Select value={editFormData.status} onValueChange={(value: Material['status']) => handleEditInputChange('status', value)}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                  <Select
+                    value={editFormData.status}
+                    onValueChange={(v: Material['status']) => handleEditInputChange('status', v)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="ordered">Ordered</SelectItem>
                       <SelectItem value="delivered">Delivered</SelectItem>
@@ -947,38 +923,49 @@ export function MaterialsManager({
 
               <div className="space-y-2">
                 <Label htmlFor="edit-projectId">Assign to Project</Label>
-                <Select value={editFormData.projectId} onValueChange={(value) => handleEditInputChange('projectId', value)}>
+                <Select
+                  value={editFormData.projectId}
+                  onValueChange={v => handleEditInputChange('projectId', v)}
+                >
                   <SelectTrigger>
                     <SelectValue placeholder="General inventory" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">General Inventory</SelectItem>
-                    {fabricatorProjects.map(project => (
-                      <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                    {fabricatorProjects.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
               <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setEditingMaterial(null)}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingMaterial(null)}
+                >
                   Cancel
                 </Button>
-                <Button type="submit">Save Changes</Button>
+                <Button type="submit">
+                  Save Changes
+                </Button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* Header Section */}
+      {/* MAIN CONTENT */}
       <div className="flex justify-between items-center">
         <div>
           <h2 className="flex items-center gap-2 text-2xl font-bold">
             <Package className="h-6 w-6" />
             Materials Management
           </h2>
-          <p className="text-muted-foreground">Manage materials and inventory for your projects</p>
+          <p className="text-muted-foreground">
+            Manage materials and inventory for your projects
+          </p>
         </div>
         <Button onClick={() => setShowAddForm(true)}>
           <Plus className="h-4 w-4 mr-2" />
@@ -986,9 +973,8 @@ export function MaterialsManager({
         </Button>
       </div>
 
-      {/* Summary Stats Cards */}
+      {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
-        {/* Total Items */}
         <Card>
           <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
@@ -998,8 +984,7 @@ export function MaterialsManager({
             <p className="text-2xl mb-6">{filteredMaterials.length}</p>
           </CardContent>
         </Card>
-        
-        {/* Total Value */}
+
         <Card>
           <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
@@ -1011,50 +996,48 @@ export function MaterialsManager({
                     <CircleHelp className="h-3.5 w-3.5" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>Sum of unit cost times quantity for the filtered items.</TooltipContent>
+                <TooltipContent>Sum of unit cost × quantity for filtered items</TooltipContent>
               </Tooltip>
             </div>
             <p className="text-2xl mb-6">{formatCurrency(getTotalValue(), true)}</p>
           </CardContent>
         </Card>
 
-        {/* In Use */}
         <Card>
           <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
               <CheckCircle className="h-4 w-4 text-green-600" />
               <span className="text-sm">In Use</span>
             </div>
-            <p className="text-2xl mb-6">{filteredMaterials.filter(m => m.status === 'in-use').length}</p>
+            <p className="text-2xl mb-6">
+              {filteredMaterials.filter(m => m.status === 'in-use').length}
+            </p>
           </CardContent>
         </Card>
 
-        {/* Depleted */}
         <Card>
           <CardContent className="pt-6 pl-5">
             <div className="flex items-center gap-2">
               <XCircle className="h-4 w-4 text-red-600" />
               <span className="text-sm">Depleted</span>
             </div>
-            <p className="text-2xl mb-6">{filteredMaterials.filter(m => m.status === 'depleted').length}</p>
+            <p className="text-2xl mb-6">
+              {filteredMaterials.filter(m => m.status === 'depleted').length}
+            </p>
           </CardContent>
         </Card>
       </div>
 
       <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-        <Badge variant="secondary">Low Stock : {lowStockCount}</Badge>
+        <Badge variant="secondary">Low Stock: {lowStockCount}</Badge>
         <Badge variant="outline">Suppliers: {supplierCount}</Badge>
         <Badge variant="outline">Categories: {categoryCount}</Badge>
       </div>
-      <p className="text-xs text-muted-foreground">
-        Totals and badges update based on the filters below.
-      </p>
 
-      {/* Filters Section */}
+      {/* Filters */}
       <Card>
         <CardContent className="pt-6 px-5 pb-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
-             {/* Search */}
             <div className="space-y-2">
               <Label>Search Materials</Label>
               <div className="relative">
@@ -1062,13 +1045,12 @@ export function MaterialsManager({
                 <Input
                   placeholder="Search..."
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={e => setSearchTerm(e.target.value)}
                   className="pl-8"
                 />
               </div>
             </div>
 
-            {/* Project Filter */}
             <div className="space-y-2">
               <Label>Project Filter</Label>
               <Select value={selectedProject} onValueChange={setSelectedProject}>
@@ -1076,17 +1058,16 @@ export function MaterialsManager({
                 <SelectContent>
                   <SelectItem value="all">All Projects</SelectItem>
                   <SelectItem value="general">General Inventory</SelectItem>
-                  {fabricatorProjects.map(project => (
-                    <SelectItem key={project.id} value={project.id}>{project.name}</SelectItem>
+                  {fabricatorProjects.map(p => (
+                    <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Status Filter */}
             <div className="space-y-2">
               <Label>Status Filter</Label>
-              <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+              <Select value={statusFilter} onValueChange={v => setStatusFilter(v as any)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
@@ -1098,7 +1079,6 @@ export function MaterialsManager({
               </Select>
             </div>
 
-            {/* Category Filter */}
             <div className="space-y-2">
               <Label>Category Filter</Label>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
@@ -1106,12 +1086,13 @@ export function MaterialsManager({
                 <SelectContent>
                   <SelectItem value="all">All Categories</SelectItem>
                   <SelectItem value="uncategorized">Uncategorized</SelectItem>
-                  {availableCategories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {availableCategories.map(c => (
+                    <SelectItem key={c} value={c}>{c}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Supplier Filter */}
             <div className="space-y-2">
               <Label>Supplier Filter</Label>
               <Select value={supplierFilter} onValueChange={setSupplierFilter}>
@@ -1119,15 +1100,16 @@ export function MaterialsManager({
                 <SelectContent>
                   <SelectItem value="all">All Suppliers</SelectItem>
                   <SelectItem value="unspecified">Unspecified</SelectItem>
-                  {availableSuppliers.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {availableSuppliers.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
-            {/* Sort */}
             <div className="space-y-2">
               <Label>Sort By</Label>
-              <Select value={sortBy} onValueChange={(value: any) => setSortBy(value)}>
+              <Select value={sortBy} onValueChange={v => setSortBy(v as SortOption)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="recent">Recently Added</SelectItem>
@@ -1141,20 +1123,24 @@ export function MaterialsManager({
           </div>
 
           <div className="mt-4 flex flex-wrap gap-4 items-end">
-             <div className="space-y-2 w-full md:w-auto">
+            <div className="space-y-2 w-full md:w-auto">
               <Label htmlFor="lowStockThreshold">Low Stock Threshold</Label>
               <Input
                 id="lowStockThreshold"
                 type="number"
                 min="0"
                 value={lowStockThreshold}
-                onChange={(e) => setLowStockThreshold(Number(e.target.value) || 0)}
+                onChange={e => setLowStockThreshold(Number(e.target.value) || 0)}
                 className="w-full md:w-[150px]"
               />
             </div>
 
             <div className="flex items-center gap-2 pb-2">
-              <Switch id="low-stock-only" checked={lowStockOnly} onCheckedChange={setLowStockOnly} />
+              <Switch
+                id="low-stock-only"
+                checked={lowStockOnly}
+                onCheckedChange={setLowStockOnly}
+              />
               <Label htmlFor="low-stock-only">Low Stock Only</Label>
             </div>
 
@@ -1186,7 +1172,7 @@ export function MaterialsManager({
             <Badge variant="outline">{filteredMaterials.length} items</Badge>
           </CardTitle>
         </CardHeader>
-        <CardContent className='px-5 mb-5'>
+        <CardContent className="px-5 mb-5">
           {filteredMaterials.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
@@ -1197,93 +1183,102 @@ export function MaterialsManager({
             </div>
           ) : (
             <div className="space-y-4">
-              {sortedMaterials.map((material) => {
+              {sortedMaterials.map(material => {
                 const isLowStock = material.quantity <= lowStockLimit;
+
                 return (
-                <div
-                  key={material.id}
-                  className={`border rounded-lg p-4 relative ${isLowStock ? 'border-orange-200 bg-orange-50/40' : ''}`}
-                >
-                  <div className="flex justify-between items-start mb-3 pr-20">
-                    <div className="flex items-center gap-3">
-                      {getStatusIcon(material.status)}
-                      <div>
-                        <h4 className="font-medium">{material.name}</h4>
-                        {material.description && (
-                          <p className="text-sm text-muted-foreground">{material.description}</p>
+                  <div
+                    key={material.id}
+                    className={`border rounded-lg p-4 relative ${
+                      isLowStock ? 'border-orange-200 bg-orange-50/40' : ''
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-3 pr-20">
+                      <div className="flex items-center gap-3">
+                        {getStatusIcon(material.status)}
+                        <div>
+                          <h4 className="font-medium">{material.name}</h4>
+                          {material.description && (
+                            <p className="text-sm text-muted-foreground">
+                              {material.description}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getStatusColor(material.status)}>
+                          {material.status}
+                        </Badge>
+                        {material.category && (
+                          <Badge variant="outline">{material.category}</Badge>
+                        )}
+                        {isLowStock && (
+                          <Badge variant="outline" className="border-orange-200 text-orange-700">
+                            Low Stock
+                          </Badge>
                         )}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Badge variant={getStatusColor(material.status)}>
-                        {material.status}
-                      </Badge>
-                      {material.category && (
-                        <Badge variant="outline">{material.category}</Badge>
-                      )}
-                      {isLowStock && (
-                        <Badge variant="outline" className="border-orange-200 text-orange-700">
-                          Low Stock
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Action Buttons */}
-                  <div className="absolute top-4 right-4 flex gap-2">
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 hover:text-blue-600 hover:bg-blue-50"
                         onClick={() => handleEditClick(material)}
                         title="Edit Material"
-                    >
+                      >
                         <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 hover:text-red-600 hover:bg-red-50"
                         onClick={() => handleDeleteClick(material.id)}
                         title="Delete Material"
-                    >
+                      >
                         <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                      </Button>
+                    </div>
 
-                  <div className="grid gap-4 md:grid-cols-4 text-sm mt-4">
-                    <div>
-                      <p className="text-muted-foreground">Quantity</p>
-                      <p>{material.quantity} {material.unit}</p>
+                    <div className="grid gap-4 md:grid-cols-4 text-sm mt-4">
+                      <div>
+                        <p className="text-muted-foreground">Quantity</p>
+                        <p>
+                          {material.quantity} {material.unit}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Unit Cost</p>
+                        <p>
+                          <span className="text-lg">{formatCurrency(material.cost)}</span>
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Total Value</p>
+                        <p>{formatCurrency(material.cost * material.quantity)}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground">Project</p>
+                        <p>{getProjectName(material.projectId)}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-muted-foreground">Unit Cost</p>
-                      <p><span className="text-lg">{formatCurrency(material.cost)}</span></p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Total Value</p>
-                      <p>{formatCurrency(material.cost * material.quantity)}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground">Project</p>
-                      <p>{getProjectName(material.projectId)}</p>
+
+                    {material.supplier && (
+                      <div className="mt-2">
+                        <p className="text-sm text-muted-foreground">
+                          Supplier: {material.supplier}
+                        </p>
+                      </div>
+                    )}
+
+                    <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
+                      Added on {new Date(material.addedAt).toLocaleDateString()}
                     </div>
                   </div>
-
-                  {material.supplier && (
-                    <div className="mt-2">
-                      <p className="text-sm text-muted-foreground">
-                        Supplier: {material.supplier}
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="text-xs text-muted-foreground mt-2 border-t pt-2">
-                    Added on {new Date(material.addedAt).toLocaleDateString()}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
             </div>
           )}
         </CardContent>

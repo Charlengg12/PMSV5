@@ -1,10 +1,21 @@
 import { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../ui/select';
 import { Badge } from '../ui/badge';
 import {
   Calendar,
@@ -14,7 +25,7 @@ import {
   TrendingUp,
   Package,
   Trash2,
-  X
+  X,
 } from 'lucide-react';
 import { ProjectFileUpload } from '../projects/ProjectFileUpload';
 import {
@@ -37,6 +48,18 @@ interface WorkLogManagerProps {
   onUpdateProject?: (project: Project) => void;
 }
 
+const swalCustomClasses = {
+  container: "swal-container",
+  popup: "swal-popup !max-w-md",
+  title: "swal-title",
+  htmlContainer: "swal-content",
+  confirmButton: "swal-confirm-button",
+  cancelButton: "swal-cancel-button",
+  icon: "swal-icon"
+};
+
+const minimumDelay = () => new Promise(resolve => setTimeout(resolve, 2000));
+
 export function WorkLogManager({
   currentUser,
   projects,
@@ -51,19 +74,21 @@ export function WorkLogManager({
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingLog, setEditingLog] = useState<WorkLogEntry | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [formData, setFormData] = useState({
+    date: new Date().toISOString().split('T')[0],
+    description: '',
+    progressPercentage: '',
+    hoursWorked: '',
+    materialsUsed: [] as string[] // array of material IDs (changed semantic)
+  });
+
   const [editFormData, setEditFormData] = useState({
     date: '',
     description: '',
     progressPercentage: '',
     hoursWorked: '',
-    materialsUsed: [] as string[]
-  });
-  const [formData, setFormData] = useState({
-    date: new Date().toISOString().split('T')[0],
-    description: '',
-    progressPercentage: '',
-    hoursWorked: '0',
-    materialsUsed: [] as string[]
+    materialsUsed: [] as string[] // array of material IDs
   });
 
   const fabricatorProjects = projects.filter(p =>
@@ -78,43 +103,149 @@ export function WorkLogManager({
     ? materials.filter(m => m.projectId === selectedProject || !m.projectId)
     : materials;
 
-  const clampNumber = (value: string, min: number, max?: number) => {
-    const parsed = Number.parseFloat(value);
-    if (isNaN(parsed) || !Number.isFinite(parsed)) return null;
-    if (typeof max === 'number') {
-      return Math.min(max, Math.max(min, parsed));
+  // ── VALIDATION FUNCTION ───────────────────────────────────────────────
+  const validateWorkLog = async (
+    data: typeof formData | typeof editFormData,
+    isEdit = false
+  ): Promise<boolean> => {
+    const prefix = isEdit ? 'edit-' : '';
+
+    if (!data.date) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Date is required',
+        customClass: swalCustomClasses
+      });
+      document.getElementById(`${prefix}date`)?.focus();
+      return false;
     }
-    return Math.max(min, parsed);
+
+    if (!data.description.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Work description is required',
+        customClass: swalCustomClasses
+      });
+      document.getElementById(`${prefix}description`)?.focus();
+      return false;
+    }
+
+    if (!data.progressPercentage.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Progress percentage is required',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (!data.hoursWorked.trim()) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Required Field',
+        text: 'Hours worked is required',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    const progress = Number(data.progressPercentage);
+    const hours = Number(data.hoursWorked);
+
+    if (isNaN(progress) || progress < 0 || progress > 100) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Invalid Progress',
+        text: 'Progress must be a number between 0 and 100',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (isNaN(hours) || hours < 0 || hours > 500) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Invalid Hours',
+        text: 'Hours worked must be between 0 and 500',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    if (data.description.trim().length > 100) {
+      await Swal.fire({
+        icon: 'error',
+        title: 'Too Long',
+        text: 'Description must be 100 characters or less',
+        customClass: swalCustomClasses
+      });
+      return false;
+    }
+
+    return true;
   };
 
-  const buildMaterialOptions = (projectId: string, selected: string[]) => {
-    const base = materials
-      .filter(m => m.projectId === projectId || !m.projectId)
-      .map(material => ({ id: material.id, name: material.name }));
-    const existingNames = new Set(base.map((item) => item.name));
-    let customIndex = 0;
+  // ── HELPERS ────────────────────────────────────────────────────────────
+  const getProjectName = (projectId: string) =>
+    projects.find(p => p.id === projectId)?.name || 'Unknown Project';
 
-    selected.forEach((name) => {
-      if (!existingNames.has(name)) {
-        base.push({ id: `custom-${customIndex}`, name });
-        existingNames.add(name);
-        customIndex += 1;
-      }
-    });
+  const getProjectProgress = (projectId: string) =>
+    projects.find(p => p.id === projectId)?.progress || 0;
 
-    return base;
+  const hasDocumentation = () => {
+    const proj = projects.find(p => p.id === selectedProject);
+    if (!proj) return false;
+    const hasFiles = Array.isArray(proj.attachments) && proj.attachments.length > 0;
+    const hasLink = !!proj.documentationUrl?.trim();
+    return hasFiles || hasLink;
   };
 
-  const handleInputChange = (field: string, value: string | string[]) => {
+  const canSubmitForReview = () => {
+    const proj = projects.find(p => p.id === selectedProject);
+    if (!proj) return false;
+
+    const validStatuses = ['1_Assigned_to_FAB', 'in-progress', 'planning'];
+    const invalidStatuses = [
+      '2_Ready_for_Supervisor_Review',
+      '3_Ready_for_Admin_Review',
+      '4_Ready_for_Client_Signoff',
+      'completed',
+      'on-hold'
+    ];
+
+    return (
+      validStatuses.includes(proj.status) &&
+      !invalidStatuses.includes(proj.status) &&
+      hasDocumentation() &&
+      proj.progress >= 100
+    );
+  };
+
+  const canManageDocumentation = () => {
+    const proj = projects.find(p => p.id === selectedProject);
+    if (!proj) return false;
+
+    if (['admin', 'supervisor'].includes(currentUser.role)) return true;
+    if (currentUser.role === 'fabricator') {
+      return proj.fabricatorIds.includes(currentUser.id);
+    }
+    return false;
+  };
+
+  // ── HANDLERS ───────────────────────────────────────────────────────────
+  const handleInputChange = (field: keyof typeof formData, value: string | string[]) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleMaterialToggle = (materialName: string) => {
+  const handleMaterialToggle = (materialId: string) => {
     setFormData(prev => ({
       ...prev,
-      materialsUsed: prev.materialsUsed.includes(materialName)
-        ? prev.materialsUsed.filter(m => m !== materialName)
-        : [...prev.materialsUsed, materialName]
+      materialsUsed: prev.materialsUsed.includes(materialId)
+        ? prev.materialsUsed.filter(id => id !== materialId)
+        : [...prev.materialsUsed, materialId]
     }));
   };
 
@@ -122,173 +253,85 @@ export function WorkLogManager({
     e.preventDefault();
 
     if (!selectedProject) {
-      Swal.fire({
+      await Swal.fire({
         icon: 'warning',
         title: 'Project Required',
         text: 'Please select a project first',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+        customClass: swalCustomClasses
       });
       return;
     }
 
-    const progressValue = clampNumber(formData.progressPercentage, 0, 100);
-    const hoursValue = clampNumber(formData.hoursWorked, 0);
-    const { date, description } = formData;
+    if (!(await validateWorkLog(formData))) return;
 
-    // 1. Check for basic missing fields (Materials is optional as per UI label)
-    if (!date || !description.trim() || formData.progressPercentage === '' || formData.hoursWorked === '') {
-      Swal.fire({
-        icon: 'error',
-        title: 'Missing Fields',
-        text: 'Please fill up all required fields.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
-
-    // 2. Validate Numeric formats
-    if (progressValue === null || hoursValue === null) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Invalid Input',
-        text: 'Please enter valid numbers for progress and hours.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
-
-    // 3. Description Length
-    if (description.length > 100) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Description Too Long',
-        text: 'Description must be less than 100 characters.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
-
-    // 4. Hours limit check
-    if (hoursValue > 500) {
-      Swal.fire({
-      icon: 'error',
-        title: 'Hours Worked Too High',
-        text: 'Hours Worked cannot be greater than 500.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
-      });
-      return;
-    }
-
-    const confirmResult = await Swal.fire({
-      title: 'Confirm Add Work Log',
-      text: `Are you sure you want to add this work log for project "${getProjectName(selectedProject)}"?`,
+    const confirm = await Swal.fire({
       icon: 'question',
+      title: 'Confirm Add Work Log',
+      text: `Add work log for "${getProjectName(selectedProject)}"?`,
       showCancelButton: true,
-      confirmButtonText: 'Confirm',
+      confirmButtonText: 'Yes, Add',
       cancelButtonText: 'Cancel',
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      customClass: swalCustomClasses
     });
 
-    if (!confirmResult.isConfirmed) return;
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({
+      title: 'Creating work log...',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading(),
+      customClass: swalCustomClasses
+    });
 
     setIsSubmitting(true);
-    Swal.fire({
-      title: 'Adding Work Log...',
-      allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
-    });
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      onAddWorkLog({
+      await minimumDelay();
+
+      const progress = Number(formData.progressPercentage);
+      const hours = Number(formData.hoursWorked);
+
+      await onAddWorkLog({
         projectId: selectedProject,
         fabricatorId: currentUser.id,
         date: formData.date,
-        description: formData.description,
-        progressPercentage: progressValue,
-        hoursWorked: hoursValue,
+        description: formData.description.trim(),
+        progressPercentage: progress,
+        hoursWorked: hours,
         materials: formData.materialsUsed.length > 0 ? formData.materialsUsed : undefined
+      });
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Success!',
+        text: 'Work log has been added successfully.',
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: swalCustomClasses
       });
 
       setFormData({
         date: new Date().toISOString().split('T')[0],
         description: '',
         progressPercentage: '',
-        hoursWorked: '0',
+        hoursWorked: '',
         materialsUsed: []
       });
-      setShowAddForm(false);
 
-      Swal.fire({
-        icon: 'success',
-        title: 'Added!',
-        text: 'Work log has been added successfully.',
-        timer: 1500,
-        showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
-      });
+      setShowAddForm(false);
     } catch (error) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to add work log' });
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to add work log',
+        customClass: swalCustomClasses
+      });
     } finally {
       setIsSubmitting(false);
+      Swal.close();
     }
   };
-
 
   const openEditLog = (log: WorkLogEntry) => {
     setEditingLog(log);
@@ -301,16 +344,16 @@ export function WorkLogManager({
     });
   };
 
-  const handleEditInputChange = (field: string, value: string | string[]) => {
+  const handleEditInputChange = (field: keyof typeof editFormData, value: string | string[]) => {
     setEditFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleEditMaterialToggle = (materialName: string) => {
+  const handleEditMaterialToggle = (materialId: string) => {
     setEditFormData(prev => ({
       ...prev,
-      materialsUsed: prev.materialsUsed.includes(materialName)
-        ? prev.materialsUsed.filter(m => m !== materialName)
-        : [...prev.materialsUsed, materialName]
+      materialsUsed: prev.materialsUsed.includes(materialId)
+        ? prev.materialsUsed.filter(id => id !== materialId)
+        : [...prev.materialsUsed, materialId]
     }));
   };
 
@@ -318,182 +361,76 @@ export function WorkLogManager({
     e.preventDefault();
     if (!editingLog || !onUpdateWorkLog) return;
 
-    const progressValue = clampNumber(editFormData.progressPercentage, 0, 100);
-    const hoursValue = clampNumber(editFormData.hoursWorked, 0);
-    const { date, description } = editFormData;
+    if (!(await validateWorkLog(editFormData, true))) return;
 
-    // 1. Basic required fields
-    if (!date || !description.trim() || editFormData.progressPercentage === '' || editFormData.hoursWorked === '') {
-      Swal.fire({
-      icon: 'error',
-        title: 'Missing Fields',
-        text: 'Please fill up all required fields.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
-
-    // if progress value is > 100 return error
-
-    if (progressValue > 100) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Invalid Progress Value',
-        text: 'Progress value must be between 0 and 100.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
-      });
-      return;
-    }
-
-    // 2. Format validation
-    if (progressValue === null || hoursValue === null) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Invalid Input',
-        text: 'Please enter valid numeric values.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
-      });
-      return;
-    }
-
-    // 3. Business Rules
-    if (description.length > 100) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Description Too Long',
-        text: 'Description must be less than 100 characters.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
-      });
-      return;
-    }
-
-    if (hoursValue > 500) {
-      Swal.fire({
-        icon: 'error',
-        title: 'Hours Worked Too High',
-        text: 'Hours Worked cannot be greater than 500.',
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
-      });
-      return;
-    }
-
-    const result = await Swal.fire({
+    const confirm = await Swal.fire({
+      icon: 'question',
       title: 'Save Changes?',
       text: 'Update this work log entry?',
-      icon: 'question',
       showCancelButton: true,
-      confirmButtonText: 'Update',
+      confirmButtonText: 'Yes, Update',
       cancelButtonText: 'Cancel',
-      confirmButtonColor: '#0f172a',
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      customClass: swalCustomClasses
     });
 
-    if (!result.isConfirmed) return;
+    if (!confirm.isConfirmed) return;
 
     Swal.fire({
-      title: 'Updating...',
+      title: 'Updating work log...',
       allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading(),
+      customClass: swalCustomClasses
     });
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      onUpdateWorkLog(editingLog.id, {
+      await minimumDelay();
+
+      const progress = Number(editFormData.progressPercentage);
+      const hours = Number(editFormData.hoursWorked);
+
+      await onUpdateWorkLog(editingLog.id, {
         date: editFormData.date,
-        description: editFormData.description,
-        progressPercentage: progressValue,
-        hoursWorked: hoursValue,
-        materials: editFormData.materialsUsed
+        description: editFormData.description.trim(),
+        progressPercentage: progress,
+        hoursWorked: hours,
+        materials: editFormData.materialsUsed.length > 0 ? editFormData.materialsUsed : undefined
       });
-      
-      setEditingLog(null);
-      Swal.fire({
+
+      await Swal.fire({
         icon: 'success',
-        title: 'Updated!',
+        title: 'Success!',
         text: 'Work log has been updated successfully.',
-        timer: 1500,
+        timer: 1800,
         showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
+        customClass: swalCustomClasses
       });
+
+      setEditingLog(null);
     } catch (error) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to update work log' });
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to update work log',
+        customClass: swalCustomClasses
+      });
+    } finally {
+      Swal.close();
     }
   };
 
   const handleDeleteLog = async (log: WorkLogEntry) => {
     if (!onDeleteWorkLog) return;
-    
-    const formattedDate = new Date(log.date).toLocaleDateString();
 
     const result = await Swal.fire({
-      title: 'Delete Work Log?',
-      text: `Are you sure you want to delete the work log from ${formattedDate}?`,
+      title: 'Are you sure?',
+      text: `Delete work log from ${new Date(log.date).toLocaleDateString()}?`,
       icon: 'warning',
       showCancelButton: true,
-      confirmButtonColor: '#dc2626',
-      cancelButtonColor: '#64748b',
-      confirmButtonText: 'Delete',
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+      confirmButtonText: 'Yes, Delete',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#ef4444',
+      customClass: swalCustomClasses
     });
 
     if (!result.isConfirmed) return;
@@ -501,150 +438,166 @@ export function WorkLogManager({
     Swal.fire({
       title: 'Deleting...',
       allowOutsideClick: false,
-      didOpen: () => {
-        Swal.showLoading();
-      },
-      customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
+      allowEscapeKey: false,
+      didOpen: () => Swal.showLoading(),
+      customClass: swalCustomClasses
     });
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      onDeleteWorkLog(log.id);
-      Swal.fire({
-        title: 'Deleted!',
-        text: 'The work log has been removed.',
+      await minimumDelay();
+      await onDeleteWorkLog(log.id);
+
+      await Swal.fire({
         icon: 'success',
-        timer: 1500,
+        title: 'Deleted!',
+        text: 'Work log has been successfully removed.',
+        timer: 1800,
         showConfirmButton: false,
-        customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-        },
+        customClass: swalCustomClasses
       });
     } catch (error) {
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Failed to delete work log' });
+      await Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to delete work log',
+        customClass: swalCustomClasses
+      });
+    } finally {
+      Swal.close();
     }
   };
 
-  const getProjectProgress = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    return project?.progress || 0;
-  };
-
-  const getSelectedProject = () => projects.find(p => p.id === selectedProject);
-  const hasDocumentation = () => {
-    const proj = getSelectedProject();
-    if (!proj) return false;
-    const hasFiles = Array.isArray(proj.attachments) && proj.attachments.length > 0;
-    const hasLink = !!proj.documentationUrl && proj.documentationUrl.trim().length > 0;
-    return hasFiles || hasLink;
-  };
-  
-  const canSubmitForReview = () => {
-    const proj = getSelectedProject();
-    if (!proj) return false;
-    const validStatuses = ['1_Assigned_to_FAB', 'in-progress', 'planning'];
-    const hasStatus = validStatuses.includes(proj.status);
-    const invalidStatuses = [
-      '2_Ready_for_Supervisor_Review',
-      '3_Ready_for_Admin_Review',
-      '4_Ready_for_Client_Signoff',
-      'completed',
-      'on-hold'
-    ];
-    const hasInvalidStatus = invalidStatuses.includes(proj.status);
-    const hasDocs = hasDocumentation();
-    const hasProgress = proj.progress >= 100;
-
-    return hasStatus && !hasInvalidStatus && hasDocs && hasProgress;
-  };
-  
-  const canManageDocumentation = () => {
-    const proj = getSelectedProject();
-    if (!proj) return false;
-    if (currentUser.role === 'admin' || currentUser.role === 'supervisor') return true;
-    if (currentUser.role === 'fabricator') {
-      return proj.fabricatorIds.includes(currentUser.id);
-    }
-    return false;
-  };
-  
-  const handleProjectFilesUploaded = (newAttachments: ProjectAttachment[]) => {
-    const proj = getSelectedProject();
-    if (!proj || !onUpdateProject) return;
-    const updatedAttachments = [...(proj.attachments || []), ...newAttachments];
-    onUpdateProject({ ...proj, attachments: updatedAttachments });
-  };
-  
   const submitForSupervisorReview = () => {
-    const proj = getSelectedProject();
+    const proj = projects.find(p => p.id === selectedProject);
     if (!proj || !onUpdateProject) return;
+
     const updated: Project = { ...proj, status: '2_Ready_for_Supervisor_Review' };
     onUpdateProject(updated);
   };
 
-  const getProjectName = (projectId: string) => {
-    const project = projects.find(p => p.id === projectId);
-    return project?.name || 'Unknown Project';
-  };
+  const handleProjectFilesUploaded = (newAttachments: ProjectAttachment[]) => {
+    const proj = projects.find(p => p.id === selectedProject);
+    if (!proj || !onUpdateProject) return;
 
-  const editMaterialOptions = editingLog
-    ? buildMaterialOptions(editingLog.projectId, editFormData.materialsUsed)
-    : [];
+    const updatedAttachments = [...(proj.attachments || []), ...newAttachments];
+    onUpdateProject({ ...proj, attachments: updatedAttachments });
+  };
 
   return (
     <div className="space-y-6">
       {/* ADD FORM */}
       {showAddForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 w-full h-full">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[100vh] overflow-y-auto mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
               <div>
                 <h2 className="text-lg font-semibold">Add Work Log Entry</h2>
-                {selectedProject && <p className="text-sm text-muted-foreground">Project: {getProjectName(selectedProject)}</p>}
+                <p className="text-sm text-muted-foreground">
+                  Project: {getProjectName(selectedProject)}
+                </p>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setShowAddForm(false)} disabled={isSubmitting}><X className="h-4 w-4" /></Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setShowAddForm(false)}
+                disabled={isSubmitting}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-4 p-6">
+
+            <form onSubmit={handleSubmit} className="space-y-5 p-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="date">Date</Label>
-                  <Input id="date" type="date" value={formData.date} onChange={(e) => handleInputChange('date', e.target.value)} />
+                  <Label htmlFor="date">Date *</Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    value={formData.date}
+                    onChange={e => handleInputChange('date', e.target.value)}
+                  />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="progress">Progress Contribution (%)</Label>
-                <Input id="progress" type="number" min="0" max="100" placeholder="5" value={formData.progressPercentage} onChange={(e) => handleInputChange('progressPercentage', e.target.value)} />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="progress">Progress Contribution (%) *</Label>
+                  <Input
+                    id="progress"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={formData.progressPercentage}
+                    onChange={e => handleInputChange('progressPercentage', e.target.value)}
+                    placeholder="e.g. 5.5"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="hours">Hours Worked *</Label>
+                  <Input
+                    id="hours"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={formData.hoursWorked}
+                    onChange={e => handleInputChange('hoursWorked', e.target.value)}
+                    placeholder="e.g. 4.5"
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="hours">Hours Worked</Label>
-                <Input id="hours" type="number" min="0" step="0.5" placeholder="4.5" value={formData.hoursWorked} onChange={(e) => handleInputChange('hoursWorked', e.target.value)} />
+                <Label htmlFor="description">Work Description *</Label>
+                <Textarea
+                  id="description"
+                  maxLength={100}
+                  value={formData.description}
+                  onChange={e => handleInputChange('description', e.target.value)}
+                  placeholder="Describe what you did today..."
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {formData.description.length} / 100
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="description">Work Description</Label>
-                <Textarea maxLength={100} id="description" placeholder="Describe the work performed..." value={formData.description} onChange={(e) => handleInputChange('description', e.target.value)} rows={4} />
-              </div>
+
               <div className="space-y-2">
                 <Label>Materials Used (Optional)</Label>
                 <div className="grid gap-2 md:grid-cols-3">
-                  {projectMaterials.map(material => (
-                    <div key={material.id} className="flex items-center space-x-2">
-                      <input type="checkbox" id={`material-${material.id}`} checked={formData.materialsUsed.includes(material.name)} onChange={() => handleMaterialToggle(material.name)} className="rounded" />
-                      <Label htmlFor={`material-${material.id}`} className="text-sm cursor-pointer">{material.name}</Label>
+                  {projectMaterials.map(m => (
+                    <div key={m.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`material-${m.id}`}
+                        checked={formData.materialsUsed.includes(m.id)}
+                        onChange={() => handleMaterialToggle(m.id)}
+                        className="rounded border-gray-300"
+                      />
+                      <Label
+                        htmlFor={`material-${m.id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {m.name}
+                      </Label>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setShowAddForm(false)} disabled={isSubmitting}>Cancel</Button>
-                <Button type="submit" disabled={isSubmitting}>{isSubmitting ? 'Adding...' : 'Add Work Log'}</Button>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowAddForm(false)}
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Adding...' : 'Add Work Log'}
+                </Button>
               </div>
             </form>
           </div>
@@ -653,44 +606,100 @@ export function WorkLogManager({
 
       {/* EDIT FORM */}
       {editingLog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 w-full h-full">
-          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[85vh] overflow-y-auto mx-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-background rounded-lg shadow-lg w-full max-w-3xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="sticky top-0 bg-background border-b px-6 py-4 flex justify-between items-center">
-              <div><h2 className="text-lg font-semibold">Edit Work Log Entry</h2></div>
-              <Button variant="ghost" size="icon" onClick={() => setEditingLog(null)}><X className="h-4 w-4" /></Button>
+              <h2 className="text-lg font-semibold">Edit Work Log Entry</h2>
+              <Button variant="ghost" size="icon" onClick={() => setEditingLog(null)}>
+                <X className="h-4 w-4" />
+              </Button>
             </div>
-            <form onSubmit={handleEditSubmit} className="space-y-4 p-6">
+
+            <form onSubmit={handleEditSubmit} className="space-y-5 p-6">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="edit-date">Date</Label>
-                  <Input id="edit-date" type="date" value={editFormData.date} onChange={(e) => handleEditInputChange('date', e.target.value)} />
+                  <Label htmlFor="edit-date">Date *</Label>
+                  <Input
+                    id="edit-date"
+                    type="date"
+                    value={editFormData.date}
+                    onChange={e => handleEditInputChange('date', e.target.value)}
+                  />
                 </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-progress">Progress Contribution (%)</Label>
-                <Input id="edit-progress" min="0" max="100" type="number" value={editFormData.progressPercentage} onChange={(e) => handleEditInputChange('progressPercentage', e.target.value)} />
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-progress">Progress Contribution (%) *</Label>
+                  <Input
+                    id="edit-progress"
+                    type="number"
+                    min={0}
+                    max={100}
+                    step={0.1}
+                    value={editFormData.progressPercentage}
+                    onChange={e => handleEditInputChange('progressPercentage', e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-hours">Hours Worked *</Label>
+                  <Input
+                    id="edit-hours"
+                    type="number"
+                    min={0}
+                    step={0.5}
+                    value={editFormData.hoursWorked}
+                    onChange={e => handleEditInputChange('hoursWorked', e.target.value)}
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="edit-hours">Hours Worked</Label>
-                <Input id="edit-hours" type="number" value={editFormData.hoursWorked} onChange={(e) => handleEditInputChange('hoursWorked', e.target.value)} />
+                <Label htmlFor="edit-description">Work Description *</Label>
+                <Textarea
+                  id="edit-description"
+                  maxLength={100}
+                  value={editFormData.description}
+                  onChange={e => handleEditInputChange('description', e.target.value)}
+                  rows={4}
+                />
+                <p className="text-xs text-muted-foreground text-right">
+                  {editFormData.description.length} / 100
+                </p>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="edit-description">Work Description</Label>
-                <Textarea maxLength={100} id="edit-description" value={editFormData.description} onChange={(e) => handleEditInputChange('description', e.target.value)} rows={4} />
-              </div>
+
               <div className="space-y-2">
                 <Label>Materials Used (Optional)</Label>
                 <div className="grid gap-2 md:grid-cols-3">
-                  {editMaterialOptions.map(material => (
-                    <div key={material.id} className="flex items-center space-x-2">
-                      <input type="checkbox" id={`edit-material-${material.id}`} checked={editFormData.materialsUsed.includes(material.name)} onChange={() => handleEditMaterialToggle(material.name)} className="rounded" />
-                      <Label htmlFor={`edit-material-${material.id}`} className="text-sm cursor-pointer">{material.name}</Label>
+                  {projectMaterials.map(m => (
+                    <div key={m.id} className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        id={`edit-material-${m.id}`}
+                        checked={editFormData.materialsUsed.includes(m.id)}
+                        onChange={() => handleEditMaterialToggle(m.id)}
+                        className="rounded border-gray-300"
+                      />
+                      <Label
+                        htmlFor={`edit-material-${m.id}`}
+                        className="text-sm cursor-pointer"
+                      >
+                        {m.name}
+                      </Label>
                     </div>
                   ))}
                 </div>
               </div>
-              <div className="flex justify-end gap-2 pt-4 border-t">
-                <Button type="button" variant="outline" onClick={() => setEditingLog(null)}>Cancel</Button>
+
+              <div className="flex justify-end gap-3 pt-4 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setEditingLog(null)}
+                >
+                  Cancel
+                </Button>
                 <Button type="submit">Save Changes</Button>
               </div>
             </form>
@@ -698,26 +707,46 @@ export function WorkLogManager({
         </div>
       )}
 
-      {/* Main View Header */}
+      {/* MAIN CONTENT */}
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="flex items-center gap-2 text-2xl font-bold"><FileText className="h-6 w-6" />Work Log & Progress Reports</h2>
+          <h2 className="flex items-center gap-2 text-2xl font-bold">
+            <FileText className="h-6 w-6" />
+            Work Log & Progress Reports
+          </h2>
           <p className="text-muted-foreground">Track your daily work progress and material usage</p>
         </div>
-        <Button onClick={() => setShowAddForm(true)} disabled={!selectedProject}><Plus className="h-4 w-4 mr-2" />Add Work Log</Button>
+
+        <Button
+          onClick={() => setShowAddForm(true)}
+          disabled={!selectedProject}
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Add Work Log
+        </Button>
       </div>
 
+      {/* Project Selector */}
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Package className="h-5 w-5" />Select Project</CardTitle></CardHeader>
-        <CardContent className='pb-5 px-5'>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Package className="h-5 w-5" />
+            Select Project
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pb-5 px-5">
           <Select value={selectedProject} onValueChange={setSelectedProject}>
-            <SelectTrigger><SelectValue placeholder="Choose a project to log work for" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Choose a project to log work for" />
+            </SelectTrigger>
             <SelectContent>
               {fabricatorProjects.map(project => (
                 <SelectItem key={project.id} value={project.id}>
                   <div className="flex items-center justify-between w-full">
                     <span>{project.name}</span>
-                    <Badge variant="outline" className="ml-2">{project.progress}% Complete</Badge>
+                    <Badge variant="outline" className="ml-2">
+                      {project.progress}% Complete
+                    </Badge>
                   </div>
                 </SelectItem>
               ))}
@@ -726,74 +755,175 @@ export function WorkLogManager({
         </CardContent>
       </Card>
 
+      {/* Quick Stats + Submit for Review */}
       {selectedProject && (
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card><CardContent className="pt-6"><div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Project Progress</span></div><p className="text-2xl">{getProjectProgress(selectedProject)}%</p></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Work Entries</span></div><p className="text-2xl">{filteredWorkLogs.length}</p></CardContent></Card>
-          <Card><CardContent className="pt-6"><div className="flex items-center gap-2"><FileText className="h-4 w-4 text-muted-foreground" /><span className="text-sm">Documentation</span></div><p className="text-2xl">{hasDocumentation() ? 'Ready' : 'Missing'}</p></CardContent></Card>
-        </div>
-      )}
+        <>
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Project Progress</span>
+                </div>
+                <p className="text-2xl mt-1">{getProjectProgress(selectedProject)}%</p>
+              </CardContent>
+            </Card>
 
-      {selectedProject && (
-        <Card>
-          <CardContent className="pt-4">
-            <div className="flex items-center justify-between">
-              <div className="text-sm text-muted-foreground space-y-1">
-                <div>Upload files in the Project Details or add a documentation link.</div>
-                {(() => {
-                  const proj = getSelectedProject();
-                  if (!proj) return null;
-                  return (
-                    <div className="text-xs space-y-1">
-                      <div>Progress: <strong>{proj.progress}%</strong></div>
-                      <div>Status: <strong>{proj.status}</strong></div>
-                      <div>Documentation: <strong>{hasDocumentation() ? 'Ready' : 'Missing'}</strong></div>
-                    </div>
-                  );
-                })()}
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Work Entries</span>
+                </div>
+                <p className="text-2xl mt-1">{filteredWorkLogs.length}</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm">Documentation</span>
+                </div>
+                <p className="text-2xl mt-1">
+                  {hasDocumentation() ? (
+                    <span className="text-green-600">Ready</span>
+                  ) : (
+                    <span className="text-red-600">Missing</span>
+                  )}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardContent className="pt-4 pb-5">
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <p>Upload files or add documentation link in Project Details</p>
+                  <p className="text-xs">
+                    Current Progress: <strong>{getProjectProgress(selectedProject)}%</strong>
+                    <br />
+                    Status: <strong>{projects.find(p => p.id === selectedProject)?.status}</strong>
+                  </p>
+                </div>
+
+                <Button
+                  onClick={submitForSupervisorReview}
+                  disabled={!canSubmitForReview()}
+                  className={canSubmitForReview() ? "bg-green-600 hover:bg-green-700" : ""}
+                >
+                  Submit for Supervisor Review
+                </Button>
               </div>
-              <Button onClick={submitForSupervisorReview} disabled={!canSubmitForReview()} className={canSubmitForReview() ? 'bg-green-600 hover:bg-green-700' : ''}>Submit for Review</Button>
-            </div>
-          </CardContent>
-      </Card>
-    )}
-
-      {selectedProject && canManageDocumentation() && onUpdateProject && (
-        <ProjectFileUpload projectId={selectedProject} currentUserId={currentUser.id} onFilesUploaded={handleProjectFilesUploaded} />
+            </CardContent>
+          </Card>
+        </>
       )}
 
+      {/* File Upload Section */}
+      {selectedProject && canManageDocumentation() && onUpdateProject && (
+        <ProjectFileUpload
+          projectId={selectedProject}
+          currentUserId={currentUser.id}
+          onFilesUploaded={handleProjectFilesUploaded}
+        />
+      )}
+
+      {/* Work Log History */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Calendar className="h-5 w-5" />Work Log History {selectedProject && <Badge variant="outline">{getProjectName(selectedProject)}</Badge>}</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            Work Log History
+            {selectedProject && (
+              <Badge variant="outline">{getProjectName(selectedProject)}</Badge>
+            )}
+          </CardTitle>
         </CardHeader>
-        <CardContent className='px-5 mb-10'>
+
+        <CardContent className="px-5 pb-10">
           {filteredWorkLogs.length === 0 ? (
-            <div className="text-center py-8"><FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" /><h3 className="text-lg mb-2">No work logs found</h3></div>
+            <div className="text-center py-12">
+              <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <h3 className="text-lg font-medium">No work logs found</h3>
+              <p className="text-muted-foreground mt-1">
+                {selectedProject
+                  ? "Start logging your work for this project"
+                  : "Select a project to view or add work logs"}
+              </p>
+            </div>
           ) : (
             <div className="space-y-4">
-              {filteredWorkLogs.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).map((log) => (
-                <div key={log.id} className="border rounded-lg p-4">
-                  <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                    <div className="flex flex-wrap items-center gap-3">
-                      <div className="text-sm text-muted-foreground">{new Date(log.date).toLocaleDateString()}</div>
-                      <Badge variant="outline">+{log.progressPercentage}% progress</Badge>
-                      <Badge variant="secondary">{log.hoursWorked} hours</Badge>
+              {[...filteredWorkLogs]
+                .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                .map(log => (
+                  <div
+                    key={log.id}
+                    className="border rounded-lg p-5 hover:border-primary/40 transition-colors"
+                  >
+                    <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">
+                          {new Date(log.date).toLocaleDateString('en-PH')}
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-1">
+                          <Badge variant="outline">+{log.progressPercentage}% progress</Badge>
+                          <Badge variant="secondary">{log.hoursWorked} hrs</Badge>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {onUpdateWorkLog && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openEditLog(log)}
+                          >
+                            <Edit className="h-3.5 w-3.5 mr-1" />
+                            Edit
+                          </Button>
+                        )}
+
+                        {onDeleteWorkLog && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            onClick={() => handleDeleteLog(log)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5 mr-1" />
+                            Delete
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {onUpdateWorkLog && <Button variant="outline" size="sm" onClick={() => openEditLog(log)}><Edit className="h-3.5 w-3.5" />Edit</Button>}
-                      {onDeleteWorkLog && <Button variant="outline" size="sm" onClick={() => handleDeleteLog(log)}><Trash2 className="h-3.5 w-3.5" />Delete</Button>}
+
+                    <p className="text-sm leading-relaxed mb-4">{log.description}</p>
+
+                    {log.materials && log.materials.length > 0 && (
+                      <div className="mb-3">
+                        <p className="text-xs text-muted-foreground mb-1.5">
+                          Materials Used:
+                        </p>
+                        <div className="flex flex-wrap gap-1">
+                          {log.materials.map((materialId, i) => {
+                            const mat = projectMaterials.find(m => m.id === materialId);
+                            return (
+                              <Badge key={i} variant="outline" className="text-xs">
+                                {mat?.name ?? materialId}
+                              </Badge>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="text-xs text-muted-foreground">
+                      Logged on {new Date(log.createdAt).toLocaleString()}
                     </div>
                   </div>
-                  <p className="text-sm mb-3">{log.description}</p>
-                  {log.materials && log.materials.length > 0 && (
-                    <div className="mb-2">
-                      <p className="text-xs text-muted-foreground mb-1">Materials Used:</p>
-                      <div className="flex flex-wrap gap-1">{log.materials.map((m, i) => <Badge key={i} variant="outline" className="text-xs">{m}</Badge>)}</div>
-                    </div>
-                  )}
-                  <div className="text-xs text-muted-foreground">Logged on {new Date(log.createdAt).toLocaleString()}</div>
-                </div>
-              ))}
+                ))}
             </div>
           )}
         </CardContent>
