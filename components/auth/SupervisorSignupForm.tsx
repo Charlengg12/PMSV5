@@ -169,7 +169,7 @@ export function SupervisorSignupForm({
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
- const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!(await validateForm())) {
@@ -177,22 +177,29 @@ export function SupervisorSignupForm({
     }
 
     const result = await Swal.fire({
-      title: 'Are you sure?',
-      text: "Name: " + formData.name + "\nEmail: " + formData.email + "\nDepartment: " + formData.department,
-      icon: 'info',
+      title: "Are you sure?",
+      text:
+        "Name: " +
+        formData.name +
+        "\nEmail: " +
+        formData.email +
+        "\nDepartment: " +
+        formData.department,
+      icon: "info",
       showCancelButton: true,
-      cancelButtonText: 'Cancel',
-      confirmButtonText: 'Confirm',
+      cancelButtonText: "Cancel",
+      confirmButtonText: "Confirm",
       allowOutsideClick: false,
       customClass: {
-          container: 'swal-container',
-          popup: 'swal-popup',
-          title: 'swal-title',
-          htmlContainer: 'swal-content',
-          confirmButton: 'swal-confirm-button',
-          cancelButton: 'swal-cancel-button',
-          icon: 'swal-icon'
-      }});
+        container: "swal-container",
+        popup: "swal-popup",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+        icon: "swal-icon",
+      },
+    });
 
     if (!result.isConfirmed) {
       return;
@@ -231,9 +238,9 @@ export function SupervisorSignupForm({
 
       if (response.data && response.data.user) {
         const userData = mapUserDataFromBackend(response.data.user);
-        
+
         // Fake minimum delay so loading feels consistent (remove/adjust if backend is very fast)
-        await new Promise(resolve => setTimeout(resolve, 2800));
+        await new Promise((resolve) => setTimeout(resolve, 2800));
 
         await Swal.fire({
           title: "Supervisor Created!",
@@ -242,18 +249,18 @@ export function SupervisorSignupForm({
           showConfirmButton: false,
           timer: 2200,
           customClass: {
-            container:     'swal-container',
-            popup:         'swal-popup',
-            title:         'swal-title',
-            htmlContainer: 'swal-content',
-            confirmButton: 'swal-confirm-button',
-            cancelButton:  'swal-cancel-button',
-            icon:          'swal-icon'
-          }
+            container: "swal-container",
+            popup: "swal-popup",
+            title: "swal-title",
+            htmlContainer: "swal-content",
+            confirmButton: "swal-confirm-button",
+            cancelButton: "swal-cancel-button",
+            icon: "swal-icon",
+          },
         });
 
         onSignup(userData);
-        
+
         // Optional: close modal / reset form / navigate
         // onClose?.();
         // resetForm();
@@ -273,13 +280,13 @@ export function SupervisorSignupForm({
         confirmButtonText: "OK",
         confirmButtonColor: "#ef4444",
         customClass: {
-          container:     'swal-container',
-          popup:         'swal-popup',
-          title:         'swal-title',
-          htmlContainer: 'swal-content',
-          confirmButton: 'swal-confirm-button',
-          icon:          'swal-icon'
-        }
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          icon: "swal-icon",
+        },
       });
     } finally {
       setIsLoading(false);
@@ -289,8 +296,8 @@ export function SupervisorSignupForm({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto modal">
-        <CardHeader className="text-center">
+      <Card className="w-full max-w-md mx-4 sm:mx-auto max-h-[90vh] overflow-y-auto modal p-4 sm:p-6">
+        <CardHeader className="p-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <UserPlus className="h-6 w-6" />
