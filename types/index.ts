@@ -82,6 +82,7 @@ export interface WorkLogEntry {
   progressPercentage: number; // How much of the project this entry represents
   materials?: string[]; // Materials used in this work session
   photos?: string[]; // Photo URLs of work progress
+  attachments?: ProjectAttachment[]; // Files shared during this log entry
   createdAt: string;
 }
 

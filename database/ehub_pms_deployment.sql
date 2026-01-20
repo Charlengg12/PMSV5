@@ -65,6 +65,7 @@ CREATE TABLE IF NOT EXISTS `projects` (
   `fabricator_ids` JSON DEFAULT NULL,
   `pending_supervisors` JSON DEFAULT NULL,
   `pending_assignments` JSON DEFAULT NULL,
+  `attachments` JSON DEFAULT NULL,
   `created_by` VARCHAR(255) DEFAULT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

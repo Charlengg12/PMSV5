@@ -90,6 +90,8 @@ export function WorkLogManager({
     hoursWorked: '',
     materialsUsed: [] as string[] // array of material IDs
   });
+  const [selectedLogFiles, setSelectedLogFiles] = useState<File[]>([]);
+  const [logFileError, setLogFileError] = useState('');
 
   const fabricatorProjects = projects.filter(p =>
     p.fabricatorIds.includes(currentUser.id) && p.status !== 'pending-assignment'
@@ -331,6 +333,13 @@ export function WorkLogManager({
       setIsSubmitting(false);
       Swal.close();
     }
+  };
+
+  const handleAddDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      resetAddFormFiles();
+    }
+    setShowAddForm(open);
   };
 
   const openEditLog = (log: WorkLogEntry) => {

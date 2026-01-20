@@ -81,6 +81,32 @@ export default function App() {
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
   const [lastReloadAt, setLastReloadAt] = useState<number>(0);
 
+  function clampProgress(value: number) {
+    return Math.min(100, Math.max(0, value));
+  }
+
+  const aggregateProgressByProject = (logs: WorkLogEntry[]) => {
+    return logs.reduce<Record<string, number>>((acc, log) => {
+      const prev = acc[log.projectId] ?? 0;
+      const next = clampProgress(prev + (log.progressPercentage ?? 0));
+      acc[log.projectId] = next;
+      return acc;
+    }, {});
+  };
+
+  const syncProjectProgressWithLogs = (logs: WorkLogEntry[]) => {
+    const aggregated = aggregateProgressByProject(logs);
+    setProjects((prevProjects) =>
+      prevProjects.map((project) => {
+        const derived = aggregated[project.id];
+        if (derived === undefined) return project;
+        const nextProgress = Math.max(project.progress, derived);
+        if (nextProgress === project.progress) return project;
+        return { ...project, progress: nextProgress };
+      })
+    );
+  };
+
   // Initialize time-based theme
   const themeStorageKey = currentUser
     ? `theme-override-${currentUser.role}`
@@ -247,7 +273,9 @@ export default function App() {
       }
 
       if (workLogsRes.data) {
-        setWorkLogs(mapWorkLogsFromBackend(workLogsRes.data));
+        const mappedLogs = mapWorkLogsFromBackend(workLogsRes.data);
+        setWorkLogs(mappedLogs);
+        syncProjectProgressWithLogs(mappedLogs);
       }
 
       if (materialsRes.data) {
@@ -444,8 +472,6 @@ export default function App() {
     }
   };
 
-  const clampProgress = (value: number) => Math.min(100, Math.max(0, value));
-
   const handleAddWorkLog = async (
     workLogData: Omit<WorkLogEntry, "id" | "createdAt">
   ) => {
@@ -470,24 +496,32 @@ export default function App() {
       }
 
       // 4. UPDATE THE UI (State)
-      setWorkLogs((prevLogs) => [savedLog, ...prevLogs]);
+      setWorkLogs((prevLogs) => {
+        const nextLogs = [savedLog, ...prevLogs];
+        syncProjectProgressWithLogs(nextLogs);
+        return nextLogs;
+      });
 
       // Update project progress based on real work log data
       const progressIncrease = Number.isFinite(savedLog.progressPercentage)
         ? savedLog.progressPercentage
         : 0;
-      let updatedProgress: number | null = null;
+      let updatedProjectSnapshot: Project | null = null;
       setProjects((prevProjects) =>
         prevProjects.map((project) => {
           if (project.id !== savedLog.projectId) return project;
           const nextProgress = clampProgress(project.progress + progressIncrease);
-          updatedProgress = nextProgress;
-          return {
+          updatedProjectSnapshot = {
             ...project,
             progress: nextProgress,
           };
+          return updatedProjectSnapshot;
         })
       );
+
+      if (updatedProjectSnapshot) {
+        handleUpdateProject(updatedProjectSnapshot);
+      }
     } catch (error) {
       console.error("Network crash:", error);
       alert("Network Error: Could not save work log.");
@@ -1240,6 +1274,7 @@ export default function App() {
               users={users}
               workLogs={workLogs}
               tasks={tasks}
+              onUpdateProject={handleUpdateProject}
             />
           );
         default:

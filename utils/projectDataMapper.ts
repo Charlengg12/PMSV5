@@ -36,6 +36,12 @@ export function mapProjectFromBackend(raw: any): Project {
         ? raw.fabricatorBudgets
         : undefined;
 
+  const attachments = Array.isArray(raw.attachments)
+    ? raw.attachments
+    : typeof raw.attachments === 'string'
+      ? safeParseJsonArray(raw.attachments)
+      : undefined;
+
   return {
     id: raw.id,
     name: raw.name || raw.title || '',
@@ -57,7 +63,7 @@ export function mapProjectFromBackend(raw: any): Project {
     clientName: raw.client_name || raw.clientName || '',
     clientId: raw.client_id || raw.clientId || undefined,
     documentationUrl: raw.documentation_url || raw.documentationUrl || undefined,
-    attachments: Array.isArray(raw.attachments) ? raw.attachments : undefined,
+    attachments: attachments && attachments.length > 0 ? attachments : undefined,
     fabricatorBudgets,
     createdBy: raw.created_by || raw.createdBy || '',
     createdAt: normalizeDateString(raw.created_at || raw.createdAt || new Date().toISOString()),
@@ -71,7 +77,7 @@ export function mapProjectsFromBackend(rows: any[]): Project[] {
   return rows.map(mapProjectFromBackend);
 }
 
-function safeParseJsonArray(value: string): string[] {
+function safeParseJsonArray<T = any>(value: string): T[] {
   try {
     const parsed = JSON.parse(value);
     return Array.isArray(parsed) ? parsed : [];

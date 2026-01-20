@@ -94,6 +94,14 @@ export function ProjectFileUpload({
     setError('');
   };
 
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    });
+
   const handleUpload = async () => {
     if (files.length === 0) {
       setError('Please select files to upload.');
@@ -105,18 +113,20 @@ export function ProjectFileUpload({
 
     try {
       // Simulate file upload process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      await new Promise(resolve => setTimeout(resolve, 1200));
 
       // Create attachment objects
-      const newAttachments: ProjectAttachment[] = files.map(file => ({
-        id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-        name: file.name,
-        size: file.size,
-        type: file.type,
-        uploadedBy: currentUserId,
-        uploadedAt: new Date().toISOString(),
-        url: `mock://uploads/${projectId}/${file.name}` // In real app, this would be the actual file URL
-      }));
+      const newAttachments: ProjectAttachment[] = await Promise.all(
+        files.map(async (file) => ({
+          id: `att-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          uploadedBy: currentUserId,
+          uploadedAt: new Date().toISOString(),
+          url: await readFileAsDataUrl(file),
+        })),
+      );
 
       onFilesUploaded(newAttachments);
       setFiles([]);

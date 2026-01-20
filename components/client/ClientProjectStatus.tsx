@@ -66,12 +66,20 @@ export function ClientProjectStatus({
   const supervisor = users.find((user) => user.id === clientProject.supervisorId);
   const statusIndex = STATUS_SEQUENCE.indexOf(clientProject.status);
   const statusPercent = Math.max(0, Math.min(100, clientProject.progress));
+  const isProgressing = clientProject.progress > 0 && clientProject.progress < 100;
 
-  const timelineSteps = STATUS_SEQUENCE.map((status) => ({
-    status,
-    label: STATUS_LABELS[status] ?? status,
-    isActive: STATUS_SEQUENCE.indexOf(status) <= statusIndex,
-  }));
+  const timelineSteps = STATUS_SEQUENCE.map((status) => {
+    const stepIndex = STATUS_SEQUENCE.indexOf(status);
+    const isCompletedStep =
+      statusIndex >= 0 && stepIndex <= statusIndex && status !== "in-progress";
+    const isInProgressStep =
+      status === "in-progress" && (isProgressing || clientProject.status === "in-progress");
+    return {
+      status,
+      label: STATUS_LABELS[status] ?? status,
+      isActive: isCompletedStep || isInProgressStep,
+    };
+  });
 
   return (
     <div className="space-y-6">
