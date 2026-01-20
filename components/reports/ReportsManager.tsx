@@ -32,13 +32,40 @@ import {
 import { Project, User as UserType, Task } from "../../types";
 import { apiService } from "../../utils/apiService";
 
+// Chart.js & react-chartjs-2 imports
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineElement,
+  PointElement,
+} from "chart.js";
+import { Bar, Doughnut } from "react-chartjs-2";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineElement,
+  PointElement
+);
+
 interface Report {
   id: string;
   title: string;
   description: string;
   type: "project" | "task" | "user" | "financial" | "custom";
   status: "draft" | "published" | "archived";
-  project_id?: string;
+  project_id?: string | null;
   shared_with?: string[];
   created_by: string;
   created_at: string;
@@ -52,6 +79,18 @@ interface ReportsManagerProps {
   currentUser: UserType;
 }
 
+interface AnalyticsData {
+  budget: number;
+  totalCost: number;
+  totalRevenue: number;
+  monthlyData?: {
+    month: string;
+    budget: number;
+    cost: number;
+    revenue: number;
+  }[];
+}
+
 const swalCustomClasses = {
   container: "swal-container !z-[10000]",
   popup: "swal-popup",
@@ -63,6 +102,7 @@ const swalCustomClasses = {
 };
 
 const MIN_LOADING_TIME = 2000;
+const ALL_PROJECTS_VALUE = "__all__";
 
 export function ReportsManager({
   projects,
@@ -80,6 +120,8 @@ export function ReportsManager({
   const [showViewForm, setShowViewForm] = useState(false);
 
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
 
   // Search state
   const [searchTerm, setSearchTerm] = useState("");
@@ -89,10 +131,8 @@ export function ReportsManager({
     description: "",
     type: "project" as Report["type"],
     status: "draft" as Report["status"],
-    project_id: "",
+    project_id: ALL_PROJECTS_VALUE,
   });
-
-  const allProjectsValue = "__all__";
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -116,13 +156,49 @@ export function ReportsManager({
     fetchReports();
   }, []);
 
+  // Fetch analytics data when viewing a report
+  useEffect(() => {
+    const fetchAnalytics = async () => {
+      if (!selectedReport || !showViewForm) return;
+
+      if (!["financial", "project"].includes(selectedReport.type)) {
+        setAnalyticsData(null);
+        return;
+      }
+
+      setAnalyticsLoading(true);
+      try {
+        const response = await apiService.getReportAnalytics(selectedReport.id);
+
+        if (response.error) {
+          throw new Error(response.error);
+        }
+
+        setAnalyticsData(response.data || null);
+      } catch (err: any) {
+        console.error("Failed to load analytics:", err);
+        Swal.fire({
+          icon: "error",
+          title: "Analytics Error",
+          text: err.message || "Could not load report analytics data.",
+          customClass: swalCustomClasses,
+        });
+        setAnalyticsData(null);
+      } finally {
+        setAnalyticsLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [selectedReport, showViewForm]);
+
   const resetForm = () => {
     setFormData({
       title: "",
       description: "",
       type: "project",
       status: "draft",
-      project_id: "",
+      project_id: ALL_PROJECTS_VALUE,
     });
   };
 
@@ -143,12 +219,10 @@ export function ReportsManager({
     });
   };
 
-  // ─── CREATE REPORT ─────────────────────────────────────────────
+  // CREATE REPORT
   const handleCreate = async () => {
     const title = formData.title.trim();
     if (!title || isCreating) return;
-
-    // if title and descrotpion are empty, do not proceed
 
     if (title.length === 0 || formData.description.length === 0) {
       Swal.fire({
@@ -160,8 +234,6 @@ export function ReportsManager({
       return;
     }
 
-    // if title is > 50 characters, do not proceed
-
     if (title.length > 50) {
       Swal.fire({
         icon: "warning",
@@ -172,7 +244,6 @@ export function ReportsManager({
       return;
     }
 
-    // if description is > 200 characters, do not proceed
     if (formData.description.length > 200) {
       Swal.fire({
         icon: "warning",
@@ -182,7 +253,6 @@ export function ReportsManager({
       });
       return;
     }
-
 
     const result = await Swal.fire({
       title: "Create this report?",
@@ -206,7 +276,7 @@ export function ReportsManager({
         description: formData.description.trim(),
         type: formData.type,
         status: formData.status,
-        project_id: formData.project_id || null,
+        project_id: formData.project_id === ALL_PROJECTS_VALUE ? null : formData.project_id,
       };
       const response = await apiService.createReport(payload);
       if (response.error) throw new Error(response.error);
@@ -247,7 +317,7 @@ export function ReportsManager({
     }
   };
 
-  // ─── UPDATE REPORT ─────────────────────────────────────────────
+  // UPDATE REPORT
   const handleUpdate = async () => {
     if (!selectedReport || !formData.title.trim()) return;
 
@@ -273,16 +343,17 @@ export function ReportsManager({
       });
       return;
     }
-    
+
     if (description.length > 200) {
       Swal.fire({
         icon: "warning",
         title: "Content Exceeds Limit",
-        text: "Title cannot exceed 200 characters.",
+        text: "Description cannot exceed 200 characters.",
         customClass: swalCustomClasses,
       });
       return;
     }
+
     const result = await Swal.fire({
       title: "Save changes?",
       html: `Update report: <strong>${formData.title}</strong>`,
@@ -302,22 +373,15 @@ export function ReportsManager({
       const payload = {
         id: selectedReport.id,
         title: formData.title.trim(),
-        description:
-          formData.description.trim() || selectedReport.description || "",
+        description: formData.description.trim() || selectedReport.description || "",
         type: formData.type,
         status: formData.status,
-        project_id: formData.project_id || null,
+        project_id: formData.project_id === ALL_PROJECTS_VALUE ? null : formData.project_id,
         created_by: selectedReport.created_by,
         created_at: selectedReport.created_at,
       };
 
-      const response = await apiService.request(
-        `/reports/${selectedReport.id}`,
-        {
-          method: "PUT",
-          body: JSON.stringify(payload),
-        }
-      );
+      const response = await apiService.editReport(selectedReport.id, payload);
 
       if (response.error) throw new Error(response.error);
 
@@ -359,7 +423,7 @@ export function ReportsManager({
     }
   };
 
-  // ─── DELETE REPORT ─────────────────────────────────────────────
+  // DELETE REPORT
   const handleDelete = async (report: Report) => {
     const result = await Swal.fire({
       title: "Delete report?",
@@ -413,7 +477,7 @@ export function ReportsManager({
     }
   };
 
-  // ─── EXPORT REPORT ─────────────────────────────────────────────
+  // EXPORT REPORT
   const handleExport = async (report: Report) => {
     const supervisors = users.filter((user) => user.role === "supervisor");
 
@@ -465,10 +529,7 @@ export function ReportsManager({
     const startTime = Date.now();
 
     try {
-      const response = await apiService.exportReport(
-        report.id,
-        selectResult.value
-      );
+      const response = await apiService.exportReport(report.id, selectResult.value);
       if (response.error) throw new Error(response.error);
 
       const elapsed = Date.now() - startTime;
@@ -510,7 +571,7 @@ export function ReportsManager({
       description: report.description || "",
       type: report.type,
       status: report.status,
-      project_id: report.project_id || "",
+      project_id: report.project_id || ALL_PROJECTS_VALUE,
     });
     setShowEditForm(true);
   };
@@ -518,6 +579,7 @@ export function ReportsManager({
   const handleView = (report: Report) => {
     setSelectedReport(report);
     setShowViewForm(true);
+    setAnalyticsData(null);
   };
 
   const getStatusColor = (status: Report["status"]) => {
@@ -555,7 +617,6 @@ export function ReportsManager({
   const canEditReport = (report: Report) =>
     currentUser.role === "admin" || report.created_by === currentUser.id;
 
-  // ─── Role-based filtering ──────────────────────────────────────
   const getRoleFilteredReports = () => {
     if (currentUser.role === "admin") return reports;
     if (currentUser.role === "supervisor") {
@@ -570,13 +631,11 @@ export function ReportsManager({
           (r.shared_with && r.shared_with.includes(currentUser.id))
       );
     }
-    // fabricator or client view — only published
     return reports.filter((r) => r.status === "published");
   };
 
   const roleFiltered = getRoleFilteredReports();
 
-  // ─── Client-side search filtering ──────────────────────────────
   const searchedReports = roleFiltered.filter((report) => {
     if (!searchTerm.trim()) return true;
 
@@ -586,7 +645,7 @@ export function ReportsManager({
       report.project_id
         ? projects.find((p) => p.id === report.project_id)?.name?.toLowerCase() ||
           ""
-        : "";
+        : "All Projects";
 
     const creatorName =
       users.find((u) => u.id === report.created_by)?.name?.toLowerCase() || "";
@@ -599,6 +658,64 @@ export function ReportsManager({
       report.type.toLowerCase().includes(term)
     );
   });
+
+  // Chart Data Preparation
+  const getChartData = () => {
+    if (!analyticsData) return null;
+
+    const labels = analyticsData.monthlyData?.map((d) => d.month) || [];
+
+    return {
+      barData: {
+        labels,
+        datasets: [
+          {
+            label: "Budget",
+            data: analyticsData.monthlyData?.map((d) => d.budget) || [],
+            backgroundColor: "rgba(53, 162, 235, 0.6)",
+            borderColor: "rgb(53, 162, 235)",
+            borderWidth: 1,
+          },
+          {
+            label: "Cost",
+            data: analyticsData.monthlyData?.map((d) => d.cost) || [],
+            backgroundColor: "rgba(255, 99, 132, 0.6)",
+            borderColor: "rgb(255, 99, 132)",
+            borderWidth: 1,
+          },
+          {
+            label: "Revenue",
+            data: analyticsData.monthlyData?.map((d) => d.revenue) || [],
+            backgroundColor: "rgba(75, 192, 192, 0.6)",
+            borderColor: "rgb(75, 192, 192)",
+            borderWidth: 1,
+          },
+        ],
+      },
+      summaryData: {
+        labels: ["Budget", "Cost", "Revenue"],
+        datasets: [
+          {
+            label: "Financial Summary",
+            data: [analyticsData.budget, analyticsData.totalCost, analyticsData.totalRevenue],
+            backgroundColor: [
+              "rgba(54, 162, 235, 0.7)",
+              "rgba(255, 99, 132, 0.7)",
+              "rgba(75, 192, 192, 0.7)",
+            ],
+            borderColor: [
+              "rgb(54, 162, 235)",
+              "rgb(255, 99, 132)",
+              "rgb(75, 192, 192)",
+            ],
+            borderWidth: 1,
+          },
+        ],
+      },
+    };
+  };
+
+  const chartData = getChartData();
 
   return (
     <div className="space-y-6 relative">
@@ -643,7 +760,9 @@ export function ReportsManager({
             <X className="h-4 w-4" />
           </button>
         )}
-        <p className="text-sm text-muted-foreground px-2"><span className="text-[#e28a33]">Note:</span> Search by report title, description, project name, creator name, or report type</p>
+        <p className="text-sm text-muted-foreground px-2">
+          <span className="text-[#e28a33]">Note:</span> Search by report title, description, project name, creator name, or report type
+        </p>
       </div>
 
       {loading ? (
@@ -656,151 +775,137 @@ export function ReportsManager({
           <p className="font-medium">{error}</p>
         </div>
       ) : (
-    <Tabs defaultValue="all" className="space-y-4">
-            <TabsList className="w-full">
-              <TabsTrigger value="all">
-                <FileText className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">All Reports</span>
-              </TabsTrigger>
-              <TabsTrigger value="project">
-                <Building className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Project</span>
-              </TabsTrigger>
-              <TabsTrigger value="task">
-                <AlertCircle className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Task</span>
-              </TabsTrigger>
-              <TabsTrigger value="financial">
-                <BarChart3 className="h-4 w-4 sm:mr-2" />
-                <span className="hidden sm:inline">Financial</span>
-              </TabsTrigger>
-            </TabsList>
+        <Tabs defaultValue="all" className="space-y-4">
+          <TabsList className="w-full">
+            <TabsTrigger value="all">
+              <FileText className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">All Reports</span>
+            </TabsTrigger>
+            <TabsTrigger value="project">
+              <Building className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Project</span>
+            </TabsTrigger>
+            <TabsTrigger value="task">
+              <AlertCircle className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Task</span>
+            </TabsTrigger>
+            <TabsTrigger value="financial">
+              <BarChart3 className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Financial</span>
+            </TabsTrigger>
+          </TabsList>
 
-            {/* Helper function to render report cards to avoid code duplication */}
-            {["all", "project", "task", "financial"].map((tabValue) => (
-              <TabsContent key={tabValue} value={tabValue} className="space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {searchedReports
-                    .filter((r) => tabValue === "all" || r.type === tabValue)
-                    .map((report) => (
-                      <Card
-                        key={report.id}
-                        className="hover:shadow-md transition-shadow"
-                      >
-                        <CardHeader className="px-4 pt-4 pb-2">
-                          <div className="space-y-3">
-                            <div>
-                              <CardTitle className="text-lg">
-                                {report.title}
-                              </CardTitle>
-                              {report.description && (
-                                <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                  {report.description}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              <Badge variant={getStatusColor(report.status)}>
-                                {report.status}
-                              </Badge>
-                              <Badge variant={getTypeColor(report.type)}>
-                                {report.type}
-                              </Badge>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="px-4 pb-4">
-                          <div className="grid gap-3 text-sm">
-                            {report.project_id && (
-                              <div className="flex items-center gap-2">
-                                <Building className="h-4 w-4 text-muted-foreground" />
-                                <span className="truncate">
-                                  {projects.find(
-                                    (p) => p.id === report.project_id
-                                  )?.name || "Unknown"}
-                                </span>
-                              </div>
+          {["all", "project", "task", "financial"].map((tabValue) => (
+            <TabsContent key={tabValue} value={tabValue} className="space-y-4">
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {searchedReports
+                  .filter((r) => tabValue === "all" || r.type === tabValue)
+                  .map((report) => (
+                    <Card key={report.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="px-4 pt-4 pb-2">
+                        <div className="space-y-3">
+                          <div>
+                            <CardTitle className="text-lg">{report.title}</CardTitle>
+                            {report.description && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {report.description}
+                              </p>
                             )}
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Created by:{" "}
-                                {users.find((u) => u.id === report.created_by)
-                                  ?.name || "Unknown"}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-muted-foreground" />
-                              <span>
-                                Created:{" "}
-                                {new Date(report.created_at).toLocaleDateString(
-                                  "en-PH"
-                                )}
-                              </span>
-                            </div>
                           </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant={getStatusColor(report.status)}>
+                              {report.status}
+                            </Badge>
+                            <Badge variant={getTypeColor(report.type)}>
+                              {report.type}
+                            </Badge>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-4 pb-4">
+                        <div className="grid gap-3 text-sm">
+                          <div className="flex items-center gap-2">
+                            <Building className="h-4 w-4 text-muted-foreground" />
+                            <span className="truncate">
+                              {report.project_id
+                                ? projects.find((p) => p.id === report.project_id)?.name || "Unknown"
+                                : "All Projects"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span>
+                              Created by:{" "}
+                              {users.find((u) => u.id === report.created_by)?.name || "Unknown"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-muted-foreground" />
+                            <span>
+                              Created: {new Date(report.created_at).toLocaleDateString("en-PH")}
+                            </span>
+                          </div>
+                        </div>
 
-                          <div className="mt-5 space-y-2">
+                        <div className="mt-5 space-y-2">
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleView(report)}
+                              className="w-full"
+                            >
+                              <Eye className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">View</span>
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleExport(report)}
+                              className="w-full"
+                            >
+                              <Download className="h-4 w-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Export</span>
+                            </Button>
+                          </div>
+                          {canEditReport(report) && (
                             <div className="grid grid-cols-2 gap-2">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleView(report)}
+                                onClick={() => handleEdit(report)}
                                 className="w-full"
                               >
-                                <Eye className="h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">View</span>
+                                <Edit className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Edit</span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleExport(report)}
-                                className="w-full"
+                                onClick={() => handleDelete(report)}
+                                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                               >
-                                <Download className="h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Export</span>
+                                <Trash2 className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Delete</span>
                               </Button>
                             </div>
-                            {canEditReport(report) && (
-                              <div className="grid grid-cols-2 gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleEdit(report)}
-                                  className="w-full"
-                                >
-                                  <Edit className="h-4 w-4 sm:mr-2" />
-                                  <span className="hidden sm:inline">Edit</span>
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleDelete(report)}
-                                  className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
-                                >
-                                  <Trash2 className="h-4 w-4 sm:mr-2" />
-                                  <span className="hidden sm:inline">
-                                    Delete
-                                  </span>
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  
-                  {/* Empty state for specific tabs */}
-                  {searchedReports.filter((r) => tabValue === "all" || r.type === tabValue).length === 0 && (
-                     <div className="col-span-full text-center py-12 text-muted-foreground">
-                        <p>No {tabValue === 'all' ? '' : tabValue} reports found.</p>
-                     </div>
-                  )}
-                </div>
-              </TabsContent>
-            ))}
-          </Tabs>
-        )}
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+
+                {searchedReports.filter((r) => tabValue === "all" || r.type === tabValue).length === 0 && (
+                  <div className="col-span-full text-center py-12 text-muted-foreground">
+                    <p>No {tabValue === "all" ? "" : tabValue} reports found.</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          ))}
+        </Tabs>
+      )}
+
       {searchedReports.length === 0 && !loading && !error && (
         <Card>
           <CardContent className="py-12 text-center">
@@ -808,9 +913,7 @@ export function ReportsManager({
               {searchTerm.trim() ? (
                 <>
                   <Search className="mx-auto h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="text-lg font-medium mb-2">
-                    No matching reports found
-                  </h3>
+                  <h3 className="text-lg font-medium mb-2">No matching reports found</h3>
                   <p className="text-sm text-muted-foreground mb-6">
                     No reports match your search "{searchTerm}"
                   </p>
@@ -847,17 +950,12 @@ export function ReportsManager({
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Create New Report</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowCreateForm(false)}
-                >
+                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
                   ×
                 </Button>
               </div>
               <p className="text-sm text-muted-foreground mb-6">
-                Generate a comprehensive report with customizable filters and
-                data.
+                Generate a comprehensive report with customizable filters and data.
               </p>
 
               <div className="space-y-6">
@@ -866,9 +964,7 @@ export function ReportsManager({
                   <Input
                     id="title"
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Enter report title"
                   />
                 </div>
@@ -878,9 +974,7 @@ export function ReportsManager({
                   <Textarea
                     id="description"
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Enter report description"
                     rows={3}
                   />
@@ -891,9 +985,7 @@ export function ReportsManager({
                     <Label>Type</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={(v) =>
-                        setFormData({ ...formData, type: v as Report["type"] })
-                      }
+                      onValueChange={(v) => setFormData({ ...formData, type: v as Report["type"] })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select type" />
@@ -902,9 +994,7 @@ export function ReportsManager({
                         <SelectItem value="project">Project Report</SelectItem>
                         <SelectItem value="task">Task Report</SelectItem>
                         <SelectItem value="user">User Report</SelectItem>
-                        <SelectItem value="financial">
-                          Financial Report
-                        </SelectItem>
+                        <SelectItem value="financial">Financial Report</SelectItem>
                         <SelectItem value="custom">Custom Report</SelectItem>
                       </SelectContent>
                     </Select>
@@ -915,10 +1005,7 @@ export function ReportsManager({
                     <Select
                       value={formData.status}
                       onValueChange={(v) =>
-                        setFormData({
-                          ...formData,
-                          status: v as Report["status"],
-                        })
+                        setFormData({ ...formData, status: v as Report["status"] })
                       }
                     >
                       <SelectTrigger>
@@ -933,30 +1020,22 @@ export function ReportsManager({
                   </div>
                 </div>
 
-                {formData.type === "project" && (
+                {(formData.type === "project" || formData.type === "financial") && (
                   <div className="space-y-2">
-                    <Label>Associated Project (optional)</Label>
+                    <Label>Associated Project</Label>
                     <Select
-                      value={formData.project_id || allProjectsValue}
-                      onValueChange={(v) =>
-                        setFormData({
-                          ...formData,
-                          project_id: v === allProjectsValue ? "" : v,
-                        })
-                      }
+                      value={formData.project_id}
+                      onValueChange={(v) => setFormData({ ...formData, project_id: v })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select project or leave blank for all" />
+                        <SelectValue placeholder="Select project or All Projects" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={allProjectsValue}>
-                          All Projects
-                        </SelectItem>
+                        <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
                         {projects
                           .filter(
                             (p) =>
-                              currentUser.role === "admin" ||
-                              p.supervisorId === currentUser.id
+                              currentUser.role === "admin" || p.supervisorId === currentUser.id
                           )
                           .map((project) => (
                             <SelectItem key={project.id} value={project.id}>
@@ -965,15 +1044,15 @@ export function ReportsManager({
                           ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select "All Projects" to aggregate data across all accessible projects
+                    </p>
                   </div>
                 )}
               </div>
 
               <div className="flex justify-end gap-3 mt-8">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowCreateForm(false)}
-                >
+                <Button variant="outline" onClick={() => setShowCreateForm(false)}>
                   Cancel
                 </Button>
                 <Button
@@ -991,7 +1070,7 @@ export function ReportsManager({
       {/* EDIT FORM */}
       {showEditForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-semibold">Edit Report</h2>
@@ -1017,9 +1096,7 @@ export function ReportsManager({
                   <Input
                     id="edit-title"
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Enter report title"
                   />
                 </div>
@@ -1029,9 +1106,7 @@ export function ReportsManager({
                   <Textarea
                     id="edit-description"
                     value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Enter report description"
                     rows={3}
                   />
@@ -1042,9 +1117,7 @@ export function ReportsManager({
                     <Label>Type</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={(v) =>
-                        setFormData({ ...formData, type: v as Report["type"] })
-                      }
+                      onValueChange={(v) => setFormData({ ...formData, type: v as Report["type"] })}
                     >
                       <SelectTrigger>
                         <SelectValue />
@@ -1053,9 +1126,7 @@ export function ReportsManager({
                         <SelectItem value="project">Project Report</SelectItem>
                         <SelectItem value="task">Task Report</SelectItem>
                         <SelectItem value="user">User Report</SelectItem>
-                        <SelectItem value="financial">
-                          Financial Report
-                        </SelectItem>
+                        <SelectItem value="financial">Financial Report</SelectItem>
                         <SelectItem value="custom">Custom Report</SelectItem>
                       </SelectContent>
                     </Select>
@@ -1066,10 +1137,7 @@ export function ReportsManager({
                     <Select
                       value={formData.status}
                       onValueChange={(v) =>
-                        setFormData({
-                          ...formData,
-                          status: v as Report["status"],
-                        })
+                        setFormData({ ...formData, status: v as Report["status"] })
                       }
                     >
                       <SelectTrigger>
@@ -1084,30 +1152,22 @@ export function ReportsManager({
                   </div>
                 </div>
 
-                {formData.type === "project" && (
+                {(formData.type === "project" || formData.type === "financial") && (
                   <div className="space-y-2">
-                    <Label>Associated Project (optional)</Label>
+                    <Label>Associated Project</Label>
                     <Select
-                      value={formData.project_id || allProjectsValue}
-                      onValueChange={(v) =>
-                        setFormData({
-                          ...formData,
-                          project_id: v === allProjectsValue ? "" : v,
-                        })
-                      }
+                      value={formData.project_id}
+                      onValueChange={(v) => setFormData({ ...formData, project_id: v })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select project or leave blank" />
+                        <SelectValue placeholder="Select project or All Projects" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value={allProjectsValue}>
-                          All Projects
-                        </SelectItem>
+                        <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
                         {projects
                           .filter(
                             (p) =>
-                              currentUser.role === "admin" ||
-                              p.supervisorId === currentUser.id
+                              currentUser.role === "admin" || p.supervisorId === currentUser.id
                           )
                           .map((project) => (
                             <SelectItem key={project.id} value={project.id}>
@@ -1116,6 +1176,9 @@ export function ReportsManager({
                           ))}
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select "All Projects" to aggregate data across all accessible projects
+                    </p>
                   </div>
                 )}
               </div>
@@ -1131,10 +1194,7 @@ export function ReportsManager({
                 >
                   Cancel
                 </Button>
-                <Button
-                  onClick={handleUpdate}
-                  disabled={!formData.title.trim()}
-                >
+                <Button onClick={handleUpdate} disabled={!formData.title.trim()}>
                   Update Report
                 </Button>
               </div>
@@ -1143,79 +1203,185 @@ export function ReportsManager({
         </div>
       )}
 
-      {/* VIEW FORM */}
+      {/* VIEW FORM - WITH REAL ANALYTICS CHARTS */}
       {showViewForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="bg-background border rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">
-                  {selectedReport.title}
-                </h2>
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
+                  {selectedReport.description && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {selectedReport.description}
+                    </p>
+                  )}
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setShowViewForm(false)}
+                  onClick={() => {
+                    setShowViewForm(false);
+                    setSelectedReport(null);
+                    setAnalyticsData(null);
+                  }}
                 >
                   ×
                 </Button>
               </div>
 
-              {selectedReport.description && (
-                <p className="text-sm text-muted-foreground mb-6">
-                  {selectedReport.description}
-                </p>
-              )}
-
-              <div className="space-y-8">
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 text-sm">
-                  <div>
-                    <p className="text-muted-foreground">Type</p>
-                    <p className="font-medium mt-1">{selectedReport.type}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Status</p>
-                    <p className="font-medium mt-1">{selectedReport.status}</p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Created</p>
-                    <p className="font-medium mt-1">
-                      {new Date(selectedReport.created_at).toLocaleString(
-                        "en-PH"
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-muted-foreground">Last Updated</p>
-                    <p className="font-medium mt-1">
-                      {new Date(selectedReport.updated_at).toLocaleString(
-                        "en-PH"
-                      )}
-                    </p>
-                  </div>
+              {/* Report Metadata */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm">
+                <div>
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium mt-1 capitalize">{selectedReport.type}</p>
                 </div>
-
-                <div className="border rounded-lg p-8 bg-muted/40 min-h-[240px] flex items-center justify-center text-muted-foreground">
-                  <div className="text-center">
-                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-70" />
-                    <p className="text-lg font-medium mb-1">
-                      Report Preview Area
-                    </p>
-                    <p className="text-sm">
-                      Report content, charts, and detailed analytics will appear
-                      here
-                    </p>
-                    <p className="text-xs mt-3 opacity-70">
-                      (Implementation pending)
-                    </p>
-                  </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <p className="font-medium mt-1 capitalize">{selectedReport.status}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Created</p>
+                  <p className="font-medium mt-1">
+                    {new Date(selectedReport.created_at).toLocaleString("en-PH")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Last Updated</p>
+                  <p className="font-medium mt-1">
+                    {new Date(selectedReport.updated_at).toLocaleString("en-PH")}
+                  </p>
                 </div>
               </div>
 
-              <div className="flex justify-end mt-8">
+              {/* Analytics Section */}
+              {["financial", "project"].includes(selectedReport.type) ? (
+                analyticsLoading ? (
+                  <div className="flex justify-center items-center h-64">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                  </div>
+                ) : analyticsData ? (
+                  <div className="space-y-10">
+                    {/* Summary Cards */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">Total Budget</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-3xl font-bold text-blue-600 p-5">
+                            ₱{analyticsData.budget.toLocaleString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">Total Cost</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-3xl font-bold text-red-600 p-5">
+                            ₱{analyticsData.totalCost.toLocaleString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+
+                      <Card>
+                        <CardHeader className="pb-2">
+                          <CardTitle className="text-lg">Total Revenue</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-3xl font-bold text-green-600 p-5">
+                            ₱{analyticsData.totalRevenue.toLocaleString()}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    {/* Charts */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                      {/* Monthly Bar Chart */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Monthly Budget vs Cost vs Revenue</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="h-80">
+                            <Bar
+                              data={chartData!.barData}
+                              options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                  legend: { position: "top" },
+                                  title: { display: false },
+                                },
+                                scales: {
+                                  y: {
+                                    beginAtZero: true,
+                                    ticks: {
+                                      callback: (value) => `₱${Number(value).toLocaleString()}`,
+                                    },
+                                  },
+                                },
+                              }}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Doughnut Chart */}
+                      <Card>
+                        <CardHeader>
+                          <CardTitle>Financial Distribution</CardTitle>
+                        </CardHeader>
+                        <CardContent className="flex justify-center">
+                          <div className="h-80 w-80">
+                            <Doughnut
+                              data={chartData!.summaryData}
+                              options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                  legend: { position: "bottom" },
+                                },
+                              }}
+                            />
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <AlertCircle className="h-12 w-12 mx-auto mb-4" />
+                    <p className="text-lg font-medium">No financial data available</p>
+                    <p className="mt-2">
+                      This report doesn't have budget/cost/revenue information yet.
+                    </p>
+                  </div>
+                )
+              ) : (
+                <div className="border rounded-lg p-12 bg-muted/40 min-h-[400px] flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <FileText className="h-16 w-16 mx-auto mb-6 opacity-70" />
+                    <p className="text-xl font-medium mb-3">Report Content Area</p>
+                    <p>Detailed report content, tables, and analytics will appear here</p>
+                    <p className="text-sm mt-4 opacity-70">
+                      (Only financial & project reports show charts at the moment)
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end mt-10">
                 <Button
                   variant="outline"
-                  onClick={() => setShowViewForm(false)}
+                  onClick={() => {
+                    setShowViewForm(false);
+                    setSelectedReport(null);
+                    setAnalyticsData(null);
+                  }}
                 >
                   Close
                 </Button>
