@@ -73,7 +73,7 @@ export function TaskManager({
     status: "pending" as Task["status"],
     priority: "medium" as Task["priority"],
     projectId: "",
-    assignedTo: "unassigned",
+    assignedTo: [] as string[],
     dueDate: "",
   });
 
@@ -84,7 +84,7 @@ export function TaskManager({
       status: "pending",
       priority: "medium",
       projectId: "",
-      assignedTo: "unassigned",
+      assignedTo: [],
       dueDate: "",
     });
   };
@@ -159,7 +159,7 @@ export function TaskManager({
     if (!formData.status) missing.push("Status");
     if (!formData.priority) missing.push("Priority");
     if (!formData.projectId) missing.push("Project");
-    if (!formData.assignedTo || formData.assignedTo === "unassigned") {
+    if (!Array.isArray(formData.assignedTo) || formData.assignedTo.length === 0) {
       missing.push("Assign To");
     }
     if (!isOnOrAfterToday(formData.dueDate)) missing.push("Due Date");
@@ -206,7 +206,10 @@ export function TaskManager({
     }
     // fabricator or other roles
     return tasks.filter(
-      (t) => t.assignedTo === currentUser.id || t.createdBy === currentUser.id
+      (t) =>
+        Array.isArray(t.assignedTo)
+          ? t.assignedTo.includes(currentUser.id)
+          : t.createdBy === currentUser.id
     );
   };
 
@@ -221,8 +224,10 @@ export function TaskManager({
     const projectName =
       projects.find((p) => p.id === task.projectId)?.name?.toLowerCase() || "";
 
-    const assignedName =
-      users.find((u) => u.id === task.assignedTo)?.name?.toLowerCase() || "";
+    const assignedName = users
+      .filter((u) => task.assignedTo?.includes(u.id))
+      .map((u) => u.name.toLowerCase())
+      .join(" ");
 
     const creatorName =
       users.find((u) => u.id === task.createdBy)?.name?.toLowerCase() || "";
@@ -736,12 +741,15 @@ export function TaskManager({
                 </span>
               </div>
 
-              {task.assignedTo && task.assignedTo !== "unassigned" && (
+              {task.assignedTo && task.assignedTo !== ["unassigned"] && (
                 <div className="flex items-center gap-2">
                   <User className="h-4 w-4 text-muted-foreground" />
                   <span>
                     Assigned:{" "}
-                    {users.find((u) => u.id === task.assignedTo)?.name || "—"}
+                    {users
+                    .filter((u) => task.assignedTo?.includes(u.id))
+                    .map((u) => u.name)
+                    .join(", ") || "—"}
                   </span>
                 </div>
               )}
@@ -776,7 +784,7 @@ export function TaskManager({
                         status: task.status,
                         priority: task.priority,
                         projectId: task.projectId,
-                        assignedTo: task.assignedTo || "unassigned",
+                        assignedTo: Array.isArray(task.assignedTo) ? task.assignedTo : [],
                         dueDate: task.dueDate || "",
                       });
                       setShowEditModal(true);
@@ -981,34 +989,42 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Assign To *</Label>
-                  <Select
-                    value={formData.assignedTo}
-                    onValueChange={(v) =>
-                      setFormData({
-                        ...formData,
-                        assignedTo: v === "unassigned" ? "unassigned" : v,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select team member" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {users
-                        .filter(
-                          (u) =>
-                            u.role === "fabricator" || u.role === "supervisor"
-                        )
-                        .map((user) => (
-                          <SelectItem key={user.id} value={user.id}>
+                    <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                    {users
+                      .filter(
+                        (u) =>
+                          u.role === "fabricator" || u.role === "supervisor"
+                      )
+                      .map((user) => {
+                        const checked = formData.assignedTo.includes(user.id);
+
+                        return (
+                          <label
+                            key={user.id}
+                            className="flex items-center gap-2 cursor-pointer text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  assignedTo: checked
+                                    ? prev.assignedTo.filter((id) => id !== user.id)
+                                    : [...prev.assignedTo, user.id],
+                                }));
+                              }}
+                            />
                             {user.name} ({user.secureId})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
+                          </label>
+                        );
+                      })}
+                  </div>
+
                   {isCreateMissing("Assign To") && (
-                    <p className="text-xs text-destructive">Assign To Required</p>
+                    <p className="text-xs text-destructive">
+                      At least one assignee required
+                    </p>
                   )}
                 </div>
 
@@ -1190,40 +1206,42 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Assign To *</Label>
-                  <Select
-                    value={formData.assignedTo}
-                    onValueChange={(v) =>
-                      setFormData({
-                        ...formData,
-                        assignedTo: v === "unassigned" ? "unassigned" : v,
-                      })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue
-                        placeholder={
-                          isEditMissing("Assign To")
-                            ? "Assign To Required"
-                            : "Select team member"
-                        }
-                      />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">Unassigned</SelectItem>
-                      {users
-                        .filter(
-                          (u) =>
-                            u.role === "fabricator" || u.role === "supervisor"
-                        )
-                        .map((u) => (
-                          <SelectItem key={u.id} value={u.id}>
-                            {u.name} ({u.secureId})
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  {isEditMissing("Assign To") && (
-                    <p className="text-xs text-destructive">Assign To Required</p>
+                  <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                    {users
+                      .filter(
+                        (u) =>
+                          u.role === "fabricator" || u.role === "supervisor"
+                      )
+                      .map((user) => {
+                        const checked = formData.assignedTo.includes(user.id);
+
+                        return (
+                          <label
+                            key={user.id}
+                            className="flex items-center gap-2 cursor-pointer text-sm"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={() => {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  assignedTo: checked
+                                    ? prev.assignedTo.filter((id) => id !== user.id)
+                                    : [...prev.assignedTo, user.id],
+                                }));
+                              }}
+                            />
+                            {user.name} ({user.secureId})
+                          </label>
+                        );
+                      })}
+                  </div>
+
+                  {isCreateMissing("Assign To") && (
+                    <p className="text-xs text-destructive">
+                      At least one assignee required
+                    </p>
                   )}
                 </div>
 

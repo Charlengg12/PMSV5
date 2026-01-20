@@ -290,7 +290,7 @@ function apply_project_progress_delta(PDO $pdo, string $projectId, float $delta)
 function handle_update_task(PDO $pdo, string $id): void
 {
     require_login();
-    $body = sanitize_recursive(json_input());
+    $body = json_input();
 
     $fields = [];
     $params = [':id' => $id];
@@ -304,23 +304,24 @@ function handle_update_task(PDO $pdo, string $id): void
         'assigned_to',
         'due_date',
         'estimated_hours',
-        'actual_hours',
-        'updated_at'
+        'actual_hours'
     ];
 
     foreach ($allowed as $field) {
         $val = null;
-        if (isset($body[$field])) {
-            $val = $body[$field];
-        }
+        
+        // Map camelCase from Frontend to snake_case for DB
+        if (isset($body[$field])) $val = $body[$field];
         if ($field === 'project_id' && isset($body['projectId'])) $val = $body['projectId'];
-        if ($field === 'assigned_to' && isset($body['assignedTo'])) $val = $body['assignedTo'];
+        if ($field === 'assigned_to' && isset($body['assignedTo'])) {
+            $val = is_array($body['assignedTo']) ? json_encode($body['assignedTo']) : $body['assignedTo'];
+        }
         if ($field === 'due_date' && isset($body['dueDate'])) $val = $body['dueDate'];
         if ($field === 'estimated_hours' && isset($body['estimatedHours'])) $val = $body['estimatedHours'];
         if ($field === 'actual_hours' && isset($body['actualHours'])) $val = $body['actualHours'];
-        if ($field === 'updated_at' && isset($body['updatedAt'])) $val = $body['updatedAt'];
 
         if ($val !== null) {
+            // Handle empty strings as NULL for specific fields
             if (($field === 'assigned_to' || $field === 'due_date') && $val === "") {
                 $val = null; 
             }
@@ -333,9 +334,8 @@ function handle_update_task(PDO $pdo, string $id): void
         json_response(['message' => 'No changes provided'], 400);
     }
 
-    $sql = "UPDATE tasks SET " . implode(', ', $fields) . " WHERE id = :id";
-    
     try {
+        $sql = "UPDATE tasks SET " . implode(', ', $fields) . ", updated_at = NOW() WHERE id = :id";
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
 
@@ -344,12 +344,10 @@ function handle_update_task(PDO $pdo, string $id): void
         $task = $stmt->fetch();
 
         if (!$task) {
-             json_response(['error' => 'Task not found or update failed'], 404);
+             json_response(['error' => 'Task not found'], 404);
         }
 
-        // LOGGING
         log_activity($pdo, $_SESSION['user_id'], 'UPDATE_TASK', "Updated task: " . ($task['title'] ?? $id));
-
         json_response($task);
 
     } catch (PDOException $e) {
@@ -1494,14 +1492,47 @@ function handle_get_tasks(PDO $pdo): void
 {
     require_login();
     $stmt = $pdo->query('SELECT * FROM tasks ORDER BY created_at DESC');
-    $tasks = $stmt->fetchAll();
+    $tasks = $stmt->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+    foreach ($tasks as &$task) {
+        // 1. Decode the assigned_to JSON string into a PHP array
+        if (!empty($task['assigned_to'])) {
+            $decoded = json_decode($task['assigned_to'], true);
+            $task['assignedTo'] = is_array($decoded) ? $decoded : [];
+        } else {
+            $task['assignedTo'] = [];
+        }
+
+        // 2. Map snake_case to camelCase for the Frontend
+        $task['projectId'] = $task['project_id'];
+        $task['dueDate'] = $task['due_date'];
+        $task['createdBy'] = $task['created_by'];
+        $task['createdAt'] = $task['created_at'];
+        $task['updatedAt'] = $task['updated_at'];
+        $task['estimatedHours'] = $task['estimated_hours'];
+        $task['actualHours'] = $task['actual_hours'];
+
+        // 3. Optional: Remove original snake_case keys to keep response clean
+        unset(
+            $task['assigned_to'], 
+            $task['project_id'], 
+            $task['due_date'], 
+            $task['created_by'], 
+            $task['created_at'], 
+            $task['updated_at'],
+            $task['estimated_hours'],
+            $task['actual_hours']
+        );
+    }
+    unset($task); // Break reference
+
     json_response($tasks);
 }
 
 function handle_create_task(PDO $pdo): void
 {
     require_login();
-    $body = sanitize_recursive(json_input());
+    $body = json_input(); // Don't use sanitize_recursive here yet if it mangles arrays
     $taskId = 'task-' . time();
 
     $title = trim((string) ($body['title'] ?? ''));
@@ -1509,9 +1540,13 @@ function handle_create_task(PDO $pdo): void
     $status = trim((string) ($body['status'] ?? ''));
     $priority = trim((string) ($body['priority'] ?? ''));
     $projectId = trim((string) ($body['projectId'] ?? ''));
-    $assignedTo = trim((string) ($body['assignedTo'] ?? ''));
     $dueDate = trim((string) ($body['dueDate'] ?? ''));
     $createdBy = trim((string) ($body['createdBy'] ?? ''));
+    
+    // Handle assignedTo as an array or string
+    $assignedToData = $body['assignedTo'] ?? [];
+    // Convert array to JSON string for DB storage, otherwise keep as string
+    $assignedToEncoded = is_array($assignedToData) ? json_encode($assignedToData) : $assignedToData;
 
     $missing = [];
     if ($projectId === '') $missing[] = 'projectId';
@@ -1519,7 +1554,7 @@ function handle_create_task(PDO $pdo): void
     if ($description === '') $missing[] = 'description';
     if ($status === '') $missing[] = 'status';
     if ($priority === '') $missing[] = 'priority';
-    if ($assignedTo === '' || $assignedTo === 'unassigned') $missing[] = 'assignedTo';
+    if (empty($assignedToData) || $assignedToData === 'unassigned') $missing[] = 'assignedTo';
     if ($dueDate === '') $missing[] = 'dueDate';
     if ($createdBy === '') $missing[] = 'createdBy';
 
@@ -1539,15 +1574,14 @@ function handle_create_task(PDO $pdo): void
         ':description' => $description,
         ':status' => $status,
         ':priority' => $priority,
-        ':assigned_to' => $assignedTo,
+        ':assigned_to' => $assignedToEncoded, // Stored as JSON string
         ':created_by' => $createdBy,
         ':due_date' => $dueDate,
         ':estimated_hours' => $body['estimatedHours'] ?? 0,
         ':actual_hours' => $body['actualHours'] ?? 0,
     ]);
 
-    // LOGGING
-    log_activity($pdo, $_SESSION['user_id'], 'CREATE_TASK', "Created task: " . $body['title']);
+    log_activity($pdo, $_SESSION['user_id'], 'CREATE_TASK', "Created task: " . $title);
 
     $stmt = $pdo->prepare('SELECT * FROM tasks WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $taskId]);

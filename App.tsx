@@ -402,8 +402,20 @@ export default function App() {
     );
   };
 
-  const handleDeleteTask = (taskId: string) => {
-    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      const { error } = await apiService.deleteTask(taskId);
+
+      if (error) {
+        console.error("Delete failed:", error);
+        return;
+      }
+
+      setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId));
+      
+    } catch (err) {
+      console.error("An unexpected error occurred during deletion:", err);
+    }
   };
 
   const handleCreateProject = async (

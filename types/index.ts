@@ -110,7 +110,7 @@ export interface Task {
   description?: string;
   status: 'pending' | 'in-progress' | 'completed' | 'blocked';
   priority: 'low' | 'medium' | 'high' | 'urgent';
-  assignedTo?: string;
+  assignedTo?: string[];
   dueDate?: string;
   estimatedHours?: number;
   actualHours?: number;
