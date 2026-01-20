@@ -949,6 +949,11 @@ export function ProjectsGrid({
           project={clientDialogProject}
           onClientCreated={(client) => {
             onCreateUser?.(client);
+            onUpdateProject?.({
+              ...clientDialogProject,
+              clientId: client.id,
+              clientName: client.name,
+            });
             setLocalClientAssignedProjectIds((prev) =>
               new Set([...prev, clientDialogProject.id])
             );

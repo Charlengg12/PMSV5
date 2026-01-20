@@ -29,6 +29,12 @@ export function ClientCreationDialog({
   project,
   onClientCreated,
 }: ClientCreationDialogProps) {
+  // Validation regex patterns
+  const emailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+  const passwordRegex =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&_\-])[A-Za-z\d@$!%*?&_\-]{8,}$/;
+  const phoneRegex = /^(\+639|09)\d{9}$/;
+
   // Mode: 'create' | 'existing'
   const [mode, setMode] = useState<"create" | "existing">("create");
 
@@ -89,15 +95,16 @@ export function ClientCreationDialog({
 
     if (!formData.name.trim()) newErrors.name = "Client name is required";
     if (!formData.email.trim()) newErrors.email = "Email is required";
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
+    else if (!emailRegex.test(formData.email)) {
+      newErrors.email = "Please enter a valid Gmail address";
     }
     if (!formData.password.trim()) newErrors.password = "Password is required";
-    else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters";
+    else if (!passwordRegex.test(formData.password)) {
+      newErrors.password =
+        "Password must be at least 8 characters with uppercase, lowercase, number, and special character (@$!%*?&_-)";
     }
-    if (formData.phone && !/^(\+639|09)\d{9}$/.test(formData.phone)) {
-      newErrors.phone = "Please enter a valid Philippine phone number";
+    if (formData.phone && !phoneRegex.test(formData.phone)) {
+      newErrors.phone = "Phone must be +639XXXXXXXXX or 09XXXXXXXXX";
     }
 
     setErrors(newErrors);
@@ -105,6 +112,18 @@ export function ClientCreationDialog({
   };
 
   const handleInputChange = (field: string, value: string) => {
+    if (field === "phone") {
+      let cleaned = value.replace(/[^\d+]/g, "");
+      if (cleaned.includes("+")) {
+        cleaned = "+" + cleaned.replace(/\+/g, "");
+      }
+      if (cleaned.startsWith("+")) {
+        cleaned = cleaned.slice(0, 13);
+      } else {
+        cleaned = cleaned.slice(0, 11);
+      }
+      value = cleaned;
+    }
     setFormData((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) {
       setErrors((prev) => ({ ...prev, [field]: "" }));
@@ -490,7 +509,7 @@ export function ClientCreationDialog({
                   <Input
                     id="email"
                     type="email"
-                    placeholder="client@example.com"
+                    placeholder="client@gmail.com"
                     value={formData.email}
                     onChange={(e) => handleInputChange("email", e.target.value)}
                     className={errors.email ? "border-destructive" : ""}
@@ -505,7 +524,9 @@ export function ClientCreationDialog({
                   <Label htmlFor="phone">Phone Number (Optional)</Label>
                   <Input
                     id="phone"
-                    placeholder="+639..."
+                    type="tel"
+                    maxLength={13}
+                    placeholder="+639123456789 or 09123456789"
                     value={formData.phone}
                     onChange={(e) => handleInputChange("phone", e.target.value)}
                     className={errors.phone ? "border-destructive" : ""}
@@ -522,7 +543,7 @@ export function ClientCreationDialog({
                     <Input
                       id="password"
                       type={showPassword ? "text" : "password"}
-                      placeholder="Min 6 chars"
+                      placeholder="Min 8 chars"
                       value={formData.password}
                       onChange={(e) =>
                         handleInputChange("password", e.target.value)
