@@ -1655,78 +1655,83 @@ function handle_signup(PDO $pdo): void
 {
     $body = sanitize_recursive(json_input());
 
-    $email = isset($body['email']) ? trim(strtolower($body['email'])) : '';
-    $password = $body['password'] ?? '';
-    $name = trim($body['name'] ?? '');
+    $email    = isset($body['email'])    ? trim(strtolower($body['email'])) : '';
+    $password = $body['password']         ?? '';
+    $name     = trim($body['name']        ?? '');
 
     if ($email === '' || $password === '' || $name === '') {
         json_response(['error' => 'Email, password, and name are required'], 400);
     }
 
+    // Check if email already exists
     $check = $pdo->prepare('SELECT id FROM users WHERE email = :email LIMIT 1');
     $check->execute([':email' => $email]);
     if ($check->fetch()) {
         json_response(['error' => 'User already exists with this email'], 409);
     }
 
+    // Role logic
     $allowedRoles = ['fabricator', 'supervisor', 'client', 'admin'];
-    $role = isset($body['role']) && in_array($body['role'], $allowedRoles) ? $body['role'] : 'fabricator';
+    $role = isset($body['role']) && in_array($body['role'], $allowedRoles) 
+        ? $body['role'] 
+        : 'fabricator';
 
-    if ($role === 'supervisor') {
-        $secureId = 'SUP' . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
-    } elseif ($role === 'client') {
-        $secureId = 'CLI' . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
-    } elseif ($role === 'admin') {
-        $secureId = 'ADM' . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
-    } else {
-        $secureId = 'FAB' . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
-    }
+    // Generate secure_id
+    $prefix = match ($role) {
+        'supervisor' => 'SUP',
+        'client'     => 'CLI',
+        'admin'      => 'ADM',
+        default      => 'FAB',
+    };
+    $secureId = $prefix . strtoupper(base_convert(time(), 10, 36)) . strtoupper(substr(bin2hex(random_bytes(2)), 0, 3));
+
     $employeeNumber = 'EMP' . substr((string)time(), -6) . str_pad((string)random_int(0, 999), 3, '0', STR_PAD_LEFT);
+
     $passwordHash = password_hash($password, PASSWORD_BCRYPT);
 
-    $userId = 'user-' . time();
+    $userId = 'user-' . time() . '-' . bin2hex(random_bytes(4)); // better uniqueness
 
+    // Insert new user
     $stmt = $pdo->prepare(
-        'INSERT INTO users (id, name, email, password_hash, role, school, phone, gcash_number, secure_id, employee_number, is_active)
-         VALUES (:id, :name, :email, :password_hash, :role, :school, :phone, :gcash_number, :secure_id, :employee_number, 1)'
+        'INSERT INTO users 
+            (id, name, email, password_hash, role, school, phone, gcash_number, secure_id, employee_number, is_active)
+         VALUES 
+            (:id, :name, :email, :password_hash, :role, :school, :phone, :gcash_number, :secure_id, :employee_number, 1)'
     );
+
     $stmt->execute([
-        ':id' => $userId,
-        ':name' => $name,
-        ':email' => $email,
-        ':password_hash' => $passwordHash,
-        ':role' => $role,
-        ':school' => $body['school'] ?? null,
-        ':phone' => $body['phone'] ?? null,
-        ':gcash_number' => $body['gcashNumber'] ?? null,
-        ':secure_id' => $secureId,
-        ':employee_number' => $employeeNumber,
+        ':id'             => $userId,
+        ':name'           => $name,
+        ':email'          => $email,
+        ':password_hash'  => $passwordHash,
+        ':role'           => $role,
+        ':school'         => $body['school']       ?? null,
+        ':phone'          => $body['phone']        ?? null,
+        ':gcash_number'   => $body['gcashNumber']  ?? null,
+        ':secure_id'      => $secureId,
+        ':employee_number'=> $employeeNumber,
     ]);
 
     $user = [
-        'id' => $userId,
-        'name' => $name,
-        'email' => $email,
-        'role' => $role,
-        'school' => $body['school'] ?? null,
-        'phone' => $body['phone'] ?? null,
-        'gcash_number' => $body['gcashNumber'] ?? null,
-        'secure_id' => $secureId,
+        'id'              => $userId,
+        'name'            => $name,
+        'email'           => $email,
+        'role'            => $role,
+        'school'          => $body['school']       ?? null,
+        'phone'           => $body['phone']        ?? null,
+        'gcash_number'    => $body['gcashNumber']  ?? null,
+        'secure_id'       => $secureId,
         'employee_number' => $employeeNumber,
-        'is_active' => 1,
+        'is_active'       => 1,
     ];
-
-    $_SESSION['user_id'] = $userId;
-    $_SESSION['role'] = 'fabricator';
 
     // LOGGING
     log_activity($pdo, $userId, 'SIGNUP', "New user registered: $name ($role)");
 
-    $token = base64_encode(random_bytes(32));
-
     json_response([
-        'user' => $user,
-        'token' => $token,
+        'success' => true,
+        'message' => 'Registration successful! Please log in with your new credentials.',
+        'user'    => $user,
     ]);
 }
 
