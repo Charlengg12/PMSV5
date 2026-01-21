@@ -35,7 +35,6 @@ interface LogEntry {
 const ITEMS_PER_PAGE = 5;
 
 export function ActivityLogs() {
-  // Export confirmation modal state
   const [showExportModal, setShowExportModal] = useState(false);
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filteredLogs, setFilteredLogs] = useState<LogEntry[]>([]);
@@ -48,11 +47,10 @@ export function ActivityLogs() {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [hasUserScrolled, setHasUserScrolled] = useState(false);
 
-  const observerRef = useRef<IntersectionObserver | null>(null);
+  const tableContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  const contentRef = useRef<HTMLDivElement>(null);
+  const observerRef = useRef<IntersectionObserver | null>(null);
 
   // Fetch all logs once on mount
   useEffect(() => {
@@ -62,17 +60,15 @@ export function ActivityLogs() {
   // Scroll listener for scroll-to-top button
   useEffect(() => {
     const handleScroll = () => {
-      if (contentRef.current) {
-        const scrollTop = contentRef.current.scrollTop;
+      if (tableContainerRef.current) {
+        const scrollTop = tableContainerRef.current.scrollTop;
         setShowScrollTop(scrollTop > 300);
-        if (scrollTop > 0) {
-          setHasUserScrolled(true);
-        }
       }
     };
-    const ref = contentRef.current;
-    ref?.addEventListener("scroll", handleScroll);
-    return () => ref?.removeEventListener("scroll", handleScroll);
+
+    const container = tableContainerRef.current;
+    container?.addEventListener("scroll", handleScroll);
+    return () => container?.removeEventListener("scroll", handleScroll);
   }, []);
 
   // Re-apply filters whenever source data or filter inputs change
@@ -80,14 +76,14 @@ export function ActivityLogs() {
     applyFilters();
   }, [logs, searchTerm, selectedAction]);
 
-  // When filteredLogs changes → reset pagination state
+  // Reset pagination when filters change
   useEffect(() => {
     setPage(1);
     setDisplayedLogs([]);
     setHasMore(true);
   }, [filteredLogs]);
 
-  // Whenever page or filteredLogs changes → slice the correct portion
+  // Load more items when page changes
   useEffect(() => {
     const start = 0;
     const end = page * ITEMS_PER_PAGE;
@@ -95,27 +91,31 @@ export function ActivityLogs() {
     setHasMore(end < filteredLogs.length);
   }, [page, filteredLogs]);
 
-  // Infinite scroll observer
+  // Infinite scroll observer — watches the bottom of the TABLE container
   useEffect(() => {
-    // Cleanup previous observer
     if (observerRef.current) {
       observerRef.current.disconnect();
     }
 
-    if (loading || loadingMore || !hasMore || !loadMoreRef.current) return;
+    if (loading || loadingMore || !hasMore || !loadMoreRef.current || !tableContainerRef.current) {
+      return;
+    }
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting && hasMore && !loadingMore) {
           setLoadingMore(true);
-          // Small delay gives smoother feel & prevents double triggers
           setTimeout(() => {
             setPage((prev) => prev + 1);
             setLoadingMore(false);
-          }, 400);
+          }, 300);
         }
       },
-      { threshold: 0.1, rootMargin: "0px 0px 100px 0px" },
+      {
+        root: tableContainerRef.current,          // ← Important: observe inside the scrollable table container
+        rootMargin: "0px 0px 150px 0px",          // trigger a bit earlier
+        threshold: 0.1,
+      }
     );
 
     observerRef.current.observe(loadMoreRef.current);
@@ -125,14 +125,14 @@ export function ActivityLogs() {
         observerRef.current.disconnect();
       }
     };
-  }, [loading, loadingMore, hasMore, filteredLogs.length, hasUserScrolled]); // ← important: depend on length too
+  }, [loading, loadingMore, hasMore, filteredLogs.length, page]);
 
   const fetchLogs = async () => {
     try {
       const response = await apiService.getLogs();
       if (response.data) {
         setLogs(response.data);
-        setFilteredLogs(response.data); // initial sync
+        setFilteredLogs(response.data);
       }
     } catch (err) {
       console.error("Failed to fetch logs", err);
@@ -148,15 +148,13 @@ export function ActivityLogs() {
   };
 
   const scrollToTop = () => {
-    contentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    tableContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // Show modal instead of exporting immediately
   const handleExport = () => {
     setShowExportModal(true);
   };
 
-  // Actual export logic
   const confirmExport = () => {
     const csv = [
       ["Timestamp", "User", "Role", "Action", "Description", "IP Address"],
@@ -181,14 +179,16 @@ export function ActivityLogs() {
     setShowExportModal(false);
   };
 
+  // ──────────────────────────────────────────────────────────────────────
+  // Helper functions (unchanged)
+  // ──────────────────────────────────────────────────────────────────────
+
   const getActionLabel = (action: string): string => {
     const upper = action.toUpperCase();
-    if (upper.includes("DEACTIVATE") || upper.includes("DELETE"))
-      return "Delete";
+    if (upper.includes("DEACTIVATE") || upper.includes("DELETE")) return "Delete";
     if (upper.includes("CREATE") || upper.includes("ADD")) return "Add";
     if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Edit";
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return "Login";
-
     return action
       .split(/[_-]/)
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -214,37 +214,24 @@ export function ActivityLogs() {
 
   const getActionIcon = (action: string) => {
     const upper = action.toUpperCase();
-    if (upper.includes("DELETE") || upper.includes("DEACTIVATE"))
-      return <Trash2 className="h-3 w-3" />;
-    if (upper.includes("CREATE") || upper.includes("ADD"))
-      return <Plus className="h-3 w-3" />;
-    if (upper.includes("LOGIN") || upper.includes("SIGN_IN"))
-      return <LogIn className="h-3 w-3" />;
-    if (upper.includes("UPDATE") || upper.includes("EDIT"))
-      return <Edit3 className="h-3 w-3" />;
+    if (upper.includes("DELETE") || upper.includes("DEACTIVATE")) return <Trash2 className="h-3 w-3" />;
+    if (upper.includes("CREATE") || upper.includes("ADD")) return <Plus className="h-3 w-3" />;
+    if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return <LogIn className="h-3 w-3" />;
+    if (upper.includes("UPDATE") || upper.includes("EDIT")) return <Edit3 className="h-3 w-3" />;
     return <Activity className="h-3 w-3" />;
   };
 
   const getRoleIcon = (role: string) => {
     const r = role.toLowerCase().trim();
-    if (r.includes("admin"))
-      return (
-        <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
-      );
+    if (r.includes("admin")) return <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />;
     if (r.includes("supervisor") || r.includes("moderator"))
-      return (
-        <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-      );
+      return <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />;
     if (r.includes("manager") || r.includes("lead"))
-      return (
-        <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
-      );
+      return <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />;
     if (r === "user" || r === "member" || r.includes("regular"))
       return <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />;
     if (r.includes("guest") || r.includes("visitor"))
-      return (
-        <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
-      );
+      return <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />;
     return <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />;
   };
 
@@ -268,9 +255,7 @@ export function ActivityLogs() {
           actionLabel.includes(term) ||
           log.description.toLowerCase().includes(term) ||
           log.ip_address.toLowerCase().includes(term) ||
-          format(new Date(log.created_at), "MMM d, yyyy h:mm a")
-            .toLowerCase()
-            .includes(term)
+          format(new Date(log.created_at), "MMM d, yyyy h:mm a").toLowerCase().includes(term)
         );
       });
     }
@@ -317,9 +302,7 @@ export function ActivityLogs() {
               disabled={loading}
               className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
             >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-              />
+              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Refresh</span>
             </button>
           </div>
@@ -370,6 +353,7 @@ export function ActivityLogs() {
                 <Download className="h-4 w-4" />
                 Export
               </button>
+
               {/* Export Confirmation Modal */}
               {showExportModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-2 sm:p-4">
@@ -389,8 +373,7 @@ export function ActivityLogs() {
                         </button>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5">
-                        Are you sure you want to export the currently displayed
-                        activity logs?
+                        Are you sure you want to export the currently displayed activity logs?
                       </p>
                     </div>
                     <div className="p-4 sm:p-6 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
@@ -428,8 +411,7 @@ export function ActivityLogs() {
           </div>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
             <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
-            Search across all fields: user name, role, action type, description,
-            IP address, and timestamps
+            Search across all fields: user name, role, action type, description, IP address, and timestamps
           </p>
         </div>
 
@@ -440,9 +422,7 @@ export function ActivityLogs() {
               <div className="relative mb-4">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
               </div>
-              <p className="text-lg font-medium dark:text-white">
-                Loading activity history...
-              </p>
+              <p className="text-lg font-medium dark:text-white">Loading activity history...</p>
               <p className="text-sm mt-2">Please wait</p>
             </div>
           ) : error ? (
@@ -464,24 +444,20 @@ export function ActivityLogs() {
                 <Activity className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
               <p className="text-lg font-medium dark:text-white">
-                {searchTerm || selectedAction
-                  ? "No matching activities found"
-                  : "No activity logs found"}
+                {searchTerm || selectedAction ? "No matching activities found" : "No activity logs found"}
               </p>
               <p className="text-sm mt-2">
-                {searchTerm || selectedAction
-                  ? "Try adjusting your filters"
-                  : "Activities will appear here"}
+                {searchTerm || selectedAction ? "Try adjusting your filters" : "Activities will appear here"}
               </p>
             </div>
           ) : (
             <>
               <div
-                ref={contentRef}
-                className="max-h-[calc(100vh-300px)] overflow-y-auto overflow-x-auto"
+                ref={tableContainerRef}
+                className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-auto scroll-smooth"
               >
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="sticky top-0 z-10 bg-white dark:bg-gray-800">
+                  <thead className="sticky top-0 z-10 dark:bg-gray-800">
                     <tr>
                       <th
                         scope="col"
@@ -552,17 +528,14 @@ export function ActivityLogs() {
                         <td className="whitespace-nowrap px-4 py-4 text-sm">
                           <span
                             className={`inline-flex items-center border-l-4 px-3 py-1 text-xs font-medium ${getActionColor(
-                              log.action,
+                              log.action
                             )}`}
                           >
                             {getActionLabel(log.action)}
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                          <div
-                            className="line-clamp-2 max-w-xs"
-                            title={log.description}
-                          >
+                          <div className="line-clamp-2 max-w-xs" title={log.description}>
                             {log.description}
                           </div>
                         </td>
@@ -573,28 +546,29 @@ export function ActivityLogs() {
                     ))}
                   </tbody>
                 </table>
+
+                {/* Load more trigger - placed at the bottom of the TABLE */}
+                {hasMore && (
+                  <div ref={loadMoreRef} className="py-10 flex justify-center items-center min-h-[80px]">
+                    {loadingMore ? (
+                      <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
+                        <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
+                        <span>Loading more activities...</span>
+                      </div>
+                    ) : (
+                      <div className="h-10" /> // invisible trigger area
+                    )}
+                  </div>
+                )}
+
+                {!hasMore && displayedLogs.length > 0 && (
+                  <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">
+                    <span className="inline-block px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                      You've reached the end
+                    </span>
+                  </div>
+                )}
               </div>
-
-              {hasMore && (
-                <div ref={loadMoreRef} className="py-10 flex justify-center">
-                  {loadingMore ? (
-                    <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
-                      <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
-                      <span>Loading more activities...</span>
-                    </div>
-                  ) : (
-                    <div className="h-12" /> // trigger area
-                  )}
-                </div>
-              )}
-
-              {!hasMore && displayedLogs.length > 0 && (
-                <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">
-                  <span className="inline-block px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                    You've reached the end
-                  </span>
-                </div>
-              )}
             </>
           )}
         </div>
