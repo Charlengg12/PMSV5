@@ -53,7 +53,7 @@ export function ClientBilling() {
   
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
 
-  // SweetAlert2 custom classes (consistent with SupervisorSignupForm)
+  // SweetAlert2 custom classes
   const swalCustomClasses = {
     container: "swal-container",
     popup: "swal-popup !max-w-md",
@@ -81,10 +81,8 @@ export function ClientBilling() {
     }
   };
 
-  // -- Helper to find selected project data for the modal --
   const selectedProjectData = billingData.find(p => p.id === selectedProject);
 
-  // -- Filter Logic --
   const getFilteredData = () => {
     if (statusFilter === "all") return billingData;
 
@@ -156,6 +154,17 @@ export function ClientBilling() {
       return;
     }
 
+    // NEW: Enforce max amount limit of 1,000,000
+    if (paymentAmount > 1000000) {
+      await Swal.fire({
+        icon: "error",
+        title: "Amount Exceeds Limit",
+        text: "The maximum allowed payment amount is ₱1,000,000.",
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
     // 3. Get project data and validate existence
     const project = billingData.find((item) => item.id === selectedProject);
     if (!project) {
@@ -179,6 +188,18 @@ export function ClientBilling() {
         icon: "error",
         title: "Overpayment Detected",
         text: `You cannot pay ${formatMoney(paymentAmount)}. The remaining balance is only ${formatMoney(remainingBalance)}.`,
+        customClass: swalCustomClasses,
+      });
+      return;
+    }
+
+    // if reference number is > 20 return the sweet alert
+
+    if (reference.trim().length > 20) {
+      await Swal.fire({
+        icon: "error",
+        title: "Reference Too Long",
+        text: "Reference number must be 20 characters or less.",
         customClass: swalCustomClasses,
       });
       return;
@@ -216,49 +237,49 @@ export function ClientBilling() {
 
     // 6. Show loading state
     Swal.fire({
-        title: "Processing Payment...",
-        allowOutsideClick: false,
-        allowEscapeKey: false,
-        didOpen: () => {
+      title: "Processing Payment...",
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+      didOpen: () => {
         Swal.showLoading();
-        },
-        customClass: swalCustomClasses,
+      },
+      customClass: swalCustomClasses,
     });
 
     // Wait exactly 2 seconds
     await new Promise(resolve => setTimeout(resolve, 2000));
 
     try {
-        await apiService.createPayment({
+      await apiService.createPayment({
         projectId: selectedProject,
         amount: paymentAmount,
         date,
         method,
         reference,
-        });
+      });
 
-        await Swal.fire({
+      await Swal.fire({
         icon: "success",
         title: "Payment Recorded!",
         text: "The payment has been successfully saved.",
         timer: 2200,
         showConfirmButton: false,
         customClass: swalCustomClasses,
-        });
+      });
 
-        setIsModalOpen(false);
-        setAmount("");
-        setReference("");
-        fetchData();
+      setIsModalOpen(false);
+      setAmount("");
+      setReference("");
+      fetchData();
     } catch (error: any) {
-        await Swal.fire({
+      await Swal.fire({
         icon: "error",
         title: "Error",
         text: error.message || "Failed to record payment. Please try again.",
         customClass: swalCustomClasses,
-        });
+      });
     } finally {
-        Swal.close();
+      Swal.close();
     }
   };
 
@@ -285,7 +306,6 @@ export function ClientBilling() {
           customClass: swalCustomClasses,
         });
 
-        // Wait exactly 2 seconds
         await new Promise(resolve => setTimeout(resolve, 2000));
 
         await apiService.deletePayment(id);
@@ -541,10 +561,9 @@ export function ClientBilling() {
         </CardContent>
       </Card>
 
-      {/* CUSTOM MODAL (Plain div instead of Dialog) */}
+      {/* CUSTOM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          {/* Modal Container */}
           <div className="bg-card w-full max-w-lg mx-4 sm:mx-6 rounded-xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b">
@@ -591,7 +610,10 @@ export function ClientBilling() {
                   <div className="relative">
                     <span className="absolute left-3 top-2.5 text-muted-foreground">₱</span>
                     <Input 
-                      type="number" 
+                      type="number"
+                      min={0}
+                      max={1000000}
+                      step="0.01"
                       className="pl-7"
                       value={amount} 
                       onChange={(e) => setAmount(e.target.value)}
@@ -601,7 +623,10 @@ export function ClientBilling() {
                   {selectedProjectData && (
                     <p className="text-[11px] text-muted-foreground text-right mt-1">
                       Max allowed: <span className="font-medium text-foreground">
-                        {formatMoney((parseFloat(selectedProjectData.total_cost) - parseFloat(selectedProjectData.total_paid)))}
+                        {formatMoney(Math.min(
+                          parseFloat(selectedProjectData.total_cost) - parseFloat(selectedProjectData.total_paid),
+                          1000000
+                        ))}
                       </span>
                     </p>
                   )}
