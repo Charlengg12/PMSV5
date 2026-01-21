@@ -272,6 +272,14 @@ export function CreateProjectForm({
         text: "Project name cannot exceed 50 characters.",
         icon: "warning",
         confirmButtonText: "Okay",
+        customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
       return;
     }
@@ -282,6 +290,14 @@ export function CreateProjectForm({
         text: "Project description cannot exceed 100 characters.",
         icon: "warning",
         confirmButtonText: "Okay",
+         customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
       return;
     }
@@ -295,6 +311,14 @@ export function CreateProjectForm({
         )}</strong>`,
         icon: "warning",
         confirmButtonText: "Okay",
+         customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
       return;
     }
@@ -311,6 +335,14 @@ export function CreateProjectForm({
       cancelButtonText: "Cancel",
       confirmButtonText: "Confirm",
       allowOutsideClick: false,
+       customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
     });
 
     if (!result.isConfirmed) {
@@ -321,6 +353,14 @@ export function CreateProjectForm({
       title: "Processing...",
       text: "Please wait, your request is being processed.",
       allowOutsideClick: false,
+       customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        },
       didOpen: () => {
         Swal.showLoading();
       },
@@ -368,6 +408,14 @@ export function CreateProjectForm({
         text: "The project was successfully created.",
         icon: "success",
         timer: 2200,
+         customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
 
       onClose();
@@ -380,6 +428,14 @@ export function CreateProjectForm({
         text: "Failed to create the project. Please try again.",
         icon: "error",
         confirmButtonText: "OK",
+         customClass: {
+          container: "swal-container",
+          popup: "swal-popup",
+          title: "swal-title",
+          htmlContainer: "swal-content",
+          confirmButton: "swal-confirm-button",
+          cancelButton: "swal-cancel-button",
+        }
       });
     }
   };
