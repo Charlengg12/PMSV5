@@ -217,7 +217,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       text: "Are you sure you want to log out?",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Yes, Logout",
+      confirmButtonText: "Logout",
       cancelButtonText: "Cancel",
       focusCancel: true,
       customClass: {
