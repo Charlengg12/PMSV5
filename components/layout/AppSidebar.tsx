@@ -154,7 +154,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       setTimeout(() => {
         setShowLogoutSpinner(false);
         onLogout();
-        window.location.href = "/login";
+        window.location.href = "/";
       }, 1500);
     }
   };
