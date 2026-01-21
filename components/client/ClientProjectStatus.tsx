@@ -207,7 +207,7 @@ export function ClientProjectStatus({
             </p>
             {milestoneTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                All milestones have been completed. Great work!
+                All tasks have been completed. Great work!
               </p>
             ) : (
               milestoneTasks.map((task) => {
