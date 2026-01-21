@@ -128,7 +128,8 @@ export function ReportsManager({
 
   const [formData, setFormData] = useState({
     title: "",
-    description: "",
+    shortSummary: "",
+    details: "",
     type: "project" as Report["type"],
     status: "draft" as Report["status"],
     project_id: ALL_PROJECTS_VALUE,
@@ -195,7 +196,8 @@ export function ReportsManager({
   const resetForm = () => {
     setFormData({
       title: "",
-      description: "",
+      shortSummary: "",
+      details: "",
       type: "project",
       status: "draft",
       project_id: ALL_PROJECTS_VALUE,
@@ -224,7 +226,7 @@ export function ReportsManager({
     const title = formData.title.trim();
     if (!title || isCreating) return;
 
-    if (title.length === 0 || formData.description.length === 0) {
+    if (title.length === 0 || formData.shortSummary.length === 0 || formData.details.length === 0) {
       Swal.fire({
         icon: "warning",
         title: "Incomplete Form",
@@ -244,7 +246,7 @@ export function ReportsManager({
       return;
     }
 
-    if (formData.description.length > 200) {
+    if (formData.shortSummary.length > 200) {
       Swal.fire({
         icon: "warning",
         title: "Content Exceeds Limit",
@@ -273,7 +275,8 @@ export function ReportsManager({
       setIsCreating(true);
       const payload = {
         title,
-        description: formData.description.trim(),
+        description: formData.shortSummary.trim(),
+        details: formData.details.trim(),
         type: formData.type,
         status: formData.status,
         project_id: formData.project_id === ALL_PROJECTS_VALUE ? null : formData.project_id,
@@ -945,50 +948,87 @@ export function ReportsManager({
 
       {/* CREATE FORM */}
       {showCreateForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Create New Report</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
-                  ×
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+          <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white shadow-[0_25px_50px_rgba(15,23,42,0.15)]">
+            <div className="p-6 sm:p-8 space-y-6">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-2xl font-semibold text-slate-900">
+                    Create New Report
+                  </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Generate a comprehensive report with customizable filters and data.
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowCreateForm(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                Generate a comprehensive report with customizable filters and data.
-              </p>
 
-              <div className="space-y-6">
+              <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label htmlFor="title">Report Title</Label>
+                  <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
+                    Report Title
+                  </p>
                   <Input
-                    id="title"
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                     placeholder="Enter report title"
+                    value={formData.title}
+                    onChange={(e) =>
+                      setFormData({ ...formData, title: e.target.value })
+                    }
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="description">Description</Label>
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
+                    <span>Short Summary (Preview)</span>
+                    <span>{`${formData.shortSummary.length}/200`}</span>
+                  </div>
                   <Textarea
-                    id="description"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="Enter report description"
-                    rows={3}
+                    rows={2}
+                    maxLength={200}
+                    placeholder="Brief summary for the dashboard card (Max 200 chars)"
+                    className="border border-slate-300 bg-white"
+                    value={formData.shortSummary}
+                    onChange={(e) =>
+                      setFormData({ ...formData, shortSummary: e.target.value })
+                    }
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
+                    Detailed Report Content
+                  </p>
+                  <Textarea
+                    rows={4}
+                    placeholder="Write your full report details here..."
+                    className="border border-slate-300 bg-white focus:border-primary focus:ring-amber/50"
+                    value={formData.details}
+                    onChange={(e) =>
+                      setFormData({ ...formData, details: e.target.value })
+                    }
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Type</Label>
+                  <div className="space-y-1">
+                    <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
+                      Type
+                    </p>
                     <Select
                       value={formData.type}
-                      onValueChange={(v) => setFormData({ ...formData, type: v as Report["type"] })}
+                      onValueChange={(v) =>
+                        setFormData({ ...formData, type: v as Report["type"] })
+                      }
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="project">Project Report</SelectItem>
@@ -1000,12 +1040,17 @@ export function ReportsManager({
                     </Select>
                   </div>
 
-                  <div className="space-y-2">
-                    <Label>Status</Label>
+                  <div className="space-y-1">
+                    <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
+                      Status
+                    </p>
                     <Select
                       value={formData.status}
                       onValueChange={(v) =>
-                        setFormData({ ...formData, status: v as Report["status"] })
+                        setFormData({
+                          ...formData,
+                          status: v as Report["status"],
+                        })
                       }
                     >
                       <SelectTrigger>
@@ -1020,44 +1065,53 @@ export function ReportsManager({
                   </div>
                 </div>
 
-                {(formData.type === "project" || formData.type === "financial") && (
-                  <div className="space-y-2">
-                    <Label>Associated Project</Label>
-                    <Select
-                      value={formData.project_id}
-                      onValueChange={(v) => setFormData({ ...formData, project_id: v })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select project or All Projects" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
-                        {projects
-                          .filter(
-                            (p) =>
-                              currentUser.role === "admin" || p.supervisorId === currentUser.id
-                          )
-                          .map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Select "All Projects" to aggregate data across all accessible projects
-                    </p>
-                  </div>
-                )}
+                <div className="space-y-1">
+                  <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
+                    Associated Project
+                  </p>
+                  <Select
+                    value={formData.project_id}
+                    onValueChange={(v) =>
+                      setFormData({ ...formData, project_id: v })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="All Projects" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
+                      {projects
+                        .filter(
+                          (p) =>
+                            currentUser.role === "admin" ||
+                            p.supervisorId === currentUser.id
+                        )
+                        .map((project) => (
+                          <SelectItem key={project.id} value={project.id}>
+                            {project.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-[0.65rem] text-slate-400">
+                    Select "All Projects" to aggregate data across all accessible projects
+                  </p>
+                </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3">
                 <Button variant="outline" onClick={() => setShowCreateForm(false)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreate}
-                  disabled={!formData.title.trim() || isCreating}
+                  className="bg-slate-900 text-white hover:bg-slate-800"
+                  disabled={
+                    !formData.title.trim() ||
+                    !formData.shortSummary.trim() ||
+                    !formData.details.trim() ||
+                    isCreating
+                  }
                 >
                   {isCreating ? "Creating..." : "Create Report"}
                 </Button>
@@ -1066,7 +1120,6 @@ export function ReportsManager({
           </div>
         </div>
       )}
-
       {/* EDIT FORM */}
       {showEditForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
