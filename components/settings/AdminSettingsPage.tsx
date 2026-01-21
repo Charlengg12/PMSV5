@@ -589,7 +589,7 @@ export function AdminSettingsPage({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-6 border-b dark:border-slate-700">
+            <div className="flex items-center justify-between p-6 border-b dark:border-slate-700 sticky top-0 bg-white">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50">Edit Profile</h2>
               <Button
                 variant="ghost"

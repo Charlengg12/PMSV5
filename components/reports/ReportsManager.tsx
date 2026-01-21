@@ -947,18 +947,20 @@ export function ReportsManager({
       {showCreateForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Create New Report</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
-                  ×
-                </Button>
+            <div className="max-h-[90vh] overflow-auto">
+              <div className="border-b p-5 sticky top-0 bg-white">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Create New Report</h2>
+                  <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>
+                    ×
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Generate a comprehensive report with customizable filters and data.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                Generate a comprehensive report with customizable filters and data.
-              </p>
 
-              <div className="space-y-6">
+              <div className="space-y-6 p-5">
                 <div className="space-y-2">
                   <Label htmlFor="title">Report Title</Label>
                   <Input
@@ -1051,7 +1053,7 @@ export function ReportsManager({
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-8 p-5">
                 <Button variant="outline" onClick={() => setShowCreateForm(false)}>
                   Cancel
                 </Button>
@@ -1071,26 +1073,28 @@ export function ReportsManager({
       {showEditForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold">Edit Report</h2>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setShowEditForm(false);
-                    setSelectedReport(null);
-                    resetForm();
-                  }}
-                >
-                  ×
-                </Button>
+            <div className="max-h-[90vh] overflow-auto">
+              <div className="p-5 border-b bg-white sticky top-0">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl font-semibold">Edit Report</h2>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setSelectedReport(null);
+                      resetForm();
+                    }}
+                  >
+                    ×
+                  </Button>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Update report details and regenerate data.
+                </p>
               </div>
-              <p className="text-sm text-muted-foreground mb-6">
-                Update report details and regenerate data.
-              </p>
 
-              <div className="space-y-6">
+              <div className="space-y-6 p-5">
                 <div className="space-y-2">
                   <Label htmlFor="edit-title">Report Title</Label>
                   <Input
@@ -1183,7 +1187,7 @@ export function ReportsManager({
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-8">
+              <div className="flex justify-end gap-3 mt-8 p-5">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1207,8 +1211,8 @@ export function ReportsManager({
       {showViewForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
+            <div className="">
+              <div className="flex items-center justify-between mb-6 border-b bg-white p-5 sticky top-0">
                 <div>
                   <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
                   {selectedReport.description && (
@@ -1231,7 +1235,7 @@ export function ReportsManager({
               </div>
 
               {/* Report Metadata */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm p-5">
                 <div>
                   <p className="text-muted-foreground">Type</p>
                   <p className="font-medium mt-1 capitalize">{selectedReport.type}</p>
@@ -1257,11 +1261,11 @@ export function ReportsManager({
               {/* Analytics Section */}
               {["financial", "project"].includes(selectedReport.type) ? (
                 analyticsLoading ? (
-                  <div className="flex justify-center items-center h-64">
+                  <div className="flex justify-center items-center h-64 ">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                   </div>
                 ) : analyticsData ? (
-                  <div className="space-y-10">
+                  <div className="space-y-10 p-5">
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <Card>
@@ -1353,7 +1357,7 @@ export function ReportsManager({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="text-center py-12 text-muted-foreground p-5">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4" />
                     <p className="text-lg font-medium">No financial data available</p>
                     <p className="mt-2">
@@ -1374,7 +1378,7 @@ export function ReportsManager({
                 </div>
               )}
 
-              <div className="flex justify-end mt-10">
+              <div className="flex justify-end mt-10 p-5">
                 <Button
                   variant="outline"
                   onClick={() => {
