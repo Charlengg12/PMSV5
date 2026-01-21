@@ -143,6 +143,7 @@ table tr:hover {
 }
 .modal{
     animation: slidefromtop 0.3s ease-in-out;
+    border-radius: 6px;
 }
 @keyframes slidefromtop {
     from {
