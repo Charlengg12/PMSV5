@@ -313,7 +313,7 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
             $stmt = $pdo->prepare("
                 SELECT 1 
                 FROM projects 
-                WHERE id = :pid AND supervisorId = :uid
+                WHERE id = :pid AND supervisor_id = :uid
             ");
             $stmt->execute([':pid' => $report['project_id'], ':uid' => $userId]);
             if ($stmt->fetchColumn() > 0) {
@@ -324,7 +324,7 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
             $stmt = $pdo->prepare("
                 SELECT COUNT(*) 
                 FROM projects 
-                WHERE supervisorId = :uid
+                WHERE supervisor_id = :uid
             ");
             $stmt->execute([':uid' => $userId]);
             if ($stmt->fetchColumn() > 0) {
@@ -350,7 +350,7 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
             $stmt = $pdo->prepare("
                 SELECT id 
                 FROM projects 
-                WHERE id = :pid AND supervisorId = :uid
+                WHERE id = :pid AND supervisor_id = :uid
             ");
             $stmt->execute([':pid' => $report['project_id'], ':uid' => $userId]);
             $allowedId = $stmt->fetchColumn();
@@ -367,7 +367,8 @@ function handle_get_report_analytics(PDO $pdo, string $reportId): void
             $stmt = $pdo->query("SELECT id FROM projects");
             $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         } elseif ($role === 'supervisor') {
-            $stmt = $pdo->query("SELECT id FROM projects");
+            $stmt = $pdo->prepare("SELECT id FROM projects WHERE supervisor_id = :uid");
+            $stmt->execute([':uid' => $userId]);
             $projectIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
         }
     }
