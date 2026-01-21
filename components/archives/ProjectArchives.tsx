@@ -427,7 +427,7 @@ export function ProjectArchives({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full lg:flex-1"
+                      className="w-full lg:flex-1 bg-green-200 hover:bg-green-700"
                       onClick={() => handleViewDetails(project)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -452,7 +452,7 @@ export function ProjectArchives({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full lg:flex-1 text-primary"
+                          className="w-full lg:flex-1 text-primary bg-blue-200 hover:bg-blue-700"
                           onClick={() => {
                             setSelectedProject(project);
                             setShowEditDialog(true);
@@ -464,10 +464,10 @@ export function ProjectArchives({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full lg:flex-1 text-destructive hover:text-destructive"
+                          className="w-full lg:flex-1 bg-red-200 text-destructive hover:text-white hover:bg-red-700"
                           onClick={() => handleDeleteClick(project)}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
+                          <Trash2 className="h-4 w-4 mr-2 " />
                           <span className="truncate">Delete</span>
                         </Button>
                       </>
