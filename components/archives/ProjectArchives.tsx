@@ -32,7 +32,13 @@ import {
   Trash2,
   Edit,
 } from "lucide-react";
-import { Project, User as UserType, Material, WorkLogEntry } from "../../types";
+import {
+  Project,
+  User as UserType,
+  Material,
+  WorkLogEntry,
+  ProjectAttachment,
+} from "../../types";
 import { ProjectDetails } from "../projects/ProjectDetails";
 import { CreateProjectForm } from "../projects/CreateProjectForm";
 import Swal from "sweetalert2";
@@ -79,6 +85,16 @@ export function ProjectArchives({
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "N/A";
     return date.toLocaleDateString();
+  };
+  const downloadAttachment = (attachment: ProjectAttachment) => {
+    if (!attachment.url) return;
+    const link = document.createElement("a");
+    link.href = attachment.url;
+    link.download = attachment.name || "attachment";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
   const getAttachments = (project?: Project) =>
     Array.isArray(project?.attachments) ? project!.attachments! : [];
@@ -605,7 +621,11 @@ export function ProjectArchives({
                                   </p>
                                 </div>
                               </div>
-                              <Button variant="outline" size="sm">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => downloadAttachment(doc)}
+                              >
                                 <Download className="h-4 w-4" />
                               </Button>
                             </div>
@@ -634,7 +654,11 @@ export function ProjectArchives({
                                 </p>
                               </div>
                             </div>
-                            <Button variant="outline" size="sm">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadAttachment(doc)}
+                            >
                               <Download className="h-4 w-4" />
                             </Button>
                           </div>
@@ -675,7 +699,11 @@ export function ProjectArchives({
                                     </p>
                                   </div>
                                 </div>
-                                <Button variant="outline" size="sm">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => downloadAttachment(doc)}
+                                >
                                   <Download className="h-4 w-4" />
                                 </Button>
                               </div>

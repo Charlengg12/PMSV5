@@ -28,6 +28,9 @@ export function ProjectFileUpload({
     '.txt', '.csv'
   ]
 }: ProjectFileUploadProps) {
+  const normalizedFileTypes = acceptedFileTypes.map((type) =>
+    type.toLowerCase(),
+  );
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
@@ -56,7 +59,7 @@ export function ProjectFileUpload({
     }
 
     const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-    if (!acceptedFileTypes.includes(fileExtension)) {
+    if (!normalizedFileTypes.includes(fileExtension)) {
       return `File type "${fileExtension}" is not supported.`;
     }
 
@@ -158,13 +161,14 @@ export function ProjectFileUpload({
             id="file-upload"
             type="file"
             multiple
-            accept={acceptedFileTypes.join(',')}
+            accept={normalizedFileTypes.join(',')}
             onChange={handleFileSelect}
             className="cursor-pointer"
           />
           <p className="text-sm text-muted-foreground">
-            Supported formats: {acceptedFileTypes.slice(0, 5).join(', ')}
-            {acceptedFileTypes.length > 5 && ` and ${acceptedFileTypes.length - 5} more`}
+            Supported formats: {normalizedFileTypes.slice(0, 5).join(', ')}
+            {normalizedFileTypes.length > 5 &&
+              ` and ${normalizedFileTypes.length - 5} more`}
           </p>
           <p className="text-sm text-muted-foreground">
             Maximum file size: {formatFileSize(maxFileSize)}

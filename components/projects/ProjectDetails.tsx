@@ -109,15 +109,20 @@ export function ProjectDetails({
 
   // 2. Fallback: Find by legacy clientProjectId link
   const linkedUser = users.find(
-    (u) => u.role === "client" && u.clientProjectId === editedProject.id
+    (u) => u.role === "client" && u.clientProjectId === editedProject.id,
   );
 
   // 3. Construct a display object. If no user found, use project.clientName string.
-  const clientDisplay = matchedUser || linkedUser || (editedProject.clientName ? {
-    name: editedProject.clientName,
-    email: "", 
-    id: editedProject.clientId
-  } : null);
+  const clientDisplay =
+    matchedUser ||
+    linkedUser ||
+    (editedProject.clientName
+      ? {
+          name: editedProject.clientName,
+          email: "",
+          id: editedProject.clientId,
+        }
+      : null);
 
   const localClientAssigned = !!clientDisplay;
 
@@ -264,6 +269,17 @@ export function ProjectDetails({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  const downloadAttachment = (attachment: ProjectAttachment) => {
+    if (!attachment.url) return;
+    const link = document.createElement("a");
+    link.href = attachment.url;
+    link.download = attachment.name || "attachment";
+    link.rel = "noopener noreferrer";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case "0_Created":
@@ -333,7 +349,7 @@ export function ProjectDetails({
           htmlContainer: "swal-content",
           confirmButton: "swal-confirm-button",
           cancelButton: "swal-cancel-button",
-        }
+        },
       });
       return;
     }
@@ -354,7 +370,7 @@ export function ProjectDetails({
           htmlContainer: "swal-content",
           confirmButton: "swal-confirm-button",
           cancelButton: "swal-cancel-button",
-        }
+        },
       });
       return;
     }
@@ -376,7 +392,7 @@ export function ProjectDetails({
           htmlContainer: "swal-content",
           confirmButton: "swal-confirm-button",
           cancelButton: "swal-cancel-button",
-        }
+        },
       });
       return;
     }
@@ -420,13 +436,13 @@ export function ProjectDetails({
       confirmButtonText: "Yes, save",
       cancelButtonText: "Cancel",
       customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        }
+        container: "swal-container",
+        popup: "swal-popup !max-w-md",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+      },
     });
 
     if (!result.isConfirmed) return;
@@ -438,13 +454,13 @@ export function ProjectDetails({
       allowEscapeKey: false,
       showConfirmButton: false,
       customClass: {
-          container: "swal-container",
-          popup: "swal-popup !max-w-md",
-          title: "swal-title",
-          htmlContainer: "swal-content",
-          confirmButton: "swal-confirm-button",
-          cancelButton: "swal-cancel-button",
-        },
+        container: "swal-container",
+        popup: "swal-popup !max-w-md",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+      },
       didOpen: () => {
         Swal.showLoading();
       },
@@ -1243,7 +1259,7 @@ export function ProjectDetails({
                         <div
                           key={attachment.id}
                           className="flex items-center justify-between p-3 bg-muted rounded gap-3"
-                        >x
+                        >
                           <div className="flex items-center gap-3 min-w-0">
                             <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                             <div className="min-w-0">
@@ -1265,6 +1281,7 @@ export function ProjectDetails({
                             variant="ghost"
                             size="sm"
                             className="shrink-0"
+                            onClick={() => downloadAttachment(attachment)}
                           >
                             <Download className="h-4 w-4" />
                           </Button>
