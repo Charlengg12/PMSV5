@@ -5,10 +5,8 @@ import {
   Clock,
   FileText,
   Users,
-  Download,
 } from "lucide-react";
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
 import { Project, Task, User as UserType, WorkLogEntry } from "../../types";
@@ -48,11 +46,6 @@ const getStatusIcon = (status: Project["status"]) => {
     default:
       return <Clock className="h-4 w-4" />;
   }
-};
-
-const openLink = (url?: string) => {
-  if (!url || typeof window === "undefined") return;
-  window.open(url, "_blank");
 };
 
 interface ClientDashboardProps {
@@ -120,11 +113,6 @@ export function ClientDashboard({
   const pendingTasks = Math.max(totalTasks - completedTasks, 0);
   const statusLabel =
     STATUS_LABELS[clientProject.status] ?? clientProject.status;
-
-  const navigateToProjectStatus = () => {
-    if (typeof window === "undefined") return;
-    window.location.hash = "project-status";
-  };
 
   return (
     <div className="space-y-8">
@@ -222,123 +210,8 @@ export function ClientDashboard({
             </Badge>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
-              onClick={navigateToProjectStatus}
-              className="w-full sm:w-auto"
-            >
-              View Project Status
-            </Button>
-
-            {clientProject.documentationUrl && (
-              <Button
-                variant="outline"
-                onClick={() => openLink(clientProject.documentationUrl)}
-                className="w-full sm:w-auto"
-              >
-                Open Documentation
-              </Button>
-            )}
-          </div>
         </CardContent>
       </Card>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="p-4 md:p-6">
-          <CardHeader className="p-0 flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="h-4 w-4" />
-              Project Documents
-            </CardTitle>
-            <Badge variant="outline">
-              {clientProject.attachments?.length ?? 0} docs
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {clientProject.attachments &&
-            clientProject.attachments.length > 0 ? (
-              clientProject.attachments.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
-                >
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">{doc.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {(doc.size / 1024 / 1024).toFixed(2)} MB - Uploaded{" "}
-                      {formatDate(doc.uploadedAt)}
-                    </p>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openLink(doc.url)}
-                  >
-                    <Download className="h-4 w-4 sm:mr-2" />
-
-                    <span className="hidden sm:inline">Download</span>
-                  </Button>
-                </div>
-              ))
-            ) : (
-              <div className="text-center py-6 text-sm text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2" />
-                <p>No documentation shared yet.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="p-4 md:p-6">
-          <CardHeader className="p-0">
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              Recent Updates
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {recentWorkLogs.length > 0 ? (
-              recentWorkLogs.map((log) => {
-                const fabricator = users.find(
-                  (user) => user.id === log.fabricatorId,
-                );
-                return (
-                  <div key={log.id} className="space-y-2 rounded-xl border p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-medium">
-                          {fabricator ? fabricator.name : "Fabricator"}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(log.date)} - {log.hoursWorked.toFixed(1)}{" "}
-                          hrs logged
-                        </p>
-                      </div>
-                      <Badge variant="secondary" className="text-xs">
-                        +{log.progressPercentage}% progress
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      {log.description || "No summary provided."}
-                    </p>
-                    {log.materials && log.materials.length > 0 && (
-                      <p className="text-xs text-muted-foreground">
-                        Materials: {log.materials.join(", ")}
-                      </p>
-                    )}
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-center py-8 text-sm text-muted-foreground">
-                <FileText className="h-8 w-8 mx-auto mb-2" />
-                <p>No activity logged yet.</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4 md:p-6">
@@ -399,6 +272,55 @@ export function ClientDashboard({
                 </p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        <Card className="p-4 md:p-6">
+          <CardHeader className="p-0">
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Recent Updates
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recentWorkLogs.length > 0 ? (
+              recentWorkLogs.map((log) => {
+                const fabricator = users.find(
+                  (user) => user.id === log.fabricatorId,
+                );
+                return (
+                  <div key={log.id} className="space-y-2 rounded-xl border p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium">
+                          {fabricator ? fabricator.name : "Fabricator"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(log.date)} - {log.hoursWorked.toFixed(1)}{" "}
+                          hrs logged
+                        </p>
+                      </div>
+                      <Badge variant="secondary" className="text-xs">
+                        +{log.progressPercentage}% progress
+                      </Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {log.description || "No summary provided."}
+                    </p>
+                    {log.materials && log.materials.length > 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        Materials: {log.materials.join(", ")}
+                      </p>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-sm text-muted-foreground">
+                <FileText className="h-8 w-8 mx-auto mb-2" />
+                <p>No activity logged yet.</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

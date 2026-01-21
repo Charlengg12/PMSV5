@@ -1,4 +1,11 @@
-import { Calendar, Clock, FileText, Download, Trash2, MessageCircle } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  FileText,
+  Download,
+  Trash2,
+  MessageCircle,
+} from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -313,8 +320,8 @@ export function ClientDocumentation({
           </CardHeader>
           <CardContent className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Share status updates, questions, or concerns so your supervisor and
-              admin can act on them quickly.
+              Share status updates, questions, or concerns so your supervisor
+              and admin can act on them quickly.
             </p>
             <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
               {sortedFeedback.length === 0 ? (
