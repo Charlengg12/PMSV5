@@ -22,9 +22,10 @@ import {
   TrendingUp,
   AlertCircle,
   FolderOpen,
+  MessageCircle,
   Search,
 } from "lucide-react";
-import { Project, User } from "../../types";
+import { Project, ProjectFeedback, User } from "../../types";
 import { CreateProjectForm } from "./CreateProjectForm";
 import { ProjectDetails } from "./ProjectDetails";
 import { emailService } from "../../utils/emailService";
@@ -208,11 +209,50 @@ export function ProjectsGrid({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  const formatFeedbackDate = (value?: string) =>
+    value
+      ? new Date(value).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "short",
+          day: "numeric",
+        })
+      : "TBD";
+
   const getFabricatorBudget = (project: Project, fabricatorId: string) => {
     return project.fabricatorBudgets?.find(
       (fb) => fb.fabricatorId === fabricatorId
     );
   };
+
+  const supervisorProjectScope =
+    currentUser.role === "supervisor"
+      ? projects.filter(
+          (project) =>
+            project.supervisorId === currentUser.id ||
+            project.pendingSupervisors?.includes(currentUser.id)
+        )
+      : [];
+
+  const feedbackPool =
+    currentUser.role === "admin"
+      ? projects
+      : currentUser.role === "supervisor"
+      ? supervisorProjectScope
+      : [];
+
+  const latestFeedbackEntries: (ProjectFeedback & { projectName: string })[] =
+    feedbackPool
+      .flatMap((project) =>
+        (project.feedbackEntries ?? []).map((entry) => ({
+          ...entry,
+          projectName: project.name,
+        }))
+      )
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      )
+      .slice(0, 4);
 
   const handleCreateProject = async (project: Omit<Project, "id">) => {
     if (onCreateProject) {
@@ -313,6 +353,53 @@ export function ProjectsGrid({
           search by name, client, or supervisor
         </p>
       </div>
+
+      {(currentUser.role === "admin" ||
+        currentUser.role === "supervisor") && (
+        <Card className="p-4 md:p-6">
+          <CardHeader className="p-0 flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <MessageCircle className="h-5 w-5" />
+              Client Feedback
+            </CardTitle>
+            <Badge variant="outline" className="text-xs">
+              {latestFeedbackEntries.length} recent
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-4">
+            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+              {latestFeedbackEntries.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No client feedback has been recorded for your projects yet.
+                </p>
+              ) : (
+                latestFeedbackEntries.map((entry) => (
+                  <div
+                    key={`${entry.id}-${entry.projectId}`}
+                    className="rounded-xl border p-3 space-y-1"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {entry.comment}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.3em] text-muted-foreground">
+                      <span>{entry.projectName}</span>
+                      <span>{formatFeedbackDate(entry.createdAt)}</span>
+                    </div>
+                    <p className="text-[0.65rem] font-semibold text-muted-foreground">
+                      {entry.createdByName || entry.createdBy || "Client"}{" "}
+                      <span className="text-[0.6rem]">
+                        ({entry.createdByRole || "client"})
+                      </span>
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project) => (
