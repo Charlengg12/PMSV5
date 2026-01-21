@@ -51,14 +51,16 @@ export function ClientDocumentation({
         <FileText className="h-12 w-12 text-muted-foreground" />
         <h3 className="text-lg font-semibold">No Project Assigned</h3>
         <p className="text-sm text-muted-foreground">
-          Once you are connected to a project, its documentation will appear here.
+          Once you are connected to a project, its documentation will appear
+          here.
         </p>
       </div>
     );
   }
 
   const supervisors = users.filter(
-    (user) => user.role === "supervisor" && user.id === clientProject.supervisorId
+    (user) =>
+      user.role === "supervisor" && user.id === clientProject.supervisorId,
   );
 
   const contact = supervisors[0] || null;
@@ -110,31 +112,48 @@ export function ClientDocumentation({
 
   return (
     <div className="space-y-6">
-      <Card className="px-6 py-7 md:px-8 md:py-10 bg-white border border-slate-200 shadow-md">
-        <CardHeader className="space-y-3">
-          <div className="flex flex-col gap-1 font-semibold tracking-[0.4em] text-[0.65rem] uppercase text-slate-500">
-            <span>Document Hub</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-              Project Documentation
-            </h1>
-            <Badge variant="outline" className="text-[0.6rem] px-3 py-1 rounded-full uppercase tracking-[0.35em]">
+      <Card className="px-4 py-4 md:px-6 md:py-8 bg-white border border-slate-200 shadow-md">
+        <CardHeader className="p-0 space-y-3">
+          {/* Container for Label and Badge */}
+          <div className="flex w-full flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="font-semibold tracking-[0.4em] text-[0.65rem] uppercase text-slate-500">
+              <span>Document Hub</span>
+            </div>
+
+            {/* Badge moved here */}
+            <Badge
+              variant="outline"
+              className="text-[0.6rem] px-3 py-1 rounded-full uppercase tracking-[0.35em]"
+            >
               {clientProject.status.replace("_", " ")}
             </Badge>
           </div>
+
+          {/* Title (Badge removed from here) */}
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">
+            Project Documentation
+          </h1>
+
           <p className="text-base text-slate-600 max-w-2xl">
-            {clientProject.name} — up-to-date specs, progress photos, and approval materials prepared for your review.
+            {clientProject.name} — up-to-date specs, progress photos, and
+            approval materials prepared for your review.
           </p>
         </CardHeader>
+
         <CardContent className="pt-5">
           <div className="flex flex-wrap gap-6 text-sm text-slate-500">
             <div className="flex flex-col gap-1">
-              <span className="uppercase tracking-[0.3em] text-[0.65rem]">Last Updated</span>
-              <span className="text-base font-semibold text-slate-900">{formatDate(clientProject.createdAt)}</span>
+              <span className="uppercase tracking-[0.3em] text-[0.65rem]">
+                Last Updated
+              </span>
+              <span className="text-base font-semibold text-slate-900">
+                {formatDate(clientProject.createdAt)}
+              </span>
             </div>
             <div className="flex flex-col gap-1">
-              <span className="uppercase tracking-[0.3em] text-[0.65rem]">Supervisor</span>
+              <span className="uppercase tracking-[0.3em] text-[0.65rem]">
+                Supervisor
+              </span>
               <span className="text-base font-semibold text-slate-900">
                 {contact ? contact.name : "Unassigned"}
               </span>
@@ -143,21 +162,23 @@ export function ClientDocumentation({
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Shared Files Card */}
         <Card className="p-4 md:p-6">
-          <CardHeader className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="h-5 w-5" />
-            Shared Files
-          </CardTitle>
+          <CardHeader className="p-0 flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <FileText className="h-5 w-5" />
+              Shared Files
+            </CardTitle>
             <Badge variant="outline" className="text-xs">
               {documentationFiles.length} files
             </Badge>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 mt-4">
             {documentationFiles.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                No files uploaded yet. Ask your team to add the latest documents.
+                No files uploaded yet. Ask your team to add the latest
+                documents.
               </p>
             ) : (
               documentationFiles.map(({ attachment: doc, source }) => {
@@ -166,11 +187,12 @@ export function ClientDocumentation({
                 return (
                   <div
                     key={doc.id}
-                    className="flex items-center justify-between rounded-xl border px-3 py-2"
+                    className="flex items-center justify-between gap-3 rounded-xl border px-3 py-2"
                   >
-                    <div className="flex items-center gap-3">
+                    {/* Left Side: Content (Added min-w-0 for truncation) */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       {isImage ? (
-                        <div className="h-14 w-14 overflow-hidden rounded-lg bg-muted">
+                        <div className="h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-muted">
                           <img
                             src={doc.url}
                             alt={doc.name}
@@ -178,20 +200,30 @@ export function ClientDocumentation({
                           />
                         </div>
                       ) : (
-                        <FileText className="h-6 w-6 text-muted-foreground" />
+                        <FileText className="h-6 w-6 shrink-0 text-muted-foreground" />
                       )}
-                      <div>
-                        <p className="text-sm font-medium">{doc.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatSize(doc.size)} · Uploaded {formatDate(doc.uploadedAt)}
+                      <div className="min-w-0 flex-1">
+                        <p
+                          className="text-sm font-medium truncate"
+                          title={doc.name}
+                        >
+                          {doc.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {formatSize(doc.size)} · Uploaded{" "}
+                          {formatDate(doc.uploadedAt)}
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+
+                    {/* Right Side: Actions (Added shrink-0) */}
+                    <div className="flex items-center gap-2 shrink-0">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => doc.url && window.open(doc.url, "_blank")}
+                        onClick={() =>
+                          doc.url && window.open(doc.url, "_blank")
+                        }
                       >
                         <Download className="h-3 w-3" />
                       </Button>
@@ -211,17 +243,17 @@ export function ClientDocumentation({
               })
             )}
           </CardContent>
-
         </Card>
 
+        {/* Next Milestones Card */}
         <Card className="p-4 md:p-6">
-          <CardHeader>
+          <CardHeader className="p-0">
             <CardTitle className="flex items-center gap-2 text-lg">
               <Clock className="h-5 w-5" />
               Next Milestones
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-3 mt-4">
             <p className="text-sm text-muted-foreground">
               Stay notified of upcoming approvals and meetings.
             </p>
@@ -233,15 +265,17 @@ export function ClientDocumentation({
                 </p>
               </div>
               <div className="rounded-lg border p-3">
-                <p className="text-sm font-semibold">Documentation Walkthrough</p>
+                <p className="text-sm font-semibold">
+                  Documentation Walkthrough
+                </p>
                 <p className="text-xs text-muted-foreground">
-                  Target date {formatDate(clientProject.startDate)} · Virtual call
+                  Target date {formatDate(clientProject.startDate)} · Virtual
+                  call
                 </p>
               </div>
             </div>
           </CardContent>
         </Card>
-
       </div>
     </div>
   );
