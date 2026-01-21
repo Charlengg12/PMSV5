@@ -43,6 +43,7 @@ class ApiService {
             });
 
             if (response.status === 429) {
+                // Too Many Requests logic...
                 const retryAfterHeader = response.headers.get('Retry-After');
                 const retryAfterSeconds = retryAfterHeader ? parseInt(retryAfterHeader, 10) : NaN;
                 const retryAfterMs = Number.isFinite(retryAfterSeconds)
@@ -53,11 +54,13 @@ class ApiService {
                     await new Promise((r) => setTimeout(r, retryAfterMs));
                     return this.request<T>(endpoint, options, retryCount + 1);
                 }
+                // If we run out of retries, we throw so the UI handles it
                 throw new Error('Too many requests. Please try again shortly.');
             }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
+                // This creates the error, which jumps to the catch block below
                 throw new Error(errorData.message || errorData.error || `HTTP ${response.status}`);
             }
 
@@ -65,6 +68,7 @@ class ApiService {
             return { data };
 
         } catch (error) {
+            // Network-level retry
             if (retryCount < 2) {
                 const backoffMs = Math.min(1000 * Math.pow(2, retryCount), 4000);
                 await new Promise((r) => setTimeout(r, backoffMs));
@@ -72,10 +76,12 @@ class ApiService {
             }
             
             console.error(`API request failed for ${endpoint}:`, error);
+            
+            // [FIX 2] CRITICAL: Re-throw the error!
+            // Do not return { error: ... }. This forces the UI to catch the failure.
             throw error; 
         }
     }
-
     // Authentication methods
     async login(identifier: string, password: string): Promise<ApiResponse<any>> {
         const response = await this.request('/auth/login', {
@@ -90,24 +96,21 @@ class ApiService {
 
         return response;
     }
+   async verifyPassword(password: string): Promise<ApiResponse<any>> {
+    const response = await this.request('/auth/verify-password', {
+        method: 'POST',
+        body: JSON.stringify({ password }),
+    });
 
-    async getMe(): Promise<ApiResponse<any>> {
-        return this.request('/auth/me');
+    // --- ADD THIS CHECK ---
+    // If the server returns 200 OK but the body says { success: false },
+    // we must manually throw an error to stop the UI from showing the IDs.
+    if (response && response.success === false) {
+        throw new Error(response.message || 'Incorrect password');
     }
 
-    async verifyPassword(password: string): Promise<ApiResponse<any>> {
-        const response = await this.request('/auth/verify-password', {
-            method: 'POST',
-            body: JSON.stringify({ password }),
-        });
-
-        if (response && response.success === false) {
-            throw new Error(response.message || 'Incorrect password');
-        }
-
-        return response;
-    }
-
+    return response;
+}
     async signup(userData: {
         email: string;
         password: string;
@@ -152,6 +155,15 @@ class ApiService {
     }
 
     async updateProject(projectId: string, updates: any): Promise<ApiResponse<any>> {
+        // (>> Uncomment this if you want to see the JSON response in the console. 
+        // FYI: the response was sent by handle_update_project() in index.php <<)
+        // await this.request(`/projects/${projectId}`, {
+        //     method: 'PUT',
+        //     body: JSON.stringify(updates),
+        // }).then((json) => {
+        //     console.log(json);
+        // });
+
         return this.request(`/projects/${projectId}`, {
             method: 'PUT',
             body: JSON.stringify(updates),
@@ -164,37 +176,37 @@ class ApiService {
         });
     }
 
+    // async respondToAssignment(
+    //     projectId: string,
+    //     response: 'accepted' | 'declined',
+    //     assignmentId?: string
+    // ): Promise<ApiResponse<any>> {
+    //     const payload: Record<string, string> = { projectId, response };
+    //     if (assignmentId) {
+    //         payload.assignmentId = assignmentId;
+    //     }
+    //     return this.request('/projects/respond-assignment', {
+    //         method: 'POST',
+    //         body: JSON.stringify(payload),
+    //     });
+    // }
+
     async respondToAssignment(
-        projectId: string,
+        assignmentId: string,
         response: 'accepted' | 'declined',
-        assignmentId?: string
+        projectId: string
     ): Promise<ApiResponse<any>> {
-        const payload: Record<string, string> = { projectId, response };
-        if (assignmentId) {
-            payload.assignmentId = assignmentId;
-        }
         return this.request('/projects/respond-assignment', {
             method: 'POST',
-            body: JSON.stringify(payload),
+            body: JSON.stringify({ assignmentId, response, projectId }),
         });
     }
-
     // Task methods
     async getTasks(): Promise<ApiResponse<any[]>> {
         return this.request('/tasks');
     }
 
-    // Explicitly typed to handle array of assignedTo
-    async createTask(taskData: {
-        title: string;
-        description: string;
-        status: string;
-        priority: string;
-        projectId: string;
-        assignedTo: string[]; // Support multi-assignment
-        dueDate: string;
-        createdBy: string;
-    }): Promise<ApiResponse<any>> {
+    async createTask(taskData: any): Promise<ApiResponse<any>> {
         return this.request('/tasks', {
             method: 'POST',
             body: JSON.stringify(taskData),
@@ -226,19 +238,6 @@ class ApiService {
         });
     }
 
-    async updateWorkLog(workLogId: string, updates: any): Promise<ApiResponse<any>> {
-        return this.request(`/worklogs/${workLogId}`, {
-            method: 'PUT',
-            body: JSON.stringify(updates),
-        });
-    }
-
-    async deleteWorkLog(workLogId: string): Promise<ApiResponse<any>> {
-        return this.request(`/worklogs/${workLogId}`, {
-            method: 'DELETE',
-        });
-    }
-
     // Materials methods
     async getMaterials(): Promise<ApiResponse<any[]>> {
         return this.request('/materials');
@@ -265,33 +264,38 @@ class ApiService {
 
     // Users methods
     async getUsers(): Promise<ApiResponse<User[]>> {
-        return this.request("/users", { method: "GET" });
+    return this.request("/users", { method: "GET" });
     }
 
     async getInactiveUsers(): Promise<ApiResponse<User[]>> {
-        return this.request("/users/inactive", { method: "GET" });
+    return this.request("/users/inactive", { method: "GET" });
     }
 
     async updateUser(id: string, data: Partial<User>): Promise<ApiResponse<any>> {
-        return this.request(`/users/${id}`, {
-            method: "PUT",
-            body: JSON.stringify(data),
-        });
+    return this.request(`/users/${id}`, {
+        method: "PUT",
+        body: JSON.stringify(data),
+    });
     }
 
     async makeUserInactive(userId: string): Promise<ApiResponse<any>> {
-        return this.request(`/users/inactive/${userId}`, {
-            method: "PUT",
-            body: JSON.stringify({ is_active: 0 }),
-        });
+    return this.request(`/users/inactive/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_active: 0 }),
+    });
     }
 
+    // ────────────────────────────────────────────────
+    // This is the missing piece you needed for restore
+    // ────────────────────────────────────────────────
     async makeUserActive(userId: string): Promise<ApiResponse<any>> {
-        return this.request(`/users/active/${userId}`, {
-            method: "PUT",
-            body: JSON.stringify({ is_active: 1 }),
-        });
+    return this.request(`/users/active/${userId}`, {
+        method: "PUT",
+        body: JSON.stringify({ is_active: 1 }),
+    });
     }
+
+
 
     // create supervisor
     async createSupervisor(supervisorData: any): Promise<ApiResponse<any>> {
@@ -340,7 +344,7 @@ class ApiService {
             method: 'DELETE',
         });
     }
-    
+    // inside Class ApiService
     async getLogs(): Promise<ApiResponse<any[]>> {
         return this.request('/activity-logs');
     }
@@ -352,12 +356,14 @@ class ApiService {
             credentials: 'include',
         });
     }
+    
 
-    // Announcements
+   // Announcements
     async getAnnouncements(): Promise<ApiResponse<any[]>> {
         return this.request('/announcements');
     }
 
+    // Updated to accept array of roles
     async createAnnouncement(data: { title: string; content: string; targetRoles: string[] }): Promise<ApiResponse<any>> {
         return this.request('/announcements', {
             method: 'POST',
@@ -365,6 +371,7 @@ class ApiService {
         });
     }
 
+    // NEW: Update method
     async updateAnnouncement(id: number, data: { title?: string; content?: string; targetRoles?: string[] }): Promise<ApiResponse<any>> {
         return this.request(`/announcements/${id}`, {
             method: 'PUT',
@@ -385,12 +392,25 @@ class ApiService {
         });
     }
 
-    async getReportAnalytics(reportId: string): Promise<ApiResponse<any>> {
-        return this.request(`/reports/${reportId}/analytics`, {
-            method: 'GET',
-            credentials: 'include',
+    async getBillingSummary(): Promise<ApiResponse<any[]>> {
+        return this.request('/billing/summary');
+    }
+
+    async createPayment(paymentData: any): Promise<ApiResponse<any>> {
+        return this.request('/billing/payment', {
+            method: 'POST',
+            body: JSON.stringify(paymentData),
         });
     }
+
+    async deletePayment(id: number): Promise<ApiResponse<any>> {
+        return this.request(`/billing/payment/${id}`, {
+            method: 'DELETE',
+        });
+    }
+    
 }
+
+
 
 export const apiService = new ApiService();

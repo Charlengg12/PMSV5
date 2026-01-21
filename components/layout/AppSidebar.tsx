@@ -22,7 +22,8 @@ import {
   Eye,
   Download,
   LogOut,
-  Activity, // <--- Added Activity Icon
+  Activity,
+  CreditCard // <--- Added Activity Icon
 } from "lucide-react";
 import { User } from "../../types";
 import { useSidebar } from "../ui/sidebar";
@@ -303,6 +304,13 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
           icon: Activity,
         },
         // -------------------------------
+
+        // Inside the Admin array in AppSidebar.tsx
+{
+  title: "Billing",
+  url: "#billing",
+  icon: CreditCard, // Import CreditCard from lucide-react
+},
         {
           title: "Settings",
           url: "#settings",
