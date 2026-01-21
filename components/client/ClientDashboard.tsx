@@ -1,4 +1,12 @@
-import { AlertCircle, Calendar, CheckCircle, Clock, FileText, Users } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  FileText,
+  Users,
+  Download,
+} from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -79,31 +87,31 @@ export function ClientDashboard({
   }
 
   const projectTasks = tasks.filter(
-    (task) => task.projectId === clientProject.id
+    (task) => task.projectId === clientProject.id,
   );
   const completedTasks = projectTasks.filter(
-    (task) => task.status === "completed"
+    (task) => task.status === "completed",
   ).length;
   const taskProgress =
     projectTasks.length === 0
       ? 0
       : (completedTasks / projectTasks.length) * 100;
   const projectWorkLogs = workLogs.filter(
-    (log) => log.projectId === clientProject.id
+    (log) => log.projectId === clientProject.id,
   );
   const sortedWorkLogs = [...projectWorkLogs].sort(
-    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
   );
   const recentWorkLogs = sortedWorkLogs.slice(0, 3);
   const supervisor = users.find(
-    (user) => user.id === clientProject.supervisorId
+    (user) => user.id === clientProject.supervisorId,
   );
   const fabricators = users.filter((user) =>
-    clientProject.fabricatorIds.includes(user.id)
+    clientProject.fabricatorIds.includes(user.id),
   );
   const fabricatorSummaries = fabricators.map((fabricator) => {
     const logs = projectWorkLogs.filter(
-      (log) => log.fabricatorId === fabricator.id
+      (log) => log.fabricatorId === fabricator.id,
     );
     const totalHours = logs.reduce((sum, log) => sum + log.hoursWorked, 0);
     return { ...fabricator, totalHours, logsCount: logs.length };
@@ -132,13 +140,10 @@ export function ClientDashboard({
             Track the progress of your {clientProject.name} project.
           </p>
         </div>
-        <Badge className="text-sm" variant="secondary">
-          {currentUser.school}
-        </Badge>
       </div>
 
       <Card className="p-4 md:p-6">
-        <CardHeader className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <CardHeader className="p-0 flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <CardTitle className="text-2xl font-semibold">
               {clientProject.name}
@@ -209,24 +214,27 @@ export function ClientDashboard({
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <Badge variant="outline">
-              {completedTasks} completed
-            </Badge>
-            <Badge variant="outline">
-              {pendingTasks} pending
-            </Badge>
+            <Badge variant="outline">{completedTasks} completed</Badge>
+            <Badge variant="outline">{pendingTasks} pending</Badge>
             <Badge variant="outline">
               {fabricators.length} fabricator
               {fabricators.length === 1 ? "" : "s"}
             </Badge>
           </div>
 
-          <div className="flex flex-wrap gap-3">
-            <Button onClick={navigateToProjectStatus}>View Project Status</Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              onClick={navigateToProjectStatus}
+              className="w-full sm:w-auto"
+            >
+              View Project Status
+            </Button>
+
             {clientProject.documentationUrl && (
               <Button
                 variant="outline"
                 onClick={() => openLink(clientProject.documentationUrl)}
+                className="w-full sm:w-auto"
               >
                 Open Documentation
               </Button>
@@ -237,15 +245,18 @@ export function ClientDashboard({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4 md:p-6">
-          <CardHeader className="flex items-center justify-between">
+          <CardHeader className="p-0 flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
               Project Documents
             </CardTitle>
-            <Badge variant="outline">{clientProject.attachments?.length ?? 0} docs</Badge>
+            <Badge variant="outline">
+              {clientProject.attachments?.length ?? 0} docs
+            </Badge>
           </CardHeader>
           <CardContent className="space-y-3">
-            {clientProject.attachments && clientProject.attachments.length > 0 ? (
+            {clientProject.attachments &&
+            clientProject.attachments.length > 0 ? (
               clientProject.attachments.map((doc) => (
                 <div
                   key={doc.id}
@@ -258,8 +269,15 @@ export function ClientDashboard({
                       {formatDate(doc.uploadedAt)}
                     </p>
                   </div>
-                  <Button variant="outline" size="sm" onClick={() => openLink(doc.url)}>
-                    Download
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => openLink(doc.url)}
+                  >
+                    <Download className="h-4 w-4 sm:mr-2" />
+
+                    <span className="hidden sm:inline">Download</span>
                   </Button>
                 </div>
               ))
@@ -273,7 +291,7 @@ export function ClientDashboard({
         </Card>
 
         <Card className="p-4 md:p-6">
-          <CardHeader>
+          <CardHeader className="p-0">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Recent Updates
@@ -283,7 +301,7 @@ export function ClientDashboard({
             {recentWorkLogs.length > 0 ? (
               recentWorkLogs.map((log) => {
                 const fabricator = users.find(
-                  (user) => user.id === log.fabricatorId
+                  (user) => user.id === log.fabricatorId,
                 );
                 return (
                   <div key={log.id} className="space-y-2 rounded-xl border p-4">
@@ -293,8 +311,8 @@ export function ClientDashboard({
                           {fabricator ? fabricator.name : "Fabricator"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(log.date)} -{" "}
-                          {log.hoursWorked.toFixed(1)} hrs logged
+                          {formatDate(log.date)} - {log.hoursWorked.toFixed(1)}{" "}
+                          hrs logged
                         </p>
                       </div>
                       <Badge variant="secondary" className="text-xs">
@@ -324,7 +342,7 @@ export function ClientDashboard({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4 md:p-6">
-          <CardHeader>
+          <CardHeader className="p-0">
             <CardTitle className="flex items-center gap-2">
               <Users className="h-4 w-4" />
               Fabrication Team
@@ -341,7 +359,8 @@ export function ClientDashboard({
                     {supervisor ? supervisor.name : "Not assigned"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {supervisor?.school ?? "N/A"} - {supervisor?.secureId ?? "-"}
+                    {supervisor?.school ?? "N/A"} -{" "}
+                    {supervisor?.secureId ?? "-"}
                   </p>
                 </div>
               </div>

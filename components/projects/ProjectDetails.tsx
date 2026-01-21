@@ -1243,7 +1243,7 @@ export function ProjectDetails({
                         <div
                           key={attachment.id}
                           className="flex items-center justify-between p-3 bg-muted rounded gap-3"
-                        >
+                        >x
                           <div className="flex items-center gap-3 min-w-0">
                             <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
                             <div className="min-w-0">

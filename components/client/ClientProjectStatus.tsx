@@ -1,4 +1,10 @@
-import { AlertCircle, Calendar, Clock, CheckCircle, Activity } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  Clock,
+  CheckCircle,
+  Activity,
+} from "lucide-react";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -47,33 +53,40 @@ export function ClientProjectStatus({
   }
 
   const projectTasks = tasks.filter(
-    (task) => task.projectId === clientProject.id
+    (task) => task.projectId === clientProject.id,
   );
   const recentUpdates = workLogs
     .filter((log) => log.projectId === clientProject.id)
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    )
     .slice(0, 3);
 
-  const pendingTasks = projectTasks.filter((task) => task.status !== "completed");
-  const nextDeadline = pendingTasks
-    .filter(Boolean)
-    .sort((a, b) => {
-      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_VALUE;
-      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_VALUE;
-      return aDate - bDate;
-    })[0];
+  const pendingTasks = projectTasks.filter(
+    (task) => task.status !== "completed",
+  );
+  const nextDeadline = pendingTasks.filter(Boolean).sort((a, b) => {
+    const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_VALUE;
+    const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_VALUE;
+    return aDate - bDate;
+  })[0];
 
-  const supervisor = users.find((user) => user.id === clientProject.supervisorId);
+  const supervisor = users.find(
+    (user) => user.id === clientProject.supervisorId,
+  );
   const statusIndex = STATUS_SEQUENCE.indexOf(clientProject.status);
   const statusPercent = Math.max(0, Math.min(100, clientProject.progress));
-  const isProgressing = clientProject.progress > 0 && clientProject.progress < 100;
+  const isProgressing =
+    clientProject.progress > 0 && clientProject.progress < 100;
 
   const timelineSteps = STATUS_SEQUENCE.map((status) => {
     const stepIndex = STATUS_SEQUENCE.indexOf(status);
     const isCompletedStep =
       statusIndex >= 0 && stepIndex <= statusIndex && status !== "in-progress";
     const isInProgressStep =
-      status === "in-progress" && (isProgressing || clientProject.status === "in-progress");
+      status === "in-progress" &&
+      (isProgressing || clientProject.status === "in-progress");
     return {
       status,
       label: STATUS_LABELS[status] ?? status,
@@ -84,15 +97,16 @@ export function ClientProjectStatus({
   return (
     <div className="space-y-6">
       <Card className="p-4 md:p-6">
-        <CardHeader className="flex flex-col gap-2">
-          <div className="flex items-start justify-between gap-4">
+        <CardHeader className="p-0 flex flex-col gap-2">
+          <div className="flex flex-col items-start gap-4 sm:flex-row sm:justify-between">
             <div>
               <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
                 Project Status
               </p>
               <h1 className="text-2xl font-semibold">{clientProject.name}</h1>
               <p className="text-sm text-muted-foreground mt-1">
-                {clientProject.description || "Recent project timeline and milestones"}
+                {clientProject.description ||
+                  "Recent project timeline and milestones"}
               </p>
             </div>
             <Badge variant="outline" className="text-xs uppercase">
@@ -103,7 +117,8 @@ export function ClientProjectStatus({
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
             <Calendar className="h-4 w-4" />
             <span>
-              {formatDate(clientProject.startDate)} - {formatDate(clientProject.endDate)}
+              {formatDate(clientProject.startDate)} -{" "}
+              {formatDate(clientProject.endDate)}
             </span>
           </div>
         </CardHeader>
@@ -112,7 +127,7 @@ export function ClientProjectStatus({
             <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
               Journey
             </p>
-            <div className="mt-4 grid grid-cols-4 gap-3">
+            <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">
               {timelineSteps.map((step) => (
                 <div
                   key={step.status}
@@ -123,7 +138,8 @@ export function ClientProjectStatus({
                   }`}
                 >
                   <div className="flex items-center gap-1">
-                    <CheckCircle className="h-3 w-3" />
+                    {/* Added shrink-0 so the icon doesn't get squished if text is long */}
+                    <CheckCircle className="h-3 w-3 shrink-0" />
                     <span className="truncate">{step.label}</span>
                   </div>
                   <p className="text-[0.65rem] uppercase tracking-widest mt-1">
@@ -149,7 +165,9 @@ export function ClientProjectStatus({
               <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
                 Progress
               </p>
-              <p className="text-sm font-semibold">{clientProject.progress}% Complete</p>
+              <p className="text-sm font-semibold">
+                {clientProject.progress}% Complete
+              </p>
             </div>
             <div className="space-y-1">
               <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
@@ -171,7 +189,7 @@ export function ClientProjectStatus({
 
       <div className="grid gap-6 lg:grid-cols-2">
         <Card className="p-4 md:p-6">
-          <CardHeader className="flex items-center justify-between">
+          <CardHeader className="p-0 flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
               Task Sprint
@@ -203,29 +221,19 @@ export function ClientProjectStatus({
             )}
             {pendingTasks.length > 4 && (
               <p className="text-xs text-muted-foreground">
-                {pendingTasks.length - 4} more tasks pending. Check back soon for updates.
+                {pendingTasks.length - 4} more tasks pending. Check back soon
+                for updates.
               </p>
             )}
           </CardContent>
         </Card>
 
         <Card className="p-4 md:p-6">
-          <CardHeader className="flex items-center justify-between">
+          <CardHeader className="p-0 flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
               Recent Activity
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.location.hash = "dashboard";
-                }
-              }}
-            >
-              Return to Dashboard
-            </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             {recentUpdates.length === 0 ? (
@@ -234,12 +242,11 @@ export function ClientProjectStatus({
               </p>
             ) : (
               recentUpdates.map((log) => {
-                const fabricator = users.find((user) => user.id === log.fabricatorId);
+                const fabricator = users.find(
+                  (user) => user.id === log.fabricatorId,
+                );
                 return (
-                  <div
-                    key={log.id}
-                    className="rounded-xl border p-3 space-y-1"
-                  >
+                  <div key={log.id} className="rounded-xl border p-3 space-y-1">
                     <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>{formatDate(log.date)}</span>
                       <span>{log.hoursWorked.toFixed(1)} hrs</span>
