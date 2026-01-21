@@ -46,9 +46,13 @@ export function mapProjectFromBackend(raw: any): Project {
     ? raw.feedback_entries
     : typeof raw.feedback_entries === 'string'
       ? safeParseJsonArray(raw.feedback_entries)
-      : Array.isArray(raw.feedbackEntries)
-        ? raw.feedbackEntries
-        : [];
+      : Array.isArray(raw.project_feedback)
+        ? raw.project_feedback
+        : typeof raw.project_feedback === 'string'
+          ? safeParseJsonArray(raw.project_feedback)
+          : Array.isArray(raw.feedbackEntries)
+            ? raw.feedbackEntries
+            : [];
 
   const feedbackEntries: ProjectFeedback[] = rawFeedbackEntries
     .map((entry: any) => ({

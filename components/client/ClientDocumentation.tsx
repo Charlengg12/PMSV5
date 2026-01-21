@@ -152,6 +152,24 @@ export function ClientDocumentation({
     setFeedbackInput("");
   };
 
+  const handleDeleteFeedback = async (feedbackId: string) => {
+    if (!onUpdateProject) return;
+    const result = await Swal.fire({
+      title: "Delete feedback?",
+      text: "This feedback will be removed for everyone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Delete",
+      confirmButtonColor: "#dc2626",
+      cancelButtonText: "Cancel",
+    });
+    if (!result.isConfirmed) return;
+    const remainingFeedback = (clientProject.feedbackEntries ?? []).filter(
+      (entry) => entry.id !== feedbackId,
+    );
+    onUpdateProject({ ...clientProject, feedbackEntries: remainingFeedback });
+  };
+
   return (
     <div className="space-y-6">
       <Card className="px-4 py-4 md:px-6 md:py-8 bg-white border border-slate-200 shadow-md">
@@ -309,7 +327,19 @@ export function ClientDocumentation({
                     key={entry.id}
                     className="rounded-xl border px-4 py-3 space-y-1"
                   >
-                    <p className="text-sm text-slate-900">{entry.comment}</p>
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="text-sm text-slate-900">{entry.comment}</p>
+                      {onUpdateProject && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:bg-destructive/10"
+                          onClick={() => handleDeleteFeedback(entry.id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                     <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-muted-foreground">
                       <span>
                         {entry.createdByName || entry.createdByRole || "Client"}

@@ -1080,7 +1080,8 @@ function ensure_projects_schema(PDO $pdo): array
         'created_by' => "ALTER TABLE projects ADD COLUMN created_by VARCHAR(255) DEFAULT NULL",
         'fabricator_ids' => "ALTER TABLE projects ADD COLUMN fabricator_ids JSON DEFAULT NULL",
         'pending_supervisors' => "ALTER TABLE projects ADD COLUMN pending_supervisors JSON DEFAULT NULL",
-        'pending_assignments' => "ALTER TABLE projects ADD COLUMN pending_assignments JSON DEFAULT NULL"
+        'pending_assignments' => "ALTER TABLE projects ADD COLUMN pending_assignments JSON DEFAULT NULL",
+        'project_feedback' => "ALTER TABLE projects ADD COLUMN project_feedback JSON NULL"
     ];
 
     foreach ($addColumns as $name => $sql) {
@@ -1257,6 +1258,7 @@ function handle_create_project(PDO $pdo): void
         'fabricator_ids' => json_encode($fabricatorIds),
         'pending_supervisors' => json_encode($pendingSupervisors),
         'pending_assignments' => json_encode($pendingAssignments),
+        'project_feedback' => json_encode($body['projectFeedback'] ?? $body['project_feedback'] ?? $body['feedbackEntries'] ?? $body['feedback_entries'] ?? []),
         'created_by' => $_SESSION['user_id'] ?? ($body['createdBy'] ?? null),
     ];
 
@@ -1398,6 +1400,21 @@ function handle_update_project(PDO $pdo, string $id): void
     }
     $updates['attachments'] = json_encode($attachments);
 }
+
+    if (array_key_exists('projectFeedback', $body) ||
+        array_key_exists('project_feedback', $body) ||
+        array_key_exists('feedbackEntries', $body) ||
+        array_key_exists('feedback_entries', $body)) {
+        $feedbackEntries = $body['projectFeedback']
+            ?? $body['project_feedback']
+            ?? $body['feedbackEntries']
+            ?? $body['feedback_entries']
+            ?? [];
+        if (!is_array($feedbackEntries)) {
+            $feedbackEntries = [];
+        }
+        $updates['project_feedback'] = json_encode($feedbackEntries);
+    }
 
     if (!empty($body['broadcastToSupervisors'])) {
         $stmt = $pdo->query("SELECT id FROM users WHERE role = 'supervisor' AND is_active = 1");
