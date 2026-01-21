@@ -37,6 +37,17 @@ const formatDate = (value?: string) =>
       })
     : "TBD";
 
+const downloadAttachment = (attachment: ProjectAttachment) => {
+  if (!attachment.url) return;
+  const link = document.createElement("a");
+  link.href = attachment.url;
+  link.download = attachment.name || "attachment";
+  link.rel = "noopener noreferrer";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
+
 export function ClientDocumentation({
   currentUser,
   projects,
@@ -252,9 +263,7 @@ export function ClientDocumentation({
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          doc.url && window.open(doc.url, "_blank")
-                        }
+                        onClick={() => downloadAttachment(doc)}
                       >
                         <Download className="h-3 w-3" />
                       </Button>
