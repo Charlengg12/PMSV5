@@ -1,6 +1,11 @@
-import { AlertCircle, Calendar, Clock, CheckCircle, Activity } from "lucide-react";
+import {
+  AlertCircle,
+  Calendar,
+  Clock,
+  CheckCircle,
+  FileText,
+} from "lucide-react";
 import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
 import { Project, Task, User as UserType, WorkLogEntry } from "../../types";
@@ -49,19 +54,37 @@ export function ClientProjectStatus({
   const projectTasks = tasks.filter(
     (task) => task.projectId === clientProject.id
   );
-  const recentUpdates = workLogs
-    .filter((log) => log.projectId === clientProject.id)
+  const projectWorkLogs = workLogs.filter(
+    (log) => log.projectId === clientProject.id,
+  );
+  const recentUpdates = [...projectWorkLogs]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 3);
 
   const pendingTasks = projectTasks.filter((task) => task.status !== "completed");
+  const sortByDueDate = (a: Task, b: Task) => {
+    const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_VALUE;
+    const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_VALUE;
+    return aDate - bDate;
+  };
+  const milestonePreviewLimit = 4;
+  const sortedPendingTasks = [...pendingTasks].sort(sortByDueDate);
+  const milestoneTasks = sortedPendingTasks.slice(0, milestonePreviewLimit);
+  const remainingMilestonesCount = Math.max(
+    0,
+    sortedPendingTasks.length - milestoneTasks.length,
+  );
+  const completedTaskCount = Math.max(
+    0,
+    projectTasks.length - pendingTasks.length,
+  );
+  const totalHoursLogged = projectWorkLogs.reduce(
+    (sum, log) => sum + log.hoursWorked,
+    0,
+  );
   const nextDeadline = pendingTasks
     .filter(Boolean)
-    .sort((a, b) => {
-      const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_VALUE;
-      const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_VALUE;
-      return aDate - bDate;
-    })[0];
+    .sort(sortByDueDate)[0];
 
   const supervisor = users.find((user) => user.id === clientProject.supervisorId);
   const statusIndex = STATUS_SEQUENCE.indexOf(clientProject.status);
@@ -153,7 +176,7 @@ export function ClientProjectStatus({
             </div>
             <div className="space-y-1">
               <p className="text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
-                Next milestone
+                Next Tasks
               </p>
               {nextDeadline ? (
                 <p className="text-sm font-semibold">
@@ -174,36 +197,50 @@ export function ClientProjectStatus({
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              Task Sprint
+              Next Tasks
             </CardTitle>
-            <Badge variant="outline">{projectTasks.length} tasks</Badge>
+            <Badge variant="outline">{pendingTasks.length} pending</Badge>
           </CardHeader>
           <CardContent className="space-y-4">
-            {pendingTasks.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Stay notified of upcoming approvals and meetings.
+            </p>
+            {milestoneTasks.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                All tasks are marked complete. Great job!
+                All tasks have been completed. Great work!
               </p>
             ) : (
-              pendingTasks.slice(0, 4).map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border px-4 py-3"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{task.title}</p>
+              milestoneTasks.map((task) => {
+                const assignedCount = task.assignedTo?.length ?? 0;
+                return (
+                  <div
+                    key={task.id}
+                    className="rounded-xl border px-4 py-3 space-y-1"
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-sm font-medium">{task.title}</p>
+                      <Badge className="text-[0.7rem] uppercase tracking-[0.2em]">
+                        {task.status.replace("-", " ")}
+                      </Badge>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      Due {formatDate(task.dueDate)}
+                      {task.description?.trim() || "Milestone awaiting update."}
                     </p>
+                    <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.3em] text-muted-foreground">
+                      <span>Due {formatDate(task.dueDate)}</span>
+                      <span>
+                        {assignedCount
+                          ? `${assignedCount} ${assignedCount === 1 ? "assignee" : "assignees"}`
+                          : "Unassigned"}
+                      </span>
+                    </div>
                   </div>
-                  <Badge className="text-[0.7rem]">
-                    {task.status.replace("-", " ")}
-                  </Badge>
-                </div>
-              ))
+                );
+              })
             )}
-            {pendingTasks.length > 4 && (
+            {remainingMilestonesCount > 0 && (
               <p className="text-xs text-muted-foreground">
-                {pendingTasks.length - 4} more tasks pending. Check back soon for updates.
+                +{remainingMilestonesCount} more milestones pending. Check back soon for updates.
               </p>
             )}
           </CardContent>
@@ -212,48 +249,86 @@ export function ClientProjectStatus({
         <Card className="p-4 md:p-6">
           <CardHeader className="flex items-center justify-between">
             <CardTitle className="flex items-center gap-2">
-              <Activity className="h-4 w-4" />
-              Recent Activity
+              <FileText className="h-4 w-4" />
+              Project Report
             </CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                if (typeof window !== "undefined") {
-                  window.location.hash = "dashboard";
-                }
-              }}
-            >
-              Return to Dashboard
-            </Button>
+            <Badge variant="outline">{projectTasks.length} total</Badge>
           </CardHeader>
           <CardContent className="space-y-4">
-            {recentUpdates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No recent updates — the team is prepping the next milestone.
-              </p>
-            ) : (
-              recentUpdates.map((log) => {
-                const fabricator = users.find((user) => user.id === log.fabricatorId);
-                return (
-                  <div
-                    key={log.id}
-                    className="rounded-xl border p-3 space-y-1"
-                  >
-                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                      <span>{formatDate(log.date)}</span>
-                      <span>{log.hoursWorked.toFixed(1)} hrs</span>
-                    </div>
-                    <p className="text-sm font-semibold">
-                      {fabricator ? fabricator.name : "Fabricator update"}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {log.description || "No summary provided."}
-                    </p>
-                  </div>
-                );
-              })
-            )}
+            <p className="text-sm text-muted-foreground">
+              All reports about this project are summarized here.
+            </p>
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg border p-3 bg-muted/50 text-sm">
+                <p className="text-muted-foreground uppercase tracking-[0.3em] text-[0.65rem]">
+                  Completed
+                </p>
+                <p className="text-lg font-semibold">{completedTaskCount}</p>
+              </div>
+              <div className="rounded-lg border p-3 bg-muted/50 text-sm">
+                <p className="text-muted-foreground uppercase tracking-[0.3em] text-[0.65rem]">
+                  Pending
+                </p>
+                <p className="text-lg font-semibold">{pendingTasks.length}</p>
+              </div>
+              <div className="rounded-lg border p-3 bg-muted/50 text-sm">
+                <p className="text-muted-foreground uppercase tracking-[0.3em] text-[0.65rem]">
+                  Hours logged
+                </p>
+                <p className="text-lg font-semibold">
+                  {totalHoursLogged.toFixed(1)} hrs
+                </p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  Next milestone
+                </p>
+                {nextDeadline ? (
+                  <p className="text-sm font-medium">
+                    {nextDeadline.title} · {formatDate(nextDeadline.dueDate)}
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No upcoming milestones scheduled.
+                  </p>
+                )}
+              </div>
+              <div>
+                <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">
+                  Latest reports
+                </p>
+                {recentUpdates.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No recent reports logged yet.
+                  </p>
+                ) : (
+                  recentUpdates.map((log) => {
+                    const fabricator = users.find(
+                      (user) => user.id === log.fabricatorId,
+                    );
+                    return (
+                      <div
+                        key={log.id}
+                        className="rounded-xl border p-3 space-y-1"
+                      >
+                        <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span>{formatDate(log.date)}</span>
+                          <span>{log.hoursWorked.toFixed(1)} hrs</span>
+                        </div>
+                        <p className="text-sm font-semibold">
+                          {fabricator ? fabricator.name : "Fabricator update"}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {log.description || "No summary provided."}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>

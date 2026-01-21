@@ -624,6 +624,16 @@ export function WorkLogManager({
                   </div>
                 </div>
 
+                {selectedProject && canManageDocumentation() && onUpdateProject && (
+                  <div className="space-y-4">
+                    <ProjectFileUpload
+                      projectId={selectedProject}
+                      currentUserId={currentUser.id}
+                      onFilesUploaded={handleProjectFilesUploaded}
+                    />
+                  </div>
+                )}
+
                 <div className="flex justify-end gap-3 pt-4 border-t">
                   <Button
                     type="button"
@@ -867,7 +877,8 @@ export function WorkLogManager({
               <div className="flex flex-wrap items-center justify-between gap-4">
                 <div className="text-sm text-muted-foreground space-y-1">
                   <p>
-                    Upload files or add documentation link in Project Details
+                    Upload project files while adding a work log or add a
+                    documentation link in Project Details.
                   </p>
                   <p className="text-xs">
                     Current Progress:{" "}
@@ -895,15 +906,6 @@ export function WorkLogManager({
             </CardContent>
           </Card>
         </div>
-      )}
-
-      {/* File Upload Section */}
-      {selectedProject && canManageDocumentation() && onUpdateProject && (
-        <ProjectFileUpload
-          projectId={selectedProject}
-          currentUserId={currentUser.id}
-          onFilesUploaded={handleProjectFilesUploaded}
-        />
       )}
 
       {/* Work Log History */}
