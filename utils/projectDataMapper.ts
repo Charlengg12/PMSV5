@@ -1,4 +1,4 @@
-import { Project } from '../types';
+import { Project, ProjectFeedback } from '../types';
 
 export function mapProjectFromBackend(raw: any): Project {
   const fabricatorIds = Array.isArray(raw.fabricator_ids)
@@ -42,6 +42,43 @@ export function mapProjectFromBackend(raw: any): Project {
       ? safeParseJsonArray(raw.attachments)
       : undefined;
 
+  const rawFeedbackEntries = Array.isArray(raw.feedback_entries)
+    ? raw.feedback_entries
+    : typeof raw.feedback_entries === 'string'
+      ? safeParseJsonArray(raw.feedback_entries)
+      : Array.isArray(raw.feedbackEntries)
+        ? raw.feedbackEntries
+        : [];
+
+  const feedbackEntries: ProjectFeedback[] = rawFeedbackEntries
+    .map((entry: any) => ({
+      id:
+        entry.id ||
+        entry.feedback_id ||
+        `${raw.id ?? raw.projectId}-feedback-${Math.random().toString(36).slice(2, 7)}`,
+      projectId: raw.id || raw.projectId || "",
+      comment: entry.comment || entry.text || "",
+      createdAt: ensureISODate(entry.createdAt || entry.created_at),
+      createdBy: entry.createdBy || entry.created_by || entry.authorId || "",
+      createdByName:
+        entry.createdByName ||
+        entry.created_by_name ||
+        entry.authorName ||
+        entry.author_name,
+      createdByRole:
+        entry.createdByRole ||
+        entry.created_by_role ||
+        entry.authorRole ||
+        entry.author_role,
+      visibilityRoles:
+        Array.isArray(entry.visibility_roles)
+          ? entry.visibility_roles
+          : Array.isArray(entry.visibilityRoles)
+            ? entry.visibilityRoles
+            : undefined,
+    }))
+    .filter((entry) => entry.comment && entry.projectId);
+
   return {
     id: raw.id,
     name: raw.name || raw.title || '',
@@ -69,6 +106,7 @@ export function mapProjectFromBackend(raw: any): Project {
     createdAt: normalizeDateString(raw.created_at || raw.createdAt || new Date().toISOString()),
     pendingAssignments: pendingAssignments.length > 0 ? pendingAssignments : undefined,
     pendingSupervisors: pendingSupervisors.length > 0 ? pendingSupervisors : undefined,
+    feedbackEntries: feedbackEntries.length > 0 ? feedbackEntries : undefined,
   } as Project;
 }
 
@@ -99,6 +137,14 @@ function normalizeDateString(value: any): string {
     return new Date().toISOString().split('T')[0];
   }
   return d.toISOString().split('T')[0];
+}
+
+function ensureISODate(value: any): string {
+  if (!value) {
+    return new Date().toISOString();
+  }
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? new Date().toISOString() : parsed.toISOString();
 }
 
 

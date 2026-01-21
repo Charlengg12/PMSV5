@@ -1,13 +1,16 @@
-import { Calendar, Clock, FileText, Download, Trash2 } from "lucide-react";
+import { Calendar, Clock, FileText, Download, Trash2, MessageCircle } from "lucide-react";
+import { useState } from "react";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
 import Swal from "sweetalert2";
 import {
   Project,
   User as UserType,
   WorkLogEntry,
   ProjectAttachment,
+  ProjectFeedback,
 } from "../../types";
 
 interface ClientDocumentationProps {
@@ -90,6 +93,12 @@ export function ClientDocumentation({
     return Array.from(entries.values());
   })();
 
+  const [feedbackInput, setFeedbackInput] = useState("");
+
+  const sortedFeedback = [...(clientProject.feedbackEntries ?? [])].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+  );
+
   const handleDeleteAttachment = async (attachmentId: string) => {
     if (!onUpdateProject) return;
     const result = await Swal.fire({
@@ -108,6 +117,28 @@ export function ClientDocumentation({
       (attachment) => attachment.id !== attachmentId,
     );
     onUpdateProject({ ...clientProject, attachments: remainingAttachments });
+  };
+
+  const handleSubmitFeedback = () => {
+    if (!onUpdateProject || !feedbackInput.trim()) return;
+
+    const newFeedback: ProjectFeedback = {
+      id: `feedback-${clientProject.id}-${Date.now()}`,
+      projectId: clientProject.id,
+      comment: feedbackInput.trim(),
+      createdAt: new Date().toISOString(),
+      createdBy: currentUser.id,
+      createdByName: currentUser.name,
+      createdByRole: currentUser.role,
+      visibilityRoles: ["supervisor", "admin"],
+    };
+
+    onUpdateProject({
+      ...clientProject,
+      feedbackEntries: [newFeedback, ...(clientProject.feedbackEntries ?? [])],
+    });
+
+    setFeedbackInput("");
   };
 
   return (
@@ -245,33 +276,65 @@ export function ClientDocumentation({
           </CardContent>
         </Card>
 
-        {/* Next Milestones Card */}
+        {/* Feedback Card */}
         <Card className="p-4 md:p-6">
           <CardHeader className="p-0">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Clock className="h-5 w-5" />
-              Next Milestones
+              <MessageCircle className="h-5 w-5" />
+              Feedback
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 mt-4">
+          <CardContent className="space-y-4 mt-4">
             <p className="text-sm text-muted-foreground">
-              Stay notified of upcoming approvals and meetings.
+              Share status updates, questions, or concerns so your supervisor and
+              admin can act on them quickly.
             </p>
+            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+              {sortedFeedback.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No feedback yet. Tell your team what's on your mind.
+                </p>
+              ) : (
+                sortedFeedback.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="rounded-xl border px-4 py-3 space-y-1"
+                  >
+                    <p className="text-sm text-slate-900">{entry.comment}</p>
+                    <div className="flex items-center justify-between text-[0.7rem] uppercase tracking-[0.25em] text-muted-foreground">
+                      <span>
+                        {entry.createdByName || entry.createdByRole || "Client"}
+                      </span>
+                      <span>{formatDate(entry.createdAt)}</span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
             <div className="space-y-2">
-              <div className="rounded-lg border p-3">
-                <p className="text-sm font-semibold">Client Review Meeting</p>
-                <p className="text-xs text-muted-foreground">
-                  Scheduled for {formatDate(clientProject.endDate)} · 1 hour
-                </p>
-              </div>
-              <div className="rounded-lg border p-3">
-                <p className="text-sm font-semibold">
-                  Documentation Walkthrough
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Target date {formatDate(clientProject.startDate)} · Virtual
-                  call
-                </p>
+              <label
+                htmlFor="client-feedback"
+                className="text-[0.65rem] uppercase tracking-[0.3em] text-muted-foreground"
+              >
+                Write feedback
+              </label>
+              <Textarea
+                id="client-feedback"
+                rows={3}
+                placeholder="Summarize how the project feels at this stage."
+                value={feedbackInput}
+                onChange={(event) => setFeedbackInput(event.target.value)}
+                disabled={!onUpdateProject}
+              />
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={handleSubmitFeedback}
+                  disabled={!feedbackInput.trim() || !onUpdateProject}
+                >
+                  Send Feedback
+                </Button>
               </div>
             </div>
           </CardContent>

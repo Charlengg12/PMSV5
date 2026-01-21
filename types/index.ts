@@ -15,6 +15,17 @@ export interface User {
   clientProjectId?: string; // For client users, which project they belong to
 }
 
+export interface ProjectFeedback {
+  id: string;
+  projectId: string;
+  comment: string;
+  createdAt: string;
+  createdBy: string;
+  createdByName?: string;
+  createdByRole?: User["role"];
+  visibilityRoles?: User["role"][];
+}
+
 export interface Project {
   id: string;
   name: string;
@@ -58,6 +69,7 @@ export interface Project {
   createdAt: string;
   pendingAssignments?: ProjectAssignment[]; 
   pendingSupervisors?: string[]; 
+  feedbackEntries?: ProjectFeedback[];
 }
 
 export interface ProjectAssignment {

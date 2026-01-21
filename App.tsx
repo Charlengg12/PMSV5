@@ -31,6 +31,7 @@ import {
   WorkLogEntry,
   Material,
   ProjectAssignment,
+  ProjectFeedback,
 } from "./types";
 import {
   mockUsers,
@@ -69,6 +70,55 @@ type ViewType =
   | "billing"
   |"activity-logs";
 type AuthView = "main" | "fabricator-signup" | "forgot-password";
+
+const FEEDBACK_STORAGE_KEY = "ehub_project_feedback_entries";
+
+const readPersistedFeedback = (): Record<string, ProjectFeedback[]> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const persistFeedbackForProject = (
+  projectId: string,
+  entries: ProjectFeedback[],
+) => {
+  if (typeof window === "undefined") return;
+  const current = readPersistedFeedback();
+  if (entries.length) {
+    current[projectId] = entries;
+  } else {
+    delete current[projectId];
+  }
+  localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(current));
+};
+
+const mergePersistedFeedback = (
+  project: Project,
+  persisted: Record<string, ProjectFeedback[]>,
+): Project => {
+  const stored = persisted[project.id] ?? [];
+  if (!stored.length && !(project.feedbackEntries?.length)) {
+    return project;
+  }
+  const combined = [...stored, ...(project.feedbackEntries ?? [])];
+  const seen = new Set<string>();
+  const deduped: ProjectFeedback[] = [];
+  combined.forEach((entry) => {
+    const dedupeKey =
+      entry.id || `${project.id}-${entry.createdAt}-${entry.comment}`;
+    if (seen.has(dedupeKey)) return;
+    seen.add(dedupeKey);
+    deduped.push(entry);
+  });
+  return { ...project, feedbackEntries: deduped };
+};
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -268,7 +318,12 @@ export default function App() {
         ]);
 
       if (projectsRes.data) {
-        setProjects(mapProjectsFromBackend(projectsRes.data));
+        const persistedFeedback = readPersistedFeedback();
+        const mappedProjects = mapProjectsFromBackend(projectsRes.data);
+        const mergedProjects = mappedProjects.map((project) =>
+          mergePersistedFeedback(project, persistedFeedback),
+        );
+        setProjects(mergedProjects);
       }
 
       if (tasksRes.data) {
@@ -975,6 +1030,10 @@ export default function App() {
     // Optimistic update for responsiveness
     setProjects((prevProjects) =>
       prevProjects.map((p) => (p.id === updatedProject.id ? updatedProject : p))
+    );
+    persistFeedbackForProject(
+      updatedProject.id,
+      updatedProject.feedbackEntries ?? [],
     );
 
     // Persist in background; keep UI responsive
