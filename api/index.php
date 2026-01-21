@@ -38,6 +38,19 @@ switch ($method . ' ' . $path) {
     //     handle_update_announcement($pdo, $path);
     //     break;
 
+    case 'GET /billing/summary':
+        handle_get_billing_summary($pdo);
+        break;
+
+    case 'POST /billing/payment':
+        handle_create_payment($pdo);
+        break;
+    
+    // Add this if you want to delete a payment mistake
+    case 'DELETE /billing/payment/:id':
+        handle_delete_payment($pdo, $path);
+        break;
+
 case 'GET /announcements':
         handle_get_announcements($pdo);
         break;
@@ -244,6 +257,10 @@ case 'GET /announcements':
             handle_update_material($pdo, $matches[1]);
         } elseif (preg_match('#^DELETE /materials/([^/]+)$#', $method . ' ' . $path, $matches)) {
             handle_delete_material($pdo, $matches[1]);
+
+            } elseif (preg_match('#^DELETE /billing/payment/(\d+)$#', $method . ' ' . $path, $matches)) {
+        // This catches "DELETE /billing/payment/123"
+        handle_delete_payment($pdo, $path);
         // --
     } else {
         json_response(['error' => 'Not found'], 404);
@@ -456,6 +473,106 @@ function apply_project_progress_delta(PDO $pdo, string $projectId, float $delta)
 // ----------------------------------------------------------------------
 // HANDLERS
 // ----------------------------------------------------------------------
+
+// ----------------------------------------------------------------------
+// BILLING / PAYMENT HANDLERS
+// ----------------------------------------------------------------------
+
+function handle_get_billing_summary(PDO $pdo): void
+{
+    require_login();
+    
+    // This query fetches projects and SUMs up their payments
+    // We filter by projects that actually have a client (client_id is not null)
+    $sql = "
+        SELECT 
+            p.id, p.title, p.status, p.revenue as total_cost, p.client_id,
+            u.name as client_name,
+            COALESCE(SUM(pp.amount), 0) as total_paid,
+            (p.revenue - COALESCE(SUM(pp.amount), 0)) as balance
+        FROM projects p
+        LEFT JOIN users u ON p.client_id = u.id
+        LEFT JOIN project_payments pp ON p.id = pp.project_id
+        WHERE p.client_id IS NOT NULL
+        GROUP BY p.id
+        ORDER BY balance DESC, p.created_at DESC
+    ";
+
+    $stmt = $pdo->query($sql);
+    $summary = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Also fetch payment history details for the nested view
+    $historySql = "
+        SELECT pp.*, u.name as recorder_name 
+        FROM project_payments pp
+        JOIN users u ON pp.created_by = u.id
+        ORDER BY pp.payment_date DESC
+    ";
+    $historyStmt = $pdo->query($historySql);
+    $history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Group history by project_id for easier frontend consumption
+    $groupedHistory = [];
+    foreach ($history as $h) {
+        $groupedHistory[$h['project_id']][] = $h;
+    }
+
+    // Attach history to summary
+    foreach ($summary as &$row) {
+        $row['payment_history'] = $groupedHistory[$row['id']] ?? [];
+    }
+
+    json_response($summary);
+}
+
+function handle_create_payment(PDO $pdo): void
+{
+    require_login();
+    $body = sanitize_recursive(json_input());
+
+    if (empty($body['projectId']) || empty($body['amount']) || empty($body['date'])) {
+        json_response(['error' => 'Project, Amount, and Date are required'], 400);
+    }
+
+    $stmt = $pdo->prepare("
+        INSERT INTO project_payments (project_id, amount, payment_date, method, reference, notes, created_by)
+        VALUES (:pid, :amt, :date, :method, :ref, :notes, :uid)
+    ");
+
+    $stmt->execute([
+        ':pid' => $body['projectId'],
+        ':amt' => $body['amount'],
+        ':date' => $body['date'],
+        ':method' => $body['method'] ?? 'Cash',
+        ':ref' => $body['reference'] ?? null,
+        ':notes' => $body['notes'] ?? null,
+        ':uid' => $_SESSION['user_id']
+    ]);
+
+    log_activity($pdo, $_SESSION['user_id'], 'RECORD_PAYMENT', "Recorded payment of " . $body['amount'] . " for project " . $body['projectId']);
+
+    json_response(['message' => 'Payment recorded successfully']);
+}
+
+function handle_delete_payment(PDO $pdo, string $path): void
+{
+    require_login();
+    if ($_SESSION['role'] !== 'admin') {
+        json_response(['error' => 'Unauthorized'], 403);
+    }
+
+    if (preg_match('#/billing/payment/(\d+)#', $path, $matches)) {
+        $id = $matches[1];
+    } else {
+        json_response(['error' => 'Invalid ID'], 400);
+    }
+
+    $stmt = $pdo->prepare("DELETE FROM project_payments WHERE id = :id");
+    $stmt->execute([':id' => $id]);
+
+    log_activity($pdo, $_SESSION['user_id'], 'DELETE_PAYMENT', "Deleted payment ID: $id");
+    json_response(['message' => 'Payment deleted']);
+}
 
 function handle_update_task(PDO $pdo, string $id): void
 {

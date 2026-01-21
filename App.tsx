@@ -21,6 +21,7 @@ import { ClientDocumentation } from "./components/client/ClientDocumentation";
 import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
 import { ActivityLogs } from "./components/logs/ActivityLogs";
 import { TeamOverview } from "./components/team/TeamOverview";
+import { ClientBilling } from "./components/revenue/ClientBilling";
 // import { AdminProjectsManager } from './components/admin/AdminProjectsManager';
 // import { AdminTasksManager } from './components/admin/AdminTasksManager';
 import {
@@ -65,6 +66,7 @@ type ViewType =
   | "documentation"
   | "admin-projects"
   | "admin-tasks"
+  | "billing"
   |"activity-logs";
 type AuthView = "main" | "fabricator-signup" | "forgot-password";
 
@@ -223,7 +225,8 @@ export default function App() {
         "revenue",
         "assignments",
         "archives",
-        "activity-logs"
+        "activity-logs",
+        "billing"
       ],
       supervisor: [
         "dashboard",
@@ -1074,7 +1077,8 @@ export default function App() {
       "documentation",
       "admin-projects",
       "admin-tasks",
-      "activity-logs"
+      "activity-logs",
+      "billing",
     ] as const;
 
     const handleHashChange = () => {
@@ -1246,6 +1250,8 @@ export default function App() {
     // Client users get a special dashboard
     if (currentUser.role === "client") {
       switch (currentView) {
+
+        
         case "dashboard":
           return (
             <ClientDashboard
@@ -1277,6 +1283,9 @@ export default function App() {
               onUpdateProject={handleUpdateProject}
             />
           );
+
+          case "billing":
+          return <ClientBilling />;
         default:
           return (
             <ClientDashboard
@@ -1595,6 +1604,22 @@ case "activity-logs":
             onCreateUser={handleAddUser}
           />
         );
+
+        case "billing":
+        if (currentUser.role === "admin") {
+          return <ClientBilling />;
+        }
+        return (
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <h3 className="text-lg mb-2">Access Restricted</h3>
+              <p className="text-muted-foreground">
+                Billing is only available for administrators.
+              </p>
+            </div>
+          </div>
+        );
+      // -----------------------
 
       default:
         return (

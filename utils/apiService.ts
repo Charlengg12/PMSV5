@@ -391,6 +391,23 @@ class ApiService {
             credentials: 'include',
         });
     }
+
+    async getBillingSummary(): Promise<ApiResponse<any[]>> {
+        return this.request('/billing/summary');
+    }
+
+    async createPayment(paymentData: any): Promise<ApiResponse<any>> {
+        return this.request('/billing/payment', {
+            method: 'POST',
+            body: JSON.stringify(paymentData),
+        });
+    }
+
+    async deletePayment(id: number): Promise<ApiResponse<any>> {
+        return this.request(`/billing/payment/${id}`, {
+            method: 'DELETE',
+        });
+    }
 }
 
 export const apiService = new ApiService();
