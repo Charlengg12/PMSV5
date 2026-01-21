@@ -564,7 +564,7 @@ export function ClientBilling() {
       {/* CUSTOM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-lg mx-4 sm:mx-6 rounded-xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="modal bg-card w-full max-w-lg mx-4 sm:mx-6 rounded-xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
             {/* Header */}
             <div className="flex items-center justify-between p-6 border-b">
               <div>
