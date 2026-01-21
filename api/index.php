@@ -1732,13 +1732,13 @@ function handle_signup(PDO $pdo): void
 
 function handle_logout(PDO $pdo = null): void
 {
-    // Log before destroying session
+    // Optional: log the logout activity
     if (isset($_SESSION['user_id']) && $pdo) {
         log_activity($pdo, $_SESSION['user_id'], 'LOGOUT', 'User logged out');
     }
 
-    $_SESSION = [];
-    if (ini_get('session.use_cookies')) {
+    $_SESSION = [];                        // Clear session data
+    if (ini_get('session.use_cookies')) {  // Delete session cookie
         $params = session_get_cookie_params();
         setcookie(
             session_name(),
@@ -1750,7 +1750,8 @@ function handle_logout(PDO $pdo = null): void
             $params['httponly']
         );
     }
-    session_destroy();
+    session_destroy();                     // Destroy the session
+
     json_response(['message' => 'Logged out']);
 }
 
