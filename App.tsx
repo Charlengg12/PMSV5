@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { LoginForm } from "./components/auth/LoginForm";
 import { FabricatorSignupForm } from "./components/auth/FabricatorSignupForm";
 import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm";
+import { ResetPasswordForm } from "./components/auth/ResetPasswordForm";
 import { AppLayout } from "./components/layout/AppLayout";
 import { DashboardStats } from "./components/dashboard/DashboardStats";
 import { ProjectOverview } from "./components/dashboard/ProjectOverview";
@@ -69,9 +70,31 @@ type ViewType =
   | "admin-tasks"
   | "billing"
   |"activity-logs";
-type AuthView = "main" | "fabricator-signup" | "forgot-password";
+type AuthView = "main" | "fabricator-signup" | "forgot-password" | "reset-password";
 
 const FEEDBACK_STORAGE_KEY = "ehub_project_feedback_entries";
+
+const getResetTokenFromLocation = (): string | null => {
+  if (typeof window === "undefined") return null;
+  const fromSearch = new URLSearchParams(window.location.search).get("token");
+  if (fromSearch) return fromSearch;
+  const hash = window.location.hash.slice(1);
+  if (!hash) return null;
+  const queryIndex = hash.indexOf("?");
+  if (queryIndex === -1) return null;
+  const params = new URLSearchParams(hash.slice(queryIndex + 1));
+  return params.get("token");
+};
+
+const RESET_TOKEN_STORAGE_KEY = "ehub_reset_token";
+
+const getAuthViewFromPath = (pathname: string): AuthView => {
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  if (normalized.endsWith("/reset-password")) return "reset-password";
+  if (normalized.endsWith("/forgot-password")) return "forgot-password";
+  if (normalized.endsWith("/signup")) return "fabricator-signup";
+  return "main";
+};
 
 const readPersistedFeedback = (): Record<string, ProjectFeedback[]> => {
   if (typeof window === "undefined") return {};
@@ -123,7 +146,20 @@ const mergePersistedFeedback = (
 export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
-  const [authView, setAuthView] = useState<AuthView>("main");
+  const [authView, setAuthView] = useState<AuthView>(() => {
+    if (typeof window === "undefined") return "main";
+    return getAuthViewFromPath(window.location.pathname);
+  });
+  const [resetToken, setResetToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    const fromLocation = getResetTokenFromLocation();
+    if (fromLocation) return fromLocation;
+    try {
+      return sessionStorage.getItem(RESET_TOKEN_STORAGE_KEY);
+    } catch {
+      return null;
+    }
+  });
   const [tasks, setTasks] = useState(mockTasks);
   const [users, setUsers] = useState(mockUsers);
   const [projects, setProjects] = useState(mockProjects);
@@ -169,6 +205,65 @@ export default function App() {
     setTheme,
     getCurrentTheme,
   } = useTimeBasedTheme({ storageKey: themeStorageKey });
+
+  useEffect(() => {
+    const applyAuthRoute = () => {
+      if (currentUser) return;
+      const view = getAuthViewFromPath(window.location.pathname);
+      if (view === "reset-password") {
+        const token = getResetTokenFromLocation();
+        if (token) {
+          try {
+            sessionStorage.setItem(RESET_TOKEN_STORAGE_KEY, token);
+          } catch {}
+          const url = new URL(window.location.href);
+          if (url.searchParams.has("token")) {
+            url.searchParams.delete("token");
+          }
+          url.hash = "";
+          window.history.replaceState({}, "", url.toString());
+        }
+        const storedToken = token
+          ? token
+          : (() => {
+              try {
+                return sessionStorage.getItem(RESET_TOKEN_STORAGE_KEY);
+              } catch {
+                return null;
+              }
+            })();
+        setResetToken(storedToken);
+      } else {
+        setResetToken(null);
+      }
+      setAuthView(view);
+    };
+
+    applyAuthRoute();
+    window.addEventListener("popstate", applyAuthRoute);
+    return () => window.removeEventListener("popstate", applyAuthRoute);
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) return;
+    const path =
+      authView === "reset-password"
+        ? "/reset-password"
+        : authView === "forgot-password"
+        ? "/forgot-password"
+        : authView === "fabricator-signup"
+        ? "/signup"
+        : "/login";
+    try {
+      const url = new URL(window.location.href);
+      if (url.pathname !== path || url.hash) {
+        url.pathname = path;
+        url.hash = "";
+        url.search = "";
+        window.history.replaceState({}, "", url.toString());
+      }
+    } catch {}
+  }, [authView, currentUser]);
 
   // Initialize: restore session and view, then database and data
   useEffect(() => {
@@ -357,6 +452,14 @@ export default function App() {
     try {
       window.location.hash = "dashboard";
     } catch {}
+    try {
+      const url = new URL(window.location.href);
+      if (url.pathname !== "/") {
+        url.pathname = "/";
+        url.hash = "dashboard";
+        window.history.replaceState({}, "", url.toString());
+      }
+    } catch {}
     if (backendHealthy !== false) {
       loadDataFromDatabase().then(() => setLastReloadAt(Date.now()));
     }
@@ -387,7 +490,11 @@ export default function App() {
       localStorage.removeItem("currentUser");
     } catch {}
     try {
-      window.location.hash = "dashboard";
+      const url = new URL(window.location.href);
+      url.pathname = "/login";
+      url.search = "";
+      url.hash = "";
+      window.history.replaceState({}, "", url.toString());
     } catch {}
   };
 
@@ -424,14 +531,39 @@ export default function App() {
 
   const handleShowFabricatorSignup = () => {
     setAuthView("fabricator-signup");
+    try {
+      const url = new URL(window.location.href);
+      url.pathname = "/signup";
+      url.hash = "";
+      url.search = "";
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
   };
 
   const handleShowForgotPassword = () => {
     setAuthView("forgot-password");
+    try {
+      const url = new URL(window.location.href);
+      url.pathname = "/forgot-password";
+      url.hash = "";
+      url.search = "";
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
   };
 
   const handleBackToMain = () => {
     setAuthView("main");
+    setResetToken(null);
+    try {
+      sessionStorage.removeItem(RESET_TOKEN_STORAGE_KEY);
+    } catch {}
+    try {
+      const url = new URL(window.location.href);
+      url.pathname = "/login";
+      url.search = "";
+      url.hash = "";
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
   };
 
   const handleUpdateTaskStatus = async (
@@ -1293,6 +1425,14 @@ export default function App() {
 
       case "forgot-password":
         return <ForgotPasswordForm onBackToLogin={handleBackToMain} />;
+
+      case "reset-password":
+        return (
+          <ResetPasswordForm
+            token={resetToken}
+            onBackToLogin={handleBackToMain}
+          />
+        );
 
       default:
         return (

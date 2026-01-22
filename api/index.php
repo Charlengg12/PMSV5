@@ -71,6 +71,18 @@ case 'GET /announcements':
         handle_verify_password($pdo);
         break;
 
+    case 'POST /auth/forgot-password':
+        handle_forgot_password($pdo);
+        break;
+
+    case 'POST /auth/reset-password':
+        handle_reset_password($pdo);
+        break;
+
+    case 'POST /auth/reset-password/status':
+        handle_reset_password_status($pdo);
+        break;
+
     case 'GET /health':
         json_response([
             'status' => 'ok',
@@ -1172,6 +1184,23 @@ function ensure_work_logs_schema(PDO $pdo): array
     return $columns;
 }
 
+function ensure_password_resets_schema(PDO $pdo): void
+{
+    $pdo->exec("
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+            user_id VARCHAR(255) NOT NULL,
+            token_hash CHAR(64) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME DEFAULT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_password_resets_token (token_hash),
+            INDEX idx_password_resets_user (user_id),
+            INDEX idx_password_resets_expires (expires_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    ");
+}
+
 function normalize_project_status(string $status, array $columns): string
 {
     $status = trim($status);
@@ -1790,6 +1819,148 @@ function handle_me(PDO $pdo): void
         json_response(['user' => null]);
     }
     json_response(['user' => $user]);
+}
+
+function handle_forgot_password(PDO $pdo): void
+{
+    $body = sanitize_recursive(json_input());
+    $email = isset($body['email']) ? trim(strtolower($body['email'])) : '';
+
+    if ($email === '') {
+        json_response(['error' => 'Email is required'], 400);
+    }
+
+    $stmt = $pdo->prepare('SELECT id, name, email, is_active FROM users WHERE email = :email LIMIT 1');
+    $stmt->execute([':email' => $email]);
+    $user = $stmt->fetch();
+
+    if (!$user) {
+        json_response(['error' => 'Email not found'], 404);
+    }
+
+    if (isset($user['is_active']) && (int)$user['is_active'] === 0) {
+        json_response(['error' => 'Account is inactive'], 403);
+    }
+
+    ensure_password_resets_schema($pdo);
+
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+    $expiresAt = (new DateTime('+30 minutes'))->format('Y-m-d H:i:s');
+
+    $stmt = $pdo->prepare('DELETE FROM password_resets WHERE user_id = :uid');
+    $stmt->execute([':uid' => $user['id']]);
+
+    $stmt = $pdo->prepare(
+        'INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (:uid, :hash, :expires)'
+    );
+    $stmt->execute([
+        ':uid' => $user['id'],
+        ':hash' => $tokenHash,
+        ':expires' => $expiresAt,
+    ]);
+
+    $emailSent = send_password_reset_link_email($user['email'], $user['name'], $token);
+    if (!$emailSent) {
+        $stmt = $pdo->prepare('DELETE FROM password_resets WHERE user_id = :uid AND token_hash = :hash');
+        $stmt->execute([':uid' => $user['id'], ':hash' => $tokenHash]);
+        json_response(['error' => 'Failed to send reset email. Please try again.'], 500);
+    }
+
+    log_activity($pdo, $user['id'], 'RESET_PASSWORD', 'Password reset link sent');
+    json_response(['message' => 'Reset email sent']);
+}
+
+function handle_reset_password(PDO $pdo): void
+{
+    $body = sanitize_recursive(json_input());
+    $token = trim((string) ($body['token'] ?? ''));
+    $password = (string) ($body['password'] ?? '');
+
+    if ($token === '' || $password === '') {
+        json_response(['error' => 'Token and password are required'], 400);
+    }
+
+    if (strlen($password) < 8) {
+        json_response(['error' => 'Password must be at least 8 characters'], 400);
+    }
+
+    ensure_password_resets_schema($pdo);
+
+    $tokenHash = hash('sha256', $token);
+    $stmt = $pdo->prepare("
+        SELECT id, user_id, expires_at, used_at
+        FROM password_resets
+        WHERE token_hash = :hash
+        LIMIT 1
+    ");
+    $stmt->execute([':hash' => $tokenHash]);
+    $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$reset) {
+        json_response(['error' => 'Invalid reset token'], 400);
+    }
+
+    if (!empty($reset['used_at'])) {
+        json_response(['error' => 'Reset token already used'], 400);
+    }
+
+    $now = new DateTime();
+    $expiresAt = DateTime::createFromFormat('Y-m-d H:i:s', $reset['expires_at']);
+    if (!$expiresAt || $expiresAt < $now) {
+        json_response(['error' => 'Reset token has expired'], 400);
+    }
+
+    $newHash = password_hash($password, PASSWORD_BCRYPT);
+    $stmt = $pdo->prepare('UPDATE users SET password_hash = :hash WHERE id = :uid');
+    $stmt->execute([
+        ':hash' => $newHash,
+        ':uid' => $reset['user_id'],
+    ]);
+
+    $stmt = $pdo->prepare('UPDATE password_resets SET used_at = NOW() WHERE id = :id');
+    $stmt->execute([':id' => $reset['id']]);
+
+    log_activity($pdo, $reset['user_id'], 'RESET_PASSWORD', 'Password updated via reset link');
+    json_response(['message' => 'Password updated']);
+}
+
+function handle_reset_password_status(PDO $pdo): void
+{
+    $body = sanitize_recursive(json_input());
+    $token = trim((string) ($body['token'] ?? ''));
+
+    if ($token === '') {
+        json_response(['error' => 'Token is required'], 400);
+    }
+
+    ensure_password_resets_schema($pdo);
+
+    $tokenHash = hash('sha256', $token);
+    $stmt = $pdo->prepare("
+        SELECT expires_at, used_at
+        FROM password_resets
+        WHERE token_hash = :hash
+        LIMIT 1
+    ");
+    $stmt->execute([':hash' => $tokenHash]);
+    $reset = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$reset) {
+        json_response(['error' => 'Reset token already used or expired'], 400);
+    }
+
+    if (!empty($reset['used_at'])) {
+        json_response(['error' => 'Reset token already used or expired'], 400);
+    }
+
+    $now = new DateTime();
+    $expiresAt = DateTime::createFromFormat('Y-m-d H:i:s', $reset['expires_at']);
+    if (!$expiresAt || $expiresAt < $now) {
+        json_response(['error' => 'Reset token already used or expired'], 400);
+    }
+
+    json_response(['valid' => true]);
 }
 
 function handle_get_projects(PDO $pdo): void
@@ -2772,6 +2943,63 @@ function handle_delete_announcement(PDO $pdo, string $path): void
 
     log_activity($pdo, $_SESSION['user_id'], 'DELETE_ANNOUNCEMENT', "Deleted announcement ID: $id");
     json_response(['message' => 'Deleted successfully']);
+}
+
+function send_password_reset_link_email(string $recipientEmail, string $recipientName, string $token): bool
+{
+    $mail = new PHPMailer(true);
+
+    try {
+        $mail->SMTPDebug = 0;
+        $mail->isSMTP();
+        $mail->Host       = 'smtp.gmail.com';
+        $mail->SMTPAuth   = true;
+        $mail->Username   = 'arkquestdev@gmail.com';
+        $mail->Password   = 'hhjgxeprnxljiqdm';
+
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = 587;
+
+        $mail->setFrom($mail->Username, 'Elektronik Hub');
+        $mail->addAddress($recipientEmail, $recipientName);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'Password Reset - Elektronik Hub';
+
+        $frontendUrl = getenv('FRONTEND_URL') ?: 'http://localhost:5173/';
+        $frontendUrl = rtrim($frontendUrl, '/');
+        $resetLink = $frontendUrl . '/reset-password?token=' . urlencode($token);
+
+        $emailBody = "
+        <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;'>
+            <div style='text-align: center; border-bottom: 2px solid #eee; padding-bottom: 15px; margin-bottom: 20px;'>
+                <h2 style='color: #2563eb; margin: 0;'>Elektronik Hub</h2>
+                <p style='color: #666; margin: 5px 0 0; font-size: 14px;'>Password Reset</p>
+            </div>
+
+            <p>Hello <strong>$recipientName</strong>,</p>
+            <p>You requested a password reset. Click the button below to set a new password.</p>
+
+            <div style='margin: 20px 0; text-align: center;'>
+                <a href='$resetLink' style='display: inline-block; background: #2563eb; color: #fff; padding: 10px 18px; text-decoration: none; border-radius: 6px; font-size: 14px;'>
+                    Reset Password
+                </a>
+            </div>
+
+            <p style='font-size: 12px; color: #555;'>This link will expire in 30 minutes. If you did not request this, please contact an administrator immediately.</p>
+            <p style='color: #999; font-size: 11px; margin-top: 30px; border-top: 1px solid #eee; padding-top: 10px;'>This is an automated message sent from the Elektronik Hub system. Please do not reply.</p>
+        </div>
+        ";
+
+        $mail->Body    = $emailBody;
+        $mail->AltBody = "Reset your password using this link: $resetLink";
+
+        $mail->send();
+        return true;
+    } catch (\Throwable $e) {
+        error_log("MAILER ERROR: " . $e->getMessage());
+        return false;
+    }
 }
 
 function send_client_credentials_email($recipientEmail, $recipientName, $plainPassword, $projectName, $secureId) {
