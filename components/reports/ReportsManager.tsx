@@ -244,16 +244,6 @@ export function ReportsManager({
       return;
     }
 
-    if (formData.description.length > 200) {
-      Swal.fire({
-        icon: "warning",
-        title: "Content Exceeds Limit",
-        text: "Description cannot exceed 200 characters.",
-        customClass: swalCustomClasses,
-      });
-      return;
-    }
-
     const result = await Swal.fire({
       title: "Create this report?",
       html: `Title: <strong>${title}</strong><br>Type: <strong>${formData.type}</strong>`,
@@ -806,11 +796,6 @@ export function ReportsManager({
                         <div className="space-y-3">
                           <div>
                             <CardTitle className="text-lg">{report.title}</CardTitle>
-                            {report.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {report.description}
-                              </p>
-                            )}
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Badge variant={getStatusColor(report.status)}>
@@ -977,6 +962,7 @@ export function ReportsManager({
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Enter report description"
                     rows={3}
+                    className="max-h-24 overflow-y-auto"
                   />
                 </div>
 
@@ -1109,6 +1095,7 @@ export function ReportsManager({
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Enter report description"
                     rows={3}
+                    className="max-h-24 overflow-y-auto"
                   />
                 </div>
 
@@ -1210,12 +1197,7 @@ export function ReportsManager({
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
-                  {selectedReport.description && (
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {selectedReport.description}
-                    </p>
-                  )}
+                <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
                 </div>
                 <Button
                   variant="ghost"
@@ -1253,6 +1235,19 @@ export function ReportsManager({
                   </p>
                 </div>
               </div>
+
+              {selectedReport.description && (
+                <section className="mb-8 mt-6 rounded-2xl border border-muted-foreground/20 bg-white/90 p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold tracking-wide text-muted-foreground/80">
+                      Description
+                    </h3>
+                  </div>
+                  <div className="mt-3 max-h-48 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-900">
+                    <p className="whitespace-pre-line break-words text-slate-900">{selectedReport.description}</p>
+                  </div>
+                </section>
+              )}
 
               {/* Analytics Section */}
               {["financial", "project"].includes(selectedReport.type) ? (
