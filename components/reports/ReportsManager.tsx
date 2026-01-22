@@ -832,11 +832,6 @@ export function ReportsManager({
                             <CardTitle className="text-lg">
                               {report.title}
                             </CardTitle>
-                            {report.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {report.description}
-                              </p>
-                            )}
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Badge variant={getStatusColor(report.status)}>
@@ -1029,6 +1024,7 @@ export function ReportsManager({
                     }
                     placeholder="Enter report description"
                     rows={3}
+                    className="max-h-24 overflow-y-auto"
                   />
                 </div>
 
@@ -1184,6 +1180,7 @@ export function ReportsManager({
                     }
                     placeholder="Enter report description"
                     rows={3}
+                    className="max-h-24 overflow-y-auto"
                   />
                 </div>
 
@@ -1323,7 +1320,7 @@ export function ReportsManager({
               </div>
 
               {/* Report Metadata */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm p-5">
+              <div className="mx-1 grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm p-5">
                 <div>
                   <p className="text-muted-foreground">Type</p>
                   <p className="font-medium mt-1 capitalize">
@@ -1353,6 +1350,19 @@ export function ReportsManager({
                   </p>
                 </div>
               </div>
+
+              {selectedReport.description && (
+                <section className="mb-8 mt-6 mx-5 rounded-2xl border border-muted-foreground/20 bg-white/90 p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-semibold tracking-wide text-muted-foreground/80">
+                      Description
+                    </h3>
+                  </div>
+                  <div className="mt-3 max-h-48 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-900">
+                    <p className="whitespace-pre-line break-words text-slate-900">{selectedReport.description}</p>
+                  </div>
+                </section>
+              )}
 
               {/* Analytics Section */}
               {["financial", "project"].includes(selectedReport.type) ? (
