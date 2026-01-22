@@ -1293,7 +1293,7 @@ export function ReportsManager({
               </div>
 
               {/* Report Metadata */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm">
+              <div className="mx-1 grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm p-5">
                 <div>
                   <p className="text-muted-foreground">Type</p>
                   <p className="font-medium mt-1 capitalize">
@@ -1325,7 +1325,7 @@ export function ReportsManager({
               </div>
 
               {selectedReport.description && (
-                <section className="mb-8 mt-6 rounded-2xl border border-muted-foreground/20 bg-white/90 p-5 shadow-sm">
+                <section className="mb-8 mt-6 mx-5 rounded-2xl border border-muted-foreground/20 bg-white/90 p-5 shadow-sm">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold tracking-wide text-muted-foreground/80">
                       Description
