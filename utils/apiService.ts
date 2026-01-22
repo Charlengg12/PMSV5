@@ -293,6 +293,37 @@ class ApiService {
         });
     }
 
+    async uploadGcashQr(file: File): Promise<ApiResponse<{ gcash_qr_url: string }>> {
+        const formData = new FormData();
+        formData.append('qr_image', file);
+
+        // Gamitin natin ang raw fetch kasi kailangan natin ng FormData (hindi JSON)
+        try {
+            const response = await fetch(`${this.baseUrl}/users/upload-gcash-qr`, {
+                method: 'POST',
+                body: formData,
+                credentials: 'include', // Important para sa session authentication
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.error) {
+                throw new Error(result.error || 'Upload failed');
+            }
+
+            return {
+                data: result,
+                success: true,
+            };
+        } catch (error: any) {
+            console.error('GCash QR upload failed:', error);
+            return {
+                error: error.message || 'Failed to upload QR code',
+                success: false,
+            };
+        }
+    }
+
     // create supervisor
     async createSupervisor(supervisorData: any): Promise<ApiResponse<any>> {
         return this.request('/users/supervisor', {
