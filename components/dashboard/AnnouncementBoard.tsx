@@ -488,7 +488,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       {showModal &&
         createPortal(
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="bg-background dark:bg-slate-900 border dark:border-slate-700 rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
+            <div className=" modal bg-background dark:bg-slate-900 border dark:border-slate-700 rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
               <Button
                 variant="ghost"
                 size="icon"

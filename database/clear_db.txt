@@ -1,0 +1,8 @@
+TRUNCATE activity_logs;
+TRUNCATE announcements;
+TRUNCATE materials;
+TRUNCATE projects;
+TRUNCATE project_payments;
+TRUNCATE tasks;
+TRUNCATE work_logs;
+TRUNCATE reports;

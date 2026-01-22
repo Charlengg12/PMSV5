@@ -26,6 +26,7 @@ import {
   Users as UsersIcon,
   DollarSign as RevenueIcon,
   UserMinus, // Added icon for unassigning
+  Trash2,
 } from "lucide-react";
 import { addDays, format, setHours } from "date-fns";
 import { Project, User, ProjectAttachment } from "../../types";
@@ -500,6 +501,38 @@ export function ProjectDetails({
     const updatedProject = {
       ...editedProject,
       attachments: [...(editedProject.attachments || []), ...newAttachments],
+    };
+    setEditedProject(updatedProject);
+    onUpdateProject(updatedProject);
+  };
+
+  const handleDeleteAttachment = async (attachmentId: string) => {
+    const result = await Swal.fire({
+      title: "Remove file?",
+      text: "This cannot be undone.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Remove",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#dc2626",
+      customClass: {
+        container: "swal-container",
+        popup: "swal-popup !max-w-md",
+        title: "swal-title",
+        htmlContainer: "swal-content",
+        confirmButton: "swal-confirm-button",
+        cancelButton: "swal-cancel-button",
+      },
+    });
+
+    if (!result.isConfirmed) return;
+
+    const remainingAttachments = (editedProject.attachments || []).filter(
+      (attachment) => attachment.id !== attachmentId,
+    );
+    const updatedProject = {
+      ...editedProject,
+      attachments: remainingAttachments,
     };
     setEditedProject(updatedProject);
     onUpdateProject(updatedProject);
@@ -1277,14 +1310,25 @@ export function ProjectDetails({
                               </p>
                             </div>
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="shrink-0"
-                            onClick={() => downloadAttachment(attachment)}
-                          >
-                            <Download className="h-4 w-4" />
-                          </Button>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadAttachment(attachment)}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() =>
+                                handleDeleteAttachment(attachment.id)
+                              }
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
                         </div>
                       ))}
                     </div>

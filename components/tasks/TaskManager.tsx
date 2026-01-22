@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Swal from "sweetalert2";
 import { apiService } from "../../utils/apiService";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Input } from "../ui/input";
@@ -48,7 +47,7 @@ const swalCustomClasses = {
   icon: "swal-icon",
 };
 
-const MIN_LOADING_TIME = 2000; // 2 seconds
+const MIN_LOADING_TIME = 2000;
 
 export function TaskManager({
   tasks,
@@ -64,7 +63,6 @@ export function TaskManager({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [createAttempted, setCreateAttempted] = useState(false);
 
-  // Search state
   const [searchTerm, setSearchTerm] = useState("");
 
   const [formData, setFormData] = useState({
@@ -108,7 +106,6 @@ export function TaskManager({
     resetForm();
   };
 
-  // Helper to enforce minimum loading time
   const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
   const normalizeDateValue = (value: string) => {
@@ -193,7 +190,6 @@ export function TaskManager({
   const isEditMissing = (field: string) => editMissingFields.includes(field);
   const isCreateMissing = (field: string) => createMissingFields.includes(field);
 
-  // ─── Role-based filtering ──────────────────────────────────────
   const getFilteredTasksByRole = () => {
     if (currentUser.role === "admin") return tasks;
     if (currentUser.role === "supervisor") {
@@ -204,7 +200,6 @@ export function TaskManager({
         supervisorProjects.some((p) => p.id === t.projectId)
       );
     }
-    // fabricator or other roles
     return tasks.filter(
       (t) =>
         Array.isArray(t.assignedTo)
@@ -215,7 +210,6 @@ export function TaskManager({
 
   const roleFilteredTasks = getFilteredTasksByRole();
 
-  // ─── Client-side search ────────────────────────────────────────
   const searchedTasks = roleFilteredTasks.filter((task) => {
     if (!searchTerm.trim()) return true;
 
@@ -282,7 +276,6 @@ export function TaskManager({
     }
   };
 
-  // ─── CREATE TASK ───────────────────────────────────────────────
   const handleCreate = async () => {
     setCreateAttempted(true);
     const missingFields = getMissingFields();
@@ -296,7 +289,6 @@ export function TaskManager({
       return;
     }
 
-    // if title is > 50 chars return exceeding limit
     if (formData.title.trim().length > 50) {
       Swal.fire({
         icon: "warning",
@@ -307,7 +299,6 @@ export function TaskManager({
       return;
     }
 
-    // if description is > 200 chars return exceeding limit
     if (formData.description.trim().length > 200) {
       Swal.fire({
         icon: "warning",
@@ -404,7 +395,6 @@ export function TaskManager({
     }
   };
 
-  // ─── UPDATE TASK ───────────────────────────────────────────────
   const handleUpdate = async () => {
     if (!selectedTask) return;
     const missingFields = getMissingFields();
@@ -418,8 +408,6 @@ export function TaskManager({
       return;
     }
 
-    // if title is > 50 chars return exceeding limit
-
     if (formData.title.trim().length > 50) {
       Swal.fire({
         icon: "warning",
@@ -429,8 +417,6 @@ export function TaskManager({
       });
       return;
     }
-
-    // if description is > 200 chars return exceeding limit
 
     if (formData.description.trim().length > 200) {
       Swal.fire({
@@ -526,7 +512,6 @@ export function TaskManager({
     }
   };
 
-  // ─── MARK AS DONE ──────────────────────────────────────────────
   const handleMarkAsDone = async (task: Task) => {
     const confirmed = await Swal.fire({
       title: "Mark as Done?",
@@ -597,7 +582,6 @@ export function TaskManager({
     }
   };
 
-  // ─── DELETE TASK ───────────────────────────────────────────────
   const confirmDelete = async (task: Task) => {
     const result = await Swal.fire({
       title: "Delete Task?",
@@ -662,33 +646,32 @@ export function TaskManager({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="text-left">
-          <h2 className="text-xl sm:text-2xl font-bold">
-            <SquareCheckBig className="inline-block mr-2 mb-1 text-blue-700" />
-            Task Management
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            Create, manage, and track project tasks
-          </p>
+      {/* Main Page Header (unchanged) */}
+      <div className="z-10 bg-background border-b pb-4 mb-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-left">
+            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <SquareCheckBig className="h-6 w-6 text-blue-700" />
+              Task Management
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              Create, manage, and track project tasks
+            </p>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+            {canCreateTask && (
+              <Button onClick={openCreateModal} className="w-full sm:w-auto">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Task
+              </Button>
+            )}
+          </div>
         </div>
 
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          {canCreateTask && (
-            <Button
-              onClick={openCreateModal}
-              className="w-full sm:w-auto"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Create Task
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Search Input */}
+        <div className="mt-4">
           <div className="relative w-full max-w-md">
-            <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 pointer-events-none text-[#e28a33]" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none text-[#e28a33]" />
             <Input
               placeholder="Search task..."
               value={searchTerm}
@@ -698,41 +681,47 @@ export function TaskManager({
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm("")}
-                className="absolute right-2 top-4.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
             )}
-            <p className="text-sm text-muted-foreground px-2"><span className="text-[#e28a33]">Note: </span>Search by title, description, project, assigned to or status</p>
           </div>
+          <p className="text-sm text-muted-foreground mt-1 px-2">
+            <span className="text-[#e28a33]">Note: </span>
+            Search by title, description, project, assigned to or status
+          </p>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {searchedTasks.map((task) => (
-          <Card key={task.id} className="hover:shadow-md transition-shadow p-4 sm:p-6">
-            <CardHeader className="p-0 pb-3">
-              <div className="flex flex-col gap-3">
-                <div className="flex-1">
-                  <CardTitle className="text-lg leading-tight">
-                    {task.title}
-                  </CardTitle>
-                  {task.description && (
-                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                      {task.description}
-                    </p>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  <Badge variant={getStatusColor(task.status)}>
-                    {task.status}
-                  </Badge>
-                  <Badge variant={getPriorityColor(task.priority)}>
-                    {task.priority}
-                  </Badge>
-                </div>  
+          <div
+            key={task.id}
+            className="bg-card text-card-foreground rounded-lg border shadow-sm hover:shadow-md transition-shadow p-4 sm:p-6"
+          >
+            <div className="flex flex-col gap-3 mb-4">
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold leading-tight">
+                  {task.title}
+                </h3>
+                {task.description && (
+                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                    {task.description}
+                  </p>
+                )}
               </div>
-            </CardHeader>
+              <div className="flex flex-wrap gap-1.5">
+                <Badge variant={getStatusColor(task.status)}>
+                  {task.status}
+                </Badge>
+                <Badge variant={getPriorityColor(task.priority)}>
+                  {task.priority}
+                </Badge>
+              </div>
+            </div>
 
-            <CardContent className="p-0 text-sm space-y-2.5">
+            <div className="text-sm space-y-2.5">
               <div className="flex items-center gap-2">
                 <Building className="h-4 w-4 text-muted-foreground" />
                 <span>
@@ -747,9 +736,9 @@ export function TaskManager({
                   <span>
                     Assigned:{" "}
                     {users
-                    .filter((u) => task.assignedTo?.includes(u.id))
-                    .map((u) => u.name)
-                    .join(", ") || "—"}
+                      .filter((u) => task.assignedTo?.includes(u.id))
+                      .map((u) => u.name)
+                      .join(", ") || "—"}
                   </span>
                 </div>
               )}
@@ -816,14 +805,14 @@ export function TaskManager({
                   )}
                 </div>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 
       {searchedTasks.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
+        <div className="bg-card text-card-foreground rounded-lg border shadow-sm">
+          <div className="py-12 text-center">
             <h3 className="text-lg font-medium mb-2">
               {searchTerm.trim() ? "No matching tasks found" : "No tasks found"}
             </h3>
@@ -845,27 +834,37 @@ export function TaskManager({
                 Create Task
               </Button>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
-      {/* Create Modal */}
+      {/* ── Create Modal ────────────────────────────────────────────── */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="modal bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border">
-            <div className="p-6 space-y-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-semibold">Create New Task</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Fill in the task details below
-                  </p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={closeCreateModal}>
-                  ✕
-                </Button>
+          <div className="modal w-full max-w-lg max-h-[90vh] bg-background rounded-lg shadow-xl overflow-hidden flex flex-col border">
+            {/* Fixed Header */}
+            <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold flex items-center gap-2">
+                  <Plus className="h-5 w-5" />
+                  Create New Task
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Fill in the task details below
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={closeCreateModal}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="create-title">Task Title *</Label>
@@ -890,14 +889,14 @@ export function TaskManager({
                       setFormData({ ...formData, description: e.target.value })
                     }
                     placeholder="Task details / notes..."
-                    rows={3}
+                    rows={4}
                   />
                   {isCreateMissing("Description") && (
                     <p className="text-xs text-destructive">Description Required</p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Status *</Label>
                     <Select
@@ -907,13 +906,7 @@ export function TaskManager({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            isCreateMissing("Status")
-                              ? "Status Required"
-                              : "Select status"
-                          }
-                        />
+                        <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
@@ -936,13 +929,7 @@ export function TaskManager({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            isCreateMissing("Priority")
-                              ? "Priority Required"
-                              : "Select priority"
-                          }
-                        />
+                        <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
@@ -989,7 +976,7 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Assign To *</Label>
-                    <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <div className="border rounded-md p-4 space-y-3 max-h-48 overflow-y-auto">
                     {users
                       .filter(
                         (u) =>
@@ -997,11 +984,10 @@ export function TaskManager({
                       )
                       .map((user) => {
                         const checked = formData.assignedTo.includes(user.id);
-
                         return (
                           <label
                             key={user.id}
-                            className="flex items-center gap-2 cursor-pointer text-sm"
+                            className="flex items-center gap-3 cursor-pointer text-sm hover:bg-accent/50 p-1 rounded transition-colors"
                           >
                             <input
                               type="checkbox"
@@ -1014,13 +1000,18 @@ export function TaskManager({
                                     : [...prev.assignedTo, user.id],
                                 }));
                               }}
+                              className="h-4 w-4"
                             />
-                            {user.name} ({user.secureId})
+                            <div>
+                              <span className="font-medium">{user.name}</span>
+                              <span className="text-muted-foreground text-xs ml-2">
+                                ({user.secureId})
+                              </span>
+                            </div>
                           </label>
                         );
                       })}
                   </div>
-
                   {isCreateMissing("Assign To") && (
                     <p className="text-xs text-destructive">
                       At least one assignee required
@@ -1048,37 +1039,48 @@ export function TaskManager({
                   )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-3 justify-end pt-3 border-t">
-                <Button variant="outline" onClick={closeCreateModal}>
-                  Cancel
-                </Button>
-                <Button onClick={handleCreate} disabled={!isCreateComplete}>
-                  Create Task
-                </Button>
-              </div>
+            {/* Footer */}
+            <div className="border-t px-6 py-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={closeCreateModal}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreate} disabled={!isCreateComplete}>
+                Create Task
+              </Button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ──────────────────────────────────────────────── */}
       {showEditModal && selectedTask && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="modal bg-background rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto border">
-            <div className="p-6 space-y-5">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-xl font-semibold">Edit Task</h3>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Update task information
-                  </p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={closeEditModal}>
-                  ✕
-                </Button>
+          <div className="modal w-full max-w-lg max-h-[90vh] bg-background rounded-lg shadow-xl overflow-hidden flex flex-col border">
+            {/* Fixed Header */}
+            <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold flex items-center gap-2">
+                  <Edit className="h-5 w-5" />
+                  Edit Task
+                </h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Update task information
+                </p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={closeEditModal}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
 
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-6">
               <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="edit-title">Task Title *</Label>
@@ -1101,14 +1103,14 @@ export function TaskManager({
                     onChange={(e) =>
                       setFormData({ ...formData, description: e.target.value })
                     }
-                    rows={3}
+                    rows={4}
                   />
                   {isEditMissing("Description") && (
                     <p className="text-xs text-destructive">Description Required</p>
                   )}
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Status *</Label>
                     <Select
@@ -1118,13 +1120,7 @@ export function TaskManager({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            isEditMissing("Status")
-                              ? "Status Required"
-                              : "Select status"
-                          }
-                        />
+                        <SelectValue placeholder="Select status" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Pending</SelectItem>
@@ -1147,13 +1143,7 @@ export function TaskManager({
                       }
                     >
                       <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            isEditMissing("Priority")
-                              ? "Priority Required"
-                              : "Select priority"
-                          }
-                        />
+                        <SelectValue placeholder="Select priority" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="low">Low</SelectItem>
@@ -1177,13 +1167,7 @@ export function TaskManager({
                     }
                   >
                     <SelectTrigger>
-                      <SelectValue
-                        placeholder={
-                          isEditMissing("Project")
-                            ? "Project Required"
-                            : "Select project"
-                        }
-                      />
+                      <SelectValue placeholder="Select project" />
                     </SelectTrigger>
                     <SelectContent>
                       {projects
@@ -1206,7 +1190,7 @@ export function TaskManager({
 
                 <div className="space-y-2">
                   <Label>Assign To *</Label>
-                  <div className="border rounded-md p-3 space-y-2 max-h-40 overflow-y-auto">
+                  <div className="border rounded-md p-4 space-y-3 max-h-48 overflow-y-auto">
                     {users
                       .filter(
                         (u) =>
@@ -1214,11 +1198,10 @@ export function TaskManager({
                       )
                       .map((user) => {
                         const checked = formData.assignedTo.includes(user.id);
-
                         return (
                           <label
                             key={user.id}
-                            className="flex items-center gap-2 cursor-pointer text-sm"
+                            className="flex items-center gap-3 cursor-pointer text-sm hover:bg-accent/50 p-1 rounded transition-colors"
                           >
                             <input
                               type="checkbox"
@@ -1231,14 +1214,19 @@ export function TaskManager({
                                     : [...prev.assignedTo, user.id],
                                 }));
                               }}
+                              className="h-4 w-4"
                             />
-                            {user.name} ({user.secureId})
+                            <div>
+                              <span className="font-medium">{user.name}</span>
+                              <span className="text-muted-foreground text-xs ml-2">
+                                ({user.secureId})
+                              </span>
+                            </div>
                           </label>
                         );
                       })}
                   </div>
-
-                  {isCreateMissing("Assign To") && (
+                  {isEditMissing("Assign To") && (
                     <p className="text-xs text-destructive">
                       At least one assignee required
                     </p>
@@ -1263,15 +1251,16 @@ export function TaskManager({
                   )}
                 </div>
               </div>
+            </div>
 
-              <div className="flex gap-3 justify-end pt-3 border-t">
-                <Button variant="outline" onClick={closeEditModal}>
-                  Cancel
-                </Button>
-                <Button onClick={handleUpdate} disabled={!isEditComplete}>
-                  Update Task
-                </Button>
-              </div>
+            {/* Footer */}
+            <div className="border-t px-6 py-4 flex justify-end gap-3">
+              <Button variant="outline" onClick={closeEditModal}>
+                Cancel
+              </Button>
+              <Button onClick={handleUpdate} disabled={!isEditComplete}>
+                Update Task
+              </Button>
             </div>
           </div>
         </div>
