@@ -675,14 +675,14 @@ export function UserManagement({
           </p>
         </div>
 
-        <div className="flex flex-row gap-3 sm:gap-4 w-full sm:w-auto sm:justify-end">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto sm:justify-end">
           {canManageUsers && (
             <>
               <Button
                 variant="outline"
                 size="sm"
-                className="gap-2"
                 onClick={() => setShowInactiveModal(true)}
+                className="gap-2 w-full sm:w-auto"
               >
                 <UserX size={16} />
                 Inactive Users
@@ -690,8 +690,8 @@ export function UserManagement({
 
               <Button
                 size="sm"
-                className="gap-2 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm"
                 onClick={() => setShowSupervisorForm(true)}
+                className="gap-2 w-full sm:w-auto bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 shadow-sm"
               >
                 <UserPlus size={16} />
                 Add Supervisor
