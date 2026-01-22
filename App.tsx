@@ -246,6 +246,11 @@ export default function App() {
 
   useEffect(() => {
     if (currentUser) return;
+    let hasStoredUser = false;
+    try {
+      hasStoredUser = Boolean(localStorage.getItem("currentUser"));
+    } catch {}
+    if (hasStoredUser) return;
     const path =
       authView === "reset-password"
         ? "/reset-password"
