@@ -309,6 +309,18 @@ function handle_upload_gcash_qr(PDO $pdo): void
     $filename = 'gcash-qr-' . $userId . '-' . time() . '.' . $extension;
     $destination = $uploadDir . $filename;
 
+    // Fetch old QR image
+    $stmt = $pdo->prepare("SELECT gcash_qr_url FROM users WHERE id = :id");
+    $stmt->execute([':id' => $userId]);
+    $oldUrl = $stmt->fetchColumn();
+
+    if ($oldUrl) {
+        $oldPath = __DIR__ . '/../' . ltrim($oldUrl, '/');
+        if (file_exists($oldPath)) {
+            @unlink($oldPath);
+        }
+    }
+
     // Move uploaded file
     if (!move_uploaded_file($file['tmp_name'], $destination)) {
         json_response(['error' => 'Failed to save uploaded file'], 500);
