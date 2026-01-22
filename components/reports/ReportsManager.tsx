@@ -128,8 +128,7 @@ export function ReportsManager({
 
   const [formData, setFormData] = useState({
     title: "",
-    shortSummary: "",
-    details: "",
+    description: "",
     type: "project" as Report["type"],
     status: "draft" as Report["status"],
     project_id: ALL_PROJECTS_VALUE,
@@ -196,8 +195,7 @@ export function ReportsManager({
   const resetForm = () => {
     setFormData({
       title: "",
-      shortSummary: "",
-      details: "",
+      description: "",
       type: "project",
       status: "draft",
       project_id: ALL_PROJECTS_VALUE,
@@ -226,7 +224,7 @@ export function ReportsManager({
     const title = formData.title.trim();
     if (!title || isCreating) return;
 
-    if (title.length === 0 || formData.shortSummary.length === 0 || formData.details.length === 0) {
+    if (title.length === 0 || formData.description.length === 0) {
       Swal.fire({
         icon: "warning",
         title: "Incomplete Form",
@@ -246,7 +244,7 @@ export function ReportsManager({
       return;
     }
 
-    if (formData.shortSummary.length > 200) {
+    if (formData.description.length > 200) {
       Swal.fire({
         icon: "warning",
         title: "Content Exceeds Limit",
@@ -275,8 +273,7 @@ export function ReportsManager({
       setIsCreating(true);
       const payload = {
         title,
-        description: formData.shortSummary.trim(),
-        details: formData.details.trim(),
+        description: formData.description.trim(),
         type: formData.type,
         status: formData.status,
         project_id: formData.project_id === ALL_PROJECTS_VALUE ? null : formData.project_id,
@@ -948,106 +945,50 @@ export function ReportsManager({
 
       {/* CREATE FORM */}
       {showCreateForm && (
-<<<<<<< HEAD
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="w-full max-w-md rounded-[32px] border border-slate-200 bg-white shadow-[0_25px_50px_rgba(15,23,42,0.15)]">
-            <div className="p-6 sm:p-8 space-y-6">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <h2 className="text-2xl font-semibold text-slate-900">
-                    Create New Report
-                  </h2>
-                  <p className="text-sm text-slate-500 mt-1">
-                    Generate a comprehensive report with customizable filters and data.
-                  </p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setShowCreateForm(false)}
-                  className="text-slate-400 hover:text-slate-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-
-              <div className="space-y-5">
-=======
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="max-h-[90vh] overflow-auto">
-              <div className="border-b p-5 sticky top-0 bg-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Create New Report</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>
-                    ×
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Generate a comprehensive report with customizable filters and data.
-                </p>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Create New Report</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
+                  ×
+                </Button>
               </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Generate a comprehensive report with customizable filters and data.
+              </p>
 
-              <div className="space-y-6 p-5">
->>>>>>> main
+              <div className="space-y-6">
                 <div className="space-y-2">
-                  <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
-                    Report Title
-                  </p>
+                  <Label htmlFor="title">Report Title</Label>
                   <Input
-                    placeholder="Enter report title"
+                    id="title"
                     value={formData.title}
-                    onChange={(e) =>
-                      setFormData({ ...formData, title: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                    placeholder="Enter report title"
                   />
                 </div>
 
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
-                    <span>Short Summary (Preview)</span>
-                    <span>{`${formData.shortSummary.length}/200`}</span>
-                  </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Description</Label>
                   <Textarea
-                    rows={2}
-                    maxLength={200}
-                    placeholder="Brief summary for the dashboard card (Max 200 chars)"
-                    className="border border-slate-300 bg-white"
-                    value={formData.shortSummary}
-                    onChange={(e) =>
-                      setFormData({ ...formData, shortSummary: e.target.value })
-                    }
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
-                    Detailed Report Content
-                  </p>
-                  <Textarea
-                    rows={4}
-                    placeholder="Write your full report details here..."
-                    className="border border-slate-300 bg-white focus:border-primary focus:ring-amber/50"
-                    value={formData.details}
-                    onChange={(e) =>
-                      setFormData({ ...formData, details: e.target.value })
-                    }
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="Enter report description"
+                    rows={3}
                   />
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
-                      Type
-                    </p>
+                  <div className="space-y-2">
+                    <Label>Type</Label>
                     <Select
                       value={formData.type}
-                      onValueChange={(v) =>
-                        setFormData({ ...formData, type: v as Report["type"] })
-                      }
+                      onValueChange={(v) => setFormData({ ...formData, type: v as Report["type"] })}
                     >
                       <SelectTrigger>
-                        <SelectValue />
+                        <SelectValue placeholder="Select type" />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="project">Project Report</SelectItem>
@@ -1059,17 +1000,12 @@ export function ReportsManager({
                     </Select>
                   </div>
 
-                  <div className="space-y-1">
-                    <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
-                      Status
-                    </p>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
                     <Select
                       value={formData.status}
                       onValueChange={(v) =>
-                        setFormData({
-                          ...formData,
-                          status: v as Report["status"],
-                        })
+                        setFormData({ ...formData, status: v as Report["status"] })
                       }
                     >
                       <SelectTrigger>
@@ -1084,57 +1020,44 @@ export function ReportsManager({
                   </div>
                 </div>
 
-                <div className="space-y-1">
-                  <p className="text-[0.65rem] uppercase tracking-[0.3em] text-slate-500">
-                    Associated Project
-                  </p>
-                  <Select
-                    value={formData.project_id}
-                    onValueChange={(v) =>
-                      setFormData({ ...formData, project_id: v })
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="All Projects" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
-                      {projects
-                        .filter(
-                          (p) =>
-                            currentUser.role === "admin" ||
-                            p.supervisorId === currentUser.id
-                        )
-                        .map((project) => (
-                          <SelectItem key={project.id} value={project.id}>
-                            {project.name}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-[0.65rem] text-slate-400">
-                    Select "All Projects" to aggregate data across all accessible projects
-                  </p>
-                </div>
+                {(formData.type === "project" || formData.type === "financial") && (
+                  <div className="space-y-2">
+                    <Label>Associated Project</Label>
+                    <Select
+                      value={formData.project_id}
+                      onValueChange={(v) => setFormData({ ...formData, project_id: v })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select project or All Projects" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={ALL_PROJECTS_VALUE}>All Projects</SelectItem>
+                        {projects
+                          .filter(
+                            (p) =>
+                              currentUser.role === "admin" || p.supervisorId === currentUser.id
+                          )
+                          .map((project) => (
+                            <SelectItem key={project.id} value={project.id}>
+                              {project.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Select "All Projects" to aggregate data across all accessible projects
+                    </p>
+                  </div>
+                )}
               </div>
 
-<<<<<<< HEAD
-              <div className="flex justify-end gap-3">
-=======
-              <div className="flex justify-end gap-3 mt-8 p-5">
->>>>>>> main
+              <div className="flex justify-end gap-3 mt-8">
                 <Button variant="outline" onClick={() => setShowCreateForm(false)}>
                   Cancel
                 </Button>
                 <Button
                   onClick={handleCreate}
-                  className="bg-slate-900 text-white hover:bg-slate-800"
-                  disabled={
-                    !formData.title.trim() ||
-                    !formData.shortSummary.trim() ||
-                    !formData.details.trim() ||
-                    isCreating
-                  }
+                  disabled={!formData.title.trim() || isCreating}
                 >
                   {isCreating ? "Creating..." : "Create Report"}
                 </Button>
@@ -1143,32 +1066,31 @@ export function ReportsManager({
           </div>
         </div>
       )}
+
       {/* EDIT FORM */}
       {showEditForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="max-h-[90vh] overflow-auto">
-              <div className="p-5 border-b bg-white sticky top-0">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Edit Report</h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setShowEditForm(false);
-                      setSelectedReport(null);
-                      resetForm();
-                    }}
-                  >
-                    ×
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Update report details and regenerate data.
-                </p>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Edit Report</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setSelectedReport(null);
+                    resetForm();
+                  }}
+                >
+                  ×
+                </Button>
               </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Update report details and regenerate data.
+              </p>
 
-              <div className="space-y-6 p-5">
+              <div className="space-y-6">
                 <div className="space-y-2">
                   <Label htmlFor="edit-title">Report Title</Label>
                   <Input
@@ -1261,7 +1183,7 @@ export function ReportsManager({
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-8 p-5">
+              <div className="flex justify-end gap-3 mt-8">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1285,8 +1207,8 @@ export function ReportsManager({
       {showViewForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] overflow-y-auto">
-            <div className="">
-              <div className="flex items-center justify-between mb-6 border-b bg-white p-5 sticky top-0">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
                   {selectedReport.description && (
@@ -1309,7 +1231,7 @@ export function ReportsManager({
               </div>
 
               {/* Report Metadata */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm p-5">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm">
                 <div>
                   <p className="text-muted-foreground">Type</p>
                   <p className="font-medium mt-1 capitalize">{selectedReport.type}</p>
@@ -1335,11 +1257,11 @@ export function ReportsManager({
               {/* Analytics Section */}
               {["financial", "project"].includes(selectedReport.type) ? (
                 analyticsLoading ? (
-                  <div className="flex justify-center items-center h-64 ">
+                  <div className="flex justify-center items-center h-64">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                   </div>
                 ) : analyticsData ? (
-                  <div className="space-y-10 p-5">
+                  <div className="space-y-10">
                     {/* Summary Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <Card>
@@ -1431,7 +1353,7 @@ export function ReportsManager({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground p-5">
+                  <div className="text-center py-12 text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4" />
                     <p className="text-lg font-medium">No financial data available</p>
                     <p className="mt-2">
@@ -1452,7 +1374,7 @@ export function ReportsManager({
                 </div>
               )}
 
-              <div className="flex justify-end mt-10 p-5">
+              <div className="flex justify-end mt-10">
                 <Button
                   variant="outline"
                   onClick={() => {
