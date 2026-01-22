@@ -1,6 +1,12 @@
 import { useState, useEffect } from "react";
 import { apiService } from "../../utils/apiService";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -20,18 +26,19 @@ import {
 } from "../ui/select";
 import { Badge } from "../ui/badge";
 import { Progress } from "../ui/progress";
-import { 
-  Plus, 
-  Wallet, 
-  TrendingUp, 
-  AlertCircle, 
-  ChevronDown, 
-  ChevronRight, 
+import {
+  Plus,
+  Wallet,
+  TrendingUp,
+  AlertCircle,
+  ChevronDown,
+  ChevronRight,
   Trash2,
   CalendarIcon,
   Filter,
   RefreshCcw,
-  X
+  X,
+  CreditCard,
 } from "lucide-react";
 import { format } from "date-fns";
 import Swal from "sweetalert2";
@@ -39,18 +46,18 @@ import Swal from "sweetalert2";
 export function ClientBilling() {
   const [billingData, setBillingData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // -- Filter State --
-  const [statusFilter, setStatusFilter] = useState("all"); 
+  const [statusFilter, setStatusFilter] = useState("all");
 
   // -- Modal State --
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<string>("");
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [method, setMethod] = useState("Cash");
   const [reference, setReference] = useState("");
-  
+
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
 
   // SweetAlert2 custom classes
@@ -81,7 +88,7 @@ export function ClientBilling() {
     }
   };
 
-  const selectedProjectData = billingData.find(p => p.id === selectedProject);
+  const selectedProjectData = billingData.find((p) => p.id === selectedProject);
 
   const getFilteredData = () => {
     if (statusFilter === "all") return billingData;
@@ -101,13 +108,18 @@ export function ClientBilling() {
   const filteredData = getFilteredData();
 
   const toggleRow = (projectId: string) => {
-    setExpandedRows(prev => 
-      prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]
+    setExpandedRows((prev) =>
+      prev.includes(projectId)
+        ? prev.filter((id) => id !== projectId)
+        : [...prev, projectId],
     );
   };
 
   const formatMoney = (amount: number) => {
-    return new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(amount);
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(amount);
   };
 
   const handleAddPayment = async () => {
@@ -247,7 +259,7 @@ export function ClientBilling() {
     });
 
     // Wait exactly 2 seconds
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     try {
       await apiService.createPayment({
@@ -306,7 +318,7 @@ export function ClientBilling() {
           customClass: swalCustomClasses,
         });
 
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 2000));
 
         await apiService.deletePayment(id);
         fetchData();
@@ -332,27 +344,53 @@ export function ClientBilling() {
   };
 
   // Totals Calculation
-  const totalRevenue = billingData.reduce((sum, item) => sum + parseFloat(item.total_cost || 0), 0);
-  const totalCollected = billingData.reduce((sum, item) => sum + parseFloat(item.total_paid || 0), 0);
+  const totalRevenue = billingData.reduce(
+    (sum, item) => sum + parseFloat(item.total_cost || 0),
+    0,
+  );
+  const totalCollected = billingData.reduce(
+    (sum, item) => sum + parseFloat(item.total_paid || 0),
+    0,
+  );
   const totalReceivable = totalRevenue - totalCollected;
 
   return (
-    <div className="flex flex-col gap-6 p-4 md:p-8 bg-muted/40 min-h-screen">
-      
+    <div className="flex flex-col gap-6 min-h-screen">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Client Billing</h2>
-          <p className="text-muted-foreground mt-1">
-            Manage project invoices, track payments, and monitor receivables.
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6 mb-6">
+        {/* Left Side: Text Content */}
+        <div className="space-y-1">
+          {/* Title Row - Flex container handles the vertical centering */}
+          <div className="flex items-center gap-3">
+            {/* Icon: Fixed to h-6 w-6 (24px) on all screens. No resizing. */}
+            <CreditCard className="h-6 w-6 dark:text-blue-400 shrink-0" />
+            <h2 className="text-xl sm:text-2xl font-bold">Client Billing</h2>
+          </div>
+
+          <p className="text-sm text-muted-foreground">
+            Manage invoices, track payments, and receivables.
           </p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button variant="outline" size="icon" onClick={fetchData} className="shrink-0">
-            <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+
+        {/* Right Side: Actions */}
+        <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            onClick={fetchData}
+            className="h-10 w-full sm:w-10 sm:px-0 shrink-0"
+          >
+            <RefreshCcw
+              className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+            />
+            <span className="sm:hidden ml-2">Refresh</span>
           </Button>
-          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto shadow-md">
-            <Plus className="mr-2 h-4 w-4" /> Record Payment
+
+          <Button
+            onClick={() => setIsModalOpen(true)}
+            className="w-full sm:w-auto flex-1 sm:flex-none shadow-sm"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            <span className="whitespace-nowrap">Record Payment</span>
           </Button>
         </div>
       </div>
@@ -361,42 +399,64 @@ export function ClientBilling() {
       <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
         <Card className="shadow-sm border-l-[6px] border-l-primary">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pl-6">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Contract Value</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Contract Value
+            </CardTitle>
             <Wallet className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent className="pl-6 pb-6">
-            <div className="text-xl sm:text-2xl font-bold truncate" title={formatMoney(totalRevenue)}>
+            <div
+              className="text-xl sm:text-2xl font-bold truncate"
+              title={formatMoney(totalRevenue)}
+            >
               {formatMoney(totalRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Across all active projects</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Across all active projects
+            </p>
           </CardContent>
         </Card>
-        
+
         <Card className="shadow-sm border-l-[6px] border-l-green-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pl-6">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Total Collected</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total Collected
+            </CardTitle>
             <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent className="pl-6 pb-6">
-            <div className="text-xl sm:text-2xl font-bold text-green-600 truncate" title={formatMoney(totalCollected)}>
+            <div
+              className="text-xl sm:text-2xl font-bold text-green-600 truncate"
+              title={formatMoney(totalCollected)}
+            >
               {formatMoney(totalCollected)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {totalRevenue > 0 ? ((totalCollected / totalRevenue) * 100).toFixed(1) : 0}% of total value
+              {totalRevenue > 0
+                ? ((totalCollected / totalRevenue) * 100).toFixed(1)
+                : 0}
+              % of total value
             </p>
           </CardContent>
         </Card>
 
         <Card className="shadow-sm border-l-[6px] border-l-red-500">
           <CardHeader className="flex flex-row items-center justify-between pb-2 pl-6">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Outstanding Balance</CardTitle>
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Outstanding Balance
+            </CardTitle>
             <AlertCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent className="pl-6 pb-6">
-            <div className="text-xl sm:text-2xl font-bold text-red-600 truncate" title={formatMoney(totalReceivable)}>
+            <div
+              className="text-xl sm:text-2xl font-bold text-red-600 truncate"
+              title={formatMoney(totalReceivable)}
+            >
               {formatMoney(totalReceivable)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Pending collection</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Pending collection
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -407,9 +467,11 @@ export function ClientBilling() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
               <CardTitle>Project Accounts</CardTitle>
-              <CardDescription>Click on a row to view detailed payment history.</CardDescription>
+              <CardDescription>
+                Click on a row to view detailed payment history.
+              </CardDescription>
             </div>
-            
+
             {/* Status Filter */}
             <div className="w-full sm:w-[200px]">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -435,19 +497,43 @@ export function ClientBilling() {
               <TableHeader className="bg-muted/50 ">
                 <TableRow>
                   <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="min-w-[200px] text-white">Project / Client</TableHead>
+                  <TableHead className="min-w-[200px] text-white">
+                    Project / Client
+                  </TableHead>
                   <TableHead className="text-white">Status</TableHead>
-                  <TableHead className="text-right whitespace-nowrap text-white">Total Cost</TableHead>
-                  <TableHead className="text-right whitespace-nowrap text-white">Paid</TableHead>
-                  <TableHead className="text-right whitespace-nowrap text-white">Balance</TableHead>
-                  <TableHead className="w-[180px] min-w-[150px] text-white">Payment Progress</TableHead>
+                  <TableHead className="text-right whitespace-nowrap text-white">
+                    Total Cost
+                  </TableHead>
+                  <TableHead className="text-right whitespace-nowrap text-white">
+                    Paid
+                  </TableHead>
+                  <TableHead className="text-right whitespace-nowrap text-white">
+                    Balance
+                  </TableHead>
+                  <TableHead className="w-[180px] min-w-[150px] text-white">
+                    Payment Progress
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">Loading financial data...</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      Loading financial data...
+                    </TableCell>
+                  </TableRow>
                 ) : filteredData.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-12 text-muted-foreground">No projects found matching that filter.</TableCell></TableRow>
+                  <TableRow>
+                    <TableCell
+                      colSpan={7}
+                      className="text-center py-12 text-muted-foreground"
+                    >
+                      No projects found matching that filter.
+                    </TableCell>
+                  </TableRow>
                 ) : (
                   filteredData.map((item) => {
                     const cost = parseFloat(item.total_cost || 0);
@@ -459,17 +545,23 @@ export function ClientBilling() {
 
                     return (
                       <>
-                        <TableRow 
-                          key={item.id} 
-                          className={`cursor-pointer transition-colors ${isExpanded ? 'bg-muted/50' : 'hover:bg-muted/30'}`} 
+                        <TableRow
+                          key={item.id}
+                          className={`cursor-pointer transition-colors ${isExpanded ? "bg-muted/50" : "hover:bg-muted/30"}`}
                           onClick={() => toggleRow(item.id)}
                         >
                           <TableCell className="pl-4">
-                            {isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                            {isExpanded ? (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                            )}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col">
-                              <span className="font-semibold text-foreground">{item.title}</span>
+                              <span className="font-semibold text-foreground">
+                                {item.title}
+                              </span>
                               <span className="text-xs text-muted-foreground flex items-center gap-1">
                                 {item.client_name || "Unknown Client"}
                               </span>
@@ -477,24 +569,53 @@ export function ClientBilling() {
                           </TableCell>
                           <TableCell>
                             {isFullyPaid ? (
-                              <Badge variant="default" className="bg-green-600/15 text-green-700 hover:bg-green-600/25 border-green-200 shadow-none">Fully Paid</Badge>
+                              <Badge
+                                variant="default"
+                                className="bg-green-600/15 text-green-700 hover:bg-green-600/25 border-green-200 shadow-none"
+                              >
+                                Fully Paid
+                              </Badge>
                             ) : paid > 0 ? (
-                              <Badge variant="secondary" className="bg-blue-600/10 text-blue-700 hover:bg-blue-600/20 border-blue-200">Partial</Badge>
+                              <Badge
+                                variant="secondary"
+                                className="bg-blue-600/10 text-blue-700 hover:bg-blue-600/20 border-blue-200"
+                              >
+                                Partial
+                              </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-muted-foreground">Unpaid</Badge>
+                              <Badge
+                                variant="outline"
+                                className="text-muted-foreground"
+                              >
+                                Unpaid
+                              </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-medium whitespace-nowrap">{formatMoney(cost)}</TableCell>
-                          <TableCell className="text-right text-green-600 font-medium whitespace-nowrap">{formatMoney(paid)}</TableCell>
-                          <TableCell className="text-right text-red-600 font-medium whitespace-nowrap">{formatMoney(balance)}</TableCell>
+                          <TableCell className="text-right font-medium whitespace-nowrap">
+                            {formatMoney(cost)}
+                          </TableCell>
+                          <TableCell className="text-right text-green-600 font-medium whitespace-nowrap">
+                            {formatMoney(paid)}
+                          </TableCell>
+                          <TableCell className="text-right text-red-600 font-medium whitespace-nowrap">
+                            {formatMoney(balance)}
+                          </TableCell>
                           <TableCell className="pr-6">
                             <div className="flex items-center gap-3">
-                              <Progress value={percent} className="h-2 w-full" indicatorColor={isFullyPaid ? "bg-green-600" : ""} />
-                              <span className="text-xs font-medium text-muted-foreground w-9 text-right">{Math.min(Math.round(percent), 100)}%</span>
+                              <Progress
+                                value={percent}
+                                className="h-2 w-full"
+                                indicatorColor={
+                                  isFullyPaid ? "bg-green-600" : ""
+                                }
+                              />
+                              <span className="text-xs font-medium text-muted-foreground w-9 text-right">
+                                {Math.min(Math.round(percent), 100)}%
+                              </span>
                             </div>
                           </TableCell>
                         </TableRow>
-                        
+
                         {/* EXPANDED HISTORY ROW */}
                         {isExpanded && (
                           <TableRow className="bg-muted/30 hover:bg-muted/30 border-t-0 shadow-inner">
@@ -502,48 +623,86 @@ export function ClientBilling() {
                               <div className="py-4 px-4 md:pl-14 md:pr-4 overflow-x-auto">
                                 <div className="bg-card rounded-lg border shadow-sm">
                                   <div className="flex items-center justify-between p-3 border-b bg-muted/20">
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transaction History</h4>
-                                    <span className="text-xs text-muted-foreground">ID: {item.id}</span>
+                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                      Transaction History
+                                    </h4>
+                                    <span className="text-xs text-muted-foreground">
+                                      ID: {item.id}
+                                    </span>
                                   </div>
-                                  {item.payment_history && item.payment_history.length > 0 ? (
+                                  {item.payment_history &&
+                                  item.payment_history.length > 0 ? (
                                     <Table>
                                       <TableHeader>
                                         <TableRow className="hover:bg-transparent">
-                                          <TableHead className="h-9 text-xs text-white">Date</TableHead>
-                                          <TableHead className="h-9 text-xs text-white">Method</TableHead>
-                                          <TableHead className="h-9 text-xs text-white">Reference</TableHead>
-                                          <TableHead className="h-9 text-xs text-white text-right">Amount</TableHead>
+                                          <TableHead className="h-9 text-xs text-white">
+                                            Date
+                                          </TableHead>
+                                          <TableHead className="h-9 text-xs text-white">
+                                            Method
+                                          </TableHead>
+                                          <TableHead className="h-9 text-xs text-white">
+                                            Reference
+                                          </TableHead>
+                                          <TableHead className="h-9 text-xs text-white text-right">
+                                            Amount
+                                          </TableHead>
                                           <TableHead className="h-9 text-xs text-white text-right w-[50px]"></TableHead>
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
-                                        {item.payment_history.map((hist: any) => (
-                                          <TableRow key={hist.id} className="h-10 hover:bg-muted/20">
-                                            <TableCell className="py-2 text-sm whitespace-nowrap">
-                                              <div className="flex items-center gap-2">
-                                                <CalendarIcon className="h-3 w-3 text-muted-foreground" />
-                                                {format(new Date(hist.payment_date), "MMM d, yyyy")}
-                                              </div>
-                                            </TableCell>
-                                            <TableCell className="py-2 text-sm">{hist.method}</TableCell>
-                                            <TableCell className="py-2 text-sm font-mono text-muted-foreground">{hist.reference || "-"}</TableCell>
-                                            <TableCell className="py-2 text-sm text-right font-medium">{formatMoney(parseFloat(hist.amount))}</TableCell>
-                                            <TableCell className="py-2 text-right">
-                                              <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50" onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDeletePayment(hist.id);
-                                              }}>
-                                                <Trash2 className="h-3.5 w-3.5" />
-                                              </Button>
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
+                                        {item.payment_history.map(
+                                          (hist: any) => (
+                                            <TableRow
+                                              key={hist.id}
+                                              className="h-10 hover:bg-muted/20"
+                                            >
+                                              <TableCell className="py-2 text-sm whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                  <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                                                  {format(
+                                                    new Date(hist.payment_date),
+                                                    "MMM d, yyyy",
+                                                  )}
+                                                </div>
+                                              </TableCell>
+                                              <TableCell className="py-2 text-sm">
+                                                {hist.method}
+                                              </TableCell>
+                                              <TableCell className="py-2 text-sm font-mono text-muted-foreground">
+                                                {hist.reference || "-"}
+                                              </TableCell>
+                                              <TableCell className="py-2 text-sm text-right font-medium">
+                                                {formatMoney(
+                                                  parseFloat(hist.amount),
+                                                )}
+                                              </TableCell>
+                                              <TableCell className="py-2 text-right">
+                                                <Button
+                                                  variant="ghost"
+                                                  size="icon"
+                                                  className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeletePayment(
+                                                      hist.id,
+                                                    );
+                                                  }}
+                                                >
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </TableCell>
+                                            </TableRow>
+                                          ),
+                                        )}
                                       </TableBody>
                                     </Table>
                                   ) : (
                                     <div className="flex flex-col items-center justify-center py-8 text-center">
                                       <Wallet className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                                      <p className="text-sm text-muted-foreground">No payment records found.</p>
+                                      <p className="text-sm text-muted-foreground">
+                                        No payment records found.
+                                      </p>
                                     </div>
                                   )}
                                 </div>
@@ -587,16 +746,23 @@ export function ClientBilling() {
             <div className="p-6 space-y-6">
               {/* Project Select */}
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">Select Project</label>
-                <Select value={selectedProject} onValueChange={setSelectedProject}>
+                <label className="text-sm font-medium leading-none">
+                  Select Project
+                </label>
+                <Select
+                  value={selectedProject}
+                  onValueChange={setSelectedProject}
+                >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Search or select a project..." />
                   </SelectTrigger>
                   <SelectContent>
                     {billingData.map((p) => (
                       <SelectItem key={p.id} value={p.id}>
-                        <span className="font-medium">{p.title}</span> 
-                        <span className="text-muted-foreground ml-2 text-xs">({p.client_name})</span>
+                        <span className="font-medium">{p.title}</span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          ({p.client_name})
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -606,38 +772,48 @@ export function ClientBilling() {
               {/* Amount & Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">Amount</label>
+                  <label className="text-sm font-medium leading-none">
+                    Amount
+                  </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-muted-foreground">₱</span>
-                    <Input 
+                    <span className="absolute left-3 top-2.5 text-muted-foreground">
+                      ₱
+                    </span>
+                    <Input
                       type="number"
                       min={0}
                       max={1000000}
                       step="0.01"
                       className="pl-7"
-                      value={amount} 
+                      value={amount}
                       onChange={(e) => setAmount(e.target.value)}
-                      placeholder="0.00" 
+                      placeholder="0.00"
                     />
                   </div>
                   {selectedProjectData && (
                     <p className="text-[11px] text-muted-foreground text-right mt-1">
-                      Max allowed: <span className="font-medium text-foreground">
-                        {formatMoney(Math.min(
-                          parseFloat(selectedProjectData.total_cost) - parseFloat(selectedProjectData.total_paid),
-                          1000000
-                        ))}
+                      Max allowed:{" "}
+                      <span className="font-medium text-foreground">
+                        {formatMoney(
+                          Math.min(
+                            parseFloat(selectedProjectData.total_cost) -
+                              parseFloat(selectedProjectData.total_paid),
+                            1000000,
+                          ),
+                        )}
                       </span>
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">Date Received</label>
-                  <Input 
-                    type="date" 
-                    value={date} 
-                    onChange={(e) => setDate(e.target.value)} 
+                  <label className="text-sm font-medium leading-none">
+                    Date Received
+                  </label>
+                  <Input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
                   />
                 </div>
               </div>
@@ -645,7 +821,9 @@ export function ClientBilling() {
               {/* Method & Reference */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">Payment Method</label>
+                  <label className="text-sm font-medium leading-none">
+                    Payment Method
+                  </label>
                   <Select value={method} onValueChange={setMethod}>
                     <SelectTrigger>
                       <SelectValue />
@@ -653,7 +831,9 @@ export function ClientBilling() {
                     <SelectContent>
                       <SelectItem value="Cash">Cash</SelectItem>
                       <SelectItem value="Check">Check</SelectItem>
-                      <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                      <SelectItem value="Bank Transfer">
+                        Bank Transfer
+                      </SelectItem>
                       <SelectItem value="GCash">GCash</SelectItem>
                       <SelectItem value="Maya">Maya</SelectItem>
                     </SelectContent>
@@ -661,11 +841,13 @@ export function ClientBilling() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">Reference No. (Optional)</label>
-                  <Input 
-                    value={reference} 
-                    onChange={(e) => setReference(e.target.value)} 
-                    placeholder="e.g. Check #12345" 
+                  <label className="text-sm font-medium leading-none">
+                    Reference No. (Optional)
+                  </label>
+                  <Input
+                    value={reference}
+                    onChange={(e) => setReference(e.target.value)}
+                    placeholder="e.g. Check #12345"
                   />
                 </div>
               </div>
@@ -673,17 +855,10 @@ export function ClientBilling() {
 
             {/* Footer */}
             <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-muted/40">
-              <Button 
-                variant="outline" 
-                onClick={() => setIsModalOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
                 Cancel
               </Button>
-              <Button 
-                onClick={handleAddPayment}
-              >
-                Save Payment
-              </Button>
+              <Button onClick={handleAddPayment}>Save Payment</Button>
             </div>
           </div>
         </div>

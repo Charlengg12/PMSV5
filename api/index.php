@@ -38,6 +38,10 @@ switch ($method . ' ' . $path) {
     //     handle_update_announcement($pdo, $path);
     //     break;
 
+    case 'POST /users/upload-gcash-qr':
+        handle_upload_gcash_qr($pdo);
+        break;
+
     case 'GET /billing/summary':
         handle_get_billing_summary($pdo);
         break;
@@ -268,6 +272,89 @@ case 'GET /announcements':
     break;
     }
 
+function handle_upload_gcash_qr(PDO $pdo): void
+    {
+    require_login();
+    $userId = $_SESSION['user_id'];
+
+    // Check if file was uploaded
+    if (empty($_FILES['qr_image']) || $_FILES['qr_image']['error'] !== UPLOAD_ERR_OK) {
+        json_response(['error' => 'No file uploaded or upload error'], 400);
+    }
+
+    $file = $_FILES['qr_image'];
+
+    // Validate file type & size
+    $allowedTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    $maxSize = 5 * 1024 * 1024; // 5MB
+
+    if (!in_array($file['type'], $allowedTypes)) {
+        json_response(['error' => 'Invalid file type. Only JPG, PNG, GIF allowed'], 400);
+    }
+
+    if ($file['size'] > $maxSize) {
+        json_response(['error' => 'File too large. Maximum 5MB allowed'], 400);
+    }
+
+    // Create upload directory if not exists
+    $uploadDir = __DIR__ . '/../uploads/gcash-qr/';
+    if (!is_dir($uploadDir)) {
+        if (!mkdir($uploadDir, 0755, true)) {
+            json_response(['error' => 'Failed to create upload directory'], 500);
+        }
+    }
+
+    // Generate unique filename
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+    $filename = 'gcash-qr-' . $userId . '-' . time() . '.' . $extension;
+    $destination = $uploadDir . $filename;
+
+    // Fetch old QR image
+    $stmt = $pdo->prepare("SELECT gcash_qr_url FROM users WHERE id = :id");
+    $stmt->execute([':id' => $userId]);
+    $oldUrl = $stmt->fetchColumn();
+
+    if ($oldUrl) {
+        $oldPath = __DIR__ . '/../' . ltrim($oldUrl, '/');
+        if (file_exists($oldPath)) {
+            @unlink($oldPath);
+        }
+    }
+
+    // Move uploaded file
+    if (!move_uploaded_file($file['tmp_name'], $destination)) {
+        json_response(['error' => 'Failed to save uploaded file'], 500);
+    }
+
+    // Public URL (adjust based on your actual public path)
+    // Halimbawa: kung nasa root ng domain mo ang /uploads/
+    $publicUrl = '/uploads/gcash-qr/' . $filename;
+
+    // Update user record in database
+    try {
+        $stmt = $pdo->prepare("
+            UPDATE users 
+            SET gcash_qr_url = :url 
+            WHERE id = :id
+        ");
+        $stmt->execute([
+            ':url' => $publicUrl,
+            ':id'  => $userId
+        ]);
+
+        // Optional: Log activity
+        log_activity($pdo, $userId, 'UPLOAD_GCASH_QR', "Uploaded new GCash QR: $filename");
+
+        json_response([
+            'message'       => 'QR code uploaded successfully',
+            'gcash_qr_url'  => $publicUrl
+        ]);
+    } catch (PDOException $e) {
+        // Delete file if DB update fails
+        @unlink($destination);
+        json_response(['error' => 'Database error: ' . $e->getMessage()], 500);
+    }
+    }
 // ----------------------------------------------------------------------
 // HELPER: Activity Logger
 // ----------------------------------------------------------------------
@@ -1783,7 +1870,7 @@ function handle_me(PDO $pdo): void
     if (empty($_SESSION['user_id'])) {
         json_response(['user' => null]);
     }
-    $stmt = $pdo->prepare('SELECT id, name, email, role, school, phone, gcash_number, secure_id, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT  name, email, role, school, phone, gcash_number, secure_id, gcash_qr_url, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $_SESSION['user_id']]);
     $user = $stmt->fetch();
     if (!$user) {

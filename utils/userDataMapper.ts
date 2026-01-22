@@ -15,6 +15,7 @@ export function mapUserDataFromBackend(rawUserData: any): User {
     employeeNumber: rawUserData.employee_number, // Map employee_number to employeeNumber
     phone: rawUserData.phone,
     gcashNumber: rawUserData.gcash_number, // Map gcash_number to gcashNumber
+    gcashQrUrl: rawUserData.gcash_qr_url,
     clientProjectId: rawUserData.client_project_id // Map client_project_id to clientProjectId
   };
 }

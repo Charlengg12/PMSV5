@@ -11,6 +11,7 @@ export interface User {
   employeeNumber?: string; // Optional for clients
   phone?: string;
   gcashNumber?: string;
+  gcashQrUrl?: string;
   password?: string; // For login credentials
   clientProjectId?: string; // For client users, which project they belong to
 }

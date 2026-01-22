@@ -114,6 +114,10 @@ export function ClientDashboard({
   const statusLabel =
     STATUS_LABELS[clientProject.status] ?? clientProject.status;
 
+  // Find first system admin (so clients can see an admin's GCash QR)
+  const adminUser = users.find((u) => (u as any).role === "admin");
+  const adminQrUrl = (adminUser as any)?.gcashQrUrl;
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
@@ -210,6 +214,38 @@ export function ClientDashboard({
             </Badge>
           </div>
 
+          {/* Admin QR display for clients */}
+          {adminQrUrl && (
+            <div className="mt-4">
+              <p className="text-sm font-semibold text-gray-900 dark:text-slate-50">
+                Administrator GCash QR
+              </p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Use this QR to send payments or inquiries directly to the system administrator ({adminUser?.name || "Admin"}).
+              </p>
+
+              <div className="flex items-center gap-4">
+                <img
+                  src={adminQrUrl}
+                  alt={`Admin GCash QR - ${adminUser?.name ?? "Admin"}`}
+                  className="h-36 w-36 rounded-lg border border-gray-200 dark:border-slate-700 bg-white dark:bg-slate-900 object-contain shadow-sm"
+                  loading="lazy"
+                  onError={(e) => {
+                    console.error("Failed to load admin QR:", adminQrUrl);
+                    (e.currentTarget as HTMLImageElement).src = "/images/placeholder-qr.png";
+                    (e.currentTarget as HTMLImageElement).alt = "Failed to load Admin QR";
+                  }}
+                />
+                <div className="text-sm text-muted-foreground">
+                  <p className="font-medium">{adminUser?.name ?? "Administrator"}</p>
+                  { (adminUser as any)?.gcashNumber && (
+                    <p className="text-xs">{(adminUser as any).gcashNumber}</p>
+                  ) }
+                </div>
+              </div>
+            </div>
+          )}
+
         </CardContent>
       </Card>
 
@@ -232,8 +268,7 @@ export function ClientDashboard({
                     {supervisor ? supervisor.name : "Not assigned"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {supervisor?.school ?? "N/A"} -{" "}
-                    {supervisor?.secureId ?? "-"}
+                    {supervisor?.school ?? "N/A"} - {supervisor?.secureId ?? "-"}
                   </p>
                 </div>
               </div>
@@ -296,7 +331,7 @@ export function ClientDashboard({
                           {fabricator ? fabricator.name : "Fabricator"}
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {formatDate(log.date)} - {log.hoursWorked.toFixed(1)}{" "}
+                          {formatDate(log.date)} - {log.hoursWorked.toFixed(1)} {" "}
                           hrs logged
                         </p>
                       </div>

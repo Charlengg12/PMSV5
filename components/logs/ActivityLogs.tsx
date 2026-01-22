@@ -87,7 +87,7 @@ export function ActivityLogs() {
   }, [filteredLogs, isFiltering]);
 
   useEffect(() => {
-    if (isFiltering) return; 
+    if (isFiltering) return;
 
     const start = 0;
     const end = page * ITEMS_PER_PAGE;
@@ -96,7 +96,14 @@ export function ActivityLogs() {
   }, [page, filteredLogs, isFiltering]);
 
   useEffect(() => {
-    if (isFiltering || loading || loadingMore || !hasMore || !loadMoreRef.current || !tableContainerRef.current) {
+    if (
+      isFiltering ||
+      loading ||
+      loadingMore ||
+      !hasMore ||
+      !loadMoreRef.current ||
+      !tableContainerRef.current
+    ) {
       if (observerRef.current) observerRef.current.disconnect();
       return;
     }
@@ -115,7 +122,7 @@ export function ActivityLogs() {
         root: tableContainerRef.current,
         rootMargin: "0px 0px 150px 0px",
         threshold: 0.1,
-      }
+      },
     );
 
     observerRef.current.observe(loadMoreRef.current);
@@ -178,7 +185,8 @@ export function ActivityLogs() {
   };
   const getActionLabel = (action: string): string => {
     const upper = action.toUpperCase();
-    if (upper.includes("DEACTIVATE") || upper.includes("DELETE")) return "Delete";
+    if (upper.includes("DEACTIVATE") || upper.includes("DELETE"))
+      return "Delete";
     if (upper.includes("CREATE") || upper.includes("ADD")) return "Add";
     if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Edit";
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return "Login";
@@ -207,15 +215,24 @@ export function ActivityLogs() {
 
   const getRoleIcon = (role: string) => {
     const r = role.toLowerCase().trim();
-    if (r.includes("admin")) return <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />;
+    if (r.includes("admin"))
+      return (
+        <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+      );
     if (r.includes("supervisor") || r.includes("moderator"))
-      return <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />;
+      return (
+        <UserCheck className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+      );
     if (r.includes("manager") || r.includes("lead"))
-      return <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />;
+      return (
+        <UserCog className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+      );
     if (r === "user" || r === "member" || r.includes("regular"))
       return <User className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />;
     if (r.includes("guest") || r.includes("visitor"))
-      return <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />;
+      return (
+        <HelpCircle className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
+      );
     return <Crown className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />;
   };
 
@@ -239,7 +256,9 @@ export function ActivityLogs() {
           actionLabel.includes(term) ||
           log.description.toLowerCase().includes(term) ||
           log.ip_address.toLowerCase().includes(term) ||
-          format(new Date(log.created_at), "MMM d, yyyy h:mm a").toLowerCase().includes(term)
+          format(new Date(log.created_at), "MMM d, yyyy h:mm a")
+            .toLowerCase()
+            .includes(term)
         );
       });
     }
@@ -267,38 +286,32 @@ export function ActivityLogs() {
   return (
     <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-        <div className="flex flex-col items-start w-full">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6 mb-6">
+        {/* Left Side: Text Content */}
+        <div className="space-y-1">
           <div className="flex items-center gap-3">
-            <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400" />
-            <div>
-              <h2 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                Activity Logs
-              </h2>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Track and monitor all system activities
-              </p>
-            </div>
+            {/* Icon: Fixed size, centered vertically */}
+            <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400 shrink-0" />
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              Activity Logs
+            </h2>
           </div>
-          <div className="w-full flex items-end justify-end mt-4 lg:hidden">
-            <button
-              onClick={handleRefresh}
-              disabled={loading}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">Refresh</span>
-            </button>
-          </div>
+
+          {/* Description: Placed below the title row */}
+          <p className="text-sm text-muted-foreground text-gray-500 dark:text-gray-400">
+            Track and monitor all system activities.
+          </p>
         </div>
-        <div className="hidden lg:flex">
+
+        {/* Right Side: Actions (Consolidated Button) */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 w-full sm:w-auto shadow-sm"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            <span className="hidden sm:inline">Refresh</span>
+            <span>Refresh</span>
           </button>
         </div>
       </div>
@@ -317,11 +330,13 @@ export function ActivityLogs() {
                   : "No activities found"}
               </p>
             </div>
-            <div className="flex gap-3">
+            {/* Action Bar: Dropdown + Export Button */}
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              {/* Filter Dropdown: Full width on mobile, auto on desktop */}
               <select
                 value={selectedAction}
                 onChange={handleActionChange}
-                className="rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all outline-none cursor-pointer"
+                className="w-full sm:w-auto rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all outline-none cursor-pointer"
               >
                 <option value="">All Activities</option>
                 <option value="add">Add</option>
@@ -329,15 +344,18 @@ export function ActivityLogs() {
                 <option value="delete">Delete</option>
                 <option value="login">Login</option>
               </select>
+
+              {/* Export Button: Full width on mobile, auto on desktop */}
               <button
                 onClick={handleExport}
                 disabled={displayedLogs.length === 0}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-800 transition-colors disabled:opacity-50 font-medium text-sm"
+                className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-800 transition-colors disabled:opacity-50 font-medium text-sm"
               >
                 <Download className="h-4 w-4" />
                 Export
               </button>
 
+              {/* Export Modal */}
               {showExportModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-2 sm:p-4">
                   <div className="modal bg-white dark:bg-gray-800 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
@@ -356,7 +374,8 @@ export function ActivityLogs() {
                         </button>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5">
-                        Are you sure you want to export the currently displayed activity logs?
+                        Are you sure you want to export the currently displayed
+                        activity logs?
                       </p>
                     </div>
                     <div className="p-6 flex flex-col sm:flex-row justify-end gap-3">
@@ -394,7 +413,8 @@ export function ActivityLogs() {
           </div>
           <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
             <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
-            Search across all fields: user name, role, action type, description, IP address, and timestamps
+            Search across all fields: user name, role, action type, description,
+            IP address, and timestamps
           </p>
         </div>
 
@@ -405,7 +425,9 @@ export function ActivityLogs() {
               <div className="relative mb-4">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
               </div>
-              <p className="text-lg font-medium dark:text-white">Loading activity history...</p>
+              <p className="text-lg font-medium dark:text-white">
+                Loading activity history...
+              </p>
               <p className="text-sm mt-2">Please wait</p>
             </div>
           ) : error ? (
@@ -427,10 +449,14 @@ export function ActivityLogs() {
                 <Activity className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
               <p className="text-lg font-medium dark:text-white">
-                {searchTerm || selectedAction ? "No matching activities found" : "No activity logs found"}
+                {searchTerm || selectedAction
+                  ? "No matching activities found"
+                  : "No activity logs found"}
               </p>
               <p className="text-sm mt-2">
-                {searchTerm || selectedAction ? "Try adjusting your filters" : "Activities will appear here"}
+                {searchTerm || selectedAction
+                  ? "Try adjusting your filters"
+                  : "Activities will appear here"}
               </p>
             </div>
           ) : (
@@ -442,26 +468,44 @@ export function ActivityLogs() {
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="sticky top-0 z-10 dark:bg-gray-800">
                     <tr>
-                      <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                      >
                         Timestamp
                       </th>
-                      <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                      >
                         User
                       </th>
-                      <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                      >
                         Action
                       </th>
-                      <th scope="col" className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                      >
                         Description
                       </th>
-                      <th scope="col" className="px-4 py-3.5 text-right text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider">
+                      <th
+                        scope="col"
+                        className="px-4 py-3.5 text-right text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                      >
                         IP Address
                       </th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
                     {displayedLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors">
+                      <tr
+                        key={log.id}
+                        className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                      >
                         <td className="px-4 py-4">
                           <div className="flex flex-col">
                             <div className="font-medium text-gray-900 dark:text-white text-sm">
@@ -498,7 +542,10 @@ export function ActivityLogs() {
                           </span>
                         </td>
                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
-                          <div className="line-clamp-2 max-w-xs" title={log.description}>
+                          <div
+                            className="line-clamp-2 max-w-xs"
+                            title={log.description}
+                          >
                             {log.description}
                           </div>
                         </td>
@@ -512,7 +559,10 @@ export function ActivityLogs() {
 
                 {/* Load more trigger — only shown when NOT filtering */}
                 {!isFiltering && hasMore && (
-                  <div ref={loadMoreRef} className="py-10 flex justify-center items-center min-h-[80px]">
+                  <div
+                    ref={loadMoreRef}
+                    className="py-10 flex justify-center items-center min-h-[80px]"
+                  >
                     {loadingMore ? (
                       <div className="flex items-center gap-2.5 text-gray-600 dark:text-gray-400">
                         <Loader2 className="h-5 w-5 animate-spin text-blue-500" />
