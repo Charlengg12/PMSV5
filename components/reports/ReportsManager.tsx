@@ -819,12 +819,9 @@ export function ReportsManager({
                       <CardHeader className="px-4 pt-4 pb-2">
                         <div className="space-y-3">
                           <div>
-                            <CardTitle className="text-lg">{report.title}</CardTitle>
-                            {report.description && (
-                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                                {report.description}
-                              </p>
-                            )}
+                            <CardTitle className="text-lg">
+                              {report.title}
+                            </CardTitle>
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Badge variant={getStatusColor(report.status)}>
@@ -976,18 +973,16 @@ export function ReportsManager({
       {showCreateForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="max-h-[90vh] overflow-auto">
-              <div className="border-b p-5 sticky top-0 bg-white">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Create New Report</h2>
-                  <Button variant="ghost" size="sm" onClick={() => setShowCreateForm(false)}>
-                    ×
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Generate a comprehensive report with customizable filters and data.
-                </p>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Create New Report</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCreateForm(false)}>
+                  ×
+                </Button>
               </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Generate a comprehensive report with customizable filters and data.
+              </p>
 
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -1101,7 +1096,7 @@ export function ReportsManager({
                 )}
               </div>
 
-              <div className="flex justify-end gap-3 mt-8 p-5">
+              <div className="flex justify-end gap-3 mt-8">
                 <Button variant="outline" onClick={() => setShowCreateForm(false)}>
                   Cancel
                 </Button>
@@ -1121,26 +1116,24 @@ export function ReportsManager({
       {showEditForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
           <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="max-h-[90vh] overflow-auto">
-              <div className="p-5 border-b bg-white sticky top-0">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl font-semibold">Edit Report</h2>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      setShowEditForm(false);
-                      setSelectedReport(null);
-                      resetForm();
-                    }}
-                  >
-                    ×
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Update report details and regenerate data.
-                </p>
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-semibold">Edit Report</h2>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setSelectedReport(null);
+                    resetForm();
+                  }}
+                >
+                  ×
+                </Button>
               </div>
+              <p className="text-sm text-muted-foreground mb-6">
+                Update report details and regenerate data.
+              </p>
 
               <div className="space-y-6">
                 <div className="space-y-2">
@@ -1480,7 +1473,7 @@ export function ReportsManager({
                 </div>
               )}
 
-              <div className="flex justify-end mt-10 p-5">
+              <div className="flex justify-end mt-10">
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -1499,3 +1492,4 @@ export function ReportsManager({
     </div>
   );
 }
+
