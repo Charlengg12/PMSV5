@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { LoginForm } from "./components/auth/LoginForm";
 import { FabricatorSignupForm } from "./components/auth/FabricatorSignupForm";
 import { ForgotPasswordForm } from "./components/auth/ForgotPasswordForm";
@@ -73,6 +73,7 @@ type ViewType =
 type AuthView = "main" | "fabricator-signup" | "forgot-password" | "reset-password";
 
 const FEEDBACK_STORAGE_KEY = "ehub_project_feedback_entries";
+const DATA_CACHE_KEY = "ehub_cached_data";
 
 const getResetTokenFromLocation = (): string | null => {
   if (typeof window === "undefined") return null;
@@ -143,8 +144,53 @@ const mergePersistedFeedback = (
   return { ...project, feedbackEntries: deduped };
 };
 
+const readCachedData = (): Partial<{
+  projects: Project[];
+  tasks: Task[];
+  workLogs: WorkLogEntry[];
+  materials: Material[];
+  users: User[];
+}> => {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(DATA_CACHE_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "object" && parsed !== null ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+
+const writeCachedData = (
+  snapshot: Partial<{
+    projects: Project[];
+    tasks: Task[];
+    workLogs: WorkLogEntry[];
+    materials: Material[];
+    users: User[];
+  }>,
+) => {
+  if (typeof window === "undefined") return;
+  try {
+    const current = readCachedData();
+    const merged = { ...current, ...snapshot };
+    localStorage.setItem(DATA_CACHE_KEY, JSON.stringify(merged));
+  } catch {}
+};
+
 export default function App() {
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const initialCache = useMemo(() => readCachedData(), []);
+  const [currentUser, setCurrentUser] = useState<User | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("currentUser");
+      if (!raw) return null;
+      return JSON.parse(raw) as User;
+    } catch {
+      return null;
+    }
+  });
   const [currentView, setCurrentView] = useState<ViewType>("dashboard");
   const [authView, setAuthView] = useState<AuthView>(() => {
     if (typeof window === "undefined") return "main";
@@ -160,11 +206,21 @@ export default function App() {
       return null;
     }
   });
-  const [tasks, setTasks] = useState(mockTasks);
-  const [users, setUsers] = useState(mockUsers);
-  const [projects, setProjects] = useState(mockProjects);
-  const [workLogs, setWorkLogs] = useState(mockWorkLogs);
-  const [materials, setMaterials] = useState(mockMaterials);
+  const [tasks, setTasks] = useState<Task[]>(
+    initialCache.tasks ?? mockTasks,
+  );
+  const [users, setUsers] = useState<User[]>(
+    initialCache.users ?? mockUsers,
+  );
+  const [projects, setProjects] = useState<Project[]>(
+    initialCache.projects ?? mockProjects,
+  );
+  const [workLogs, setWorkLogs] = useState<WorkLogEntry[]>(
+    initialCache.workLogs ?? mockWorkLogs,
+  );
+  const [materials, setMaterials] = useState<Material[]>(
+    initialCache.materials ?? mockMaterials,
+  );
   const [_isInitialized, _setIsInitialized] = useState(false);
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
   const [lastReloadAt, setLastReloadAt] = useState<number>(0);
@@ -320,12 +376,17 @@ export default function App() {
         }
 
         if (!sessionUser) {
-          if (storedUserRaw) {
-            try {
-              localStorage.removeItem("currentUser");
-            } catch {}
+          if (!storedUserRaw) {
+            setCurrentUser(null);
           }
-          setCurrentUser(null);
+          if (storedUserRaw) {
+            const cached = readCachedData();
+            if (cached.projects) setProjects(cached.projects);
+            if (cached.tasks) setTasks(cached.tasks);
+            if (cached.workLogs) setWorkLogs(cached.workLogs);
+            if (cached.materials) setMaterials(cached.materials);
+            if (cached.users) setUsers(cached.users);
+          }
           setBackendHealthy(true);
           _setIsInitialized(true);
           return;
@@ -349,6 +410,12 @@ export default function App() {
       } catch (error) {
         console.error("Failed to initialize app:", error);
         console.warn("Falling back to demo mode with local data.");
+        const cached = readCachedData();
+        if (cached.projects) setProjects(cached.projects);
+        if (cached.tasks) setTasks(cached.tasks);
+        if (cached.workLogs) setWorkLogs(cached.workLogs);
+        if (cached.materials) setMaterials(cached.materials);
+        if (cached.users) setUsers(cached.users);
         setBackendHealthy(false);
         _setIsInitialized(true); // Continue with local data
       }
@@ -417,6 +484,14 @@ export default function App() {
           apiService.getUsers(),
         ]);
 
+      const cacheSnapshot: Partial<{
+        projects: Project[];
+        tasks: Task[];
+        workLogs: WorkLogEntry[];
+        materials: Material[];
+        users: User[];
+      }> = {};
+
       if (projectsRes.data) {
         const persistedFeedback = readPersistedFeedback();
         const mappedProjects = mapProjectsFromBackend(projectsRes.data);
@@ -424,24 +499,36 @@ export default function App() {
           mergePersistedFeedback(project, persistedFeedback),
         );
         setProjects(mergedProjects);
+        cacheSnapshot.projects = mergedProjects;
       }
 
       if (tasksRes.data) {
-        setTasks(mapTasksFromBackend(tasksRes.data));
+        const mappedTasks = mapTasksFromBackend(tasksRes.data);
+        setTasks(mappedTasks);
+        cacheSnapshot.tasks = mappedTasks;
       }
 
       if (workLogsRes.data) {
         const mappedLogs = mapWorkLogsFromBackend(workLogsRes.data);
         setWorkLogs(mappedLogs);
         syncProjectProgressWithLogs(mappedLogs);
+        cacheSnapshot.workLogs = mappedLogs;
       }
 
       if (materialsRes.data) {
-        setMaterials(mapMaterialsFromBackend(materialsRes.data));
+        const mappedMaterials = mapMaterialsFromBackend(materialsRes.data);
+        setMaterials(mappedMaterials);
+        cacheSnapshot.materials = mappedMaterials;
       }
 
       if (usersRes.data) {
-        setUsers(usersRes.data.map(mapUserDataFromBackend));
+        const mappedUsers = usersRes.data.map(mapUserDataFromBackend);
+        setUsers(mappedUsers);
+        cacheSnapshot.users = mappedUsers;
+      }
+
+      if (Object.keys(cacheSnapshot).length) {
+        writeCachedData(cacheSnapshot);
       }
     } catch (error) {
       console.error("Failed to load data from database:", error);
