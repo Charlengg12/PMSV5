@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Alert, AlertDescription } from '../ui/alert';
-import { DollarSign, Save, X, Users, AlertCircle } from 'lucide-react';
+import { PhilippinePeso, Save, X, Users, AlertCircle } from 'lucide-react';
 import { Project, User, FabricatorBudget } from '../../types';
 
 interface FabricatorRevenueManagerProps {
@@ -118,7 +118,7 @@ export function FabricatorRevenueManager({
     <Card>
       <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
         <CardTitle className="flex items-center gap-2">
-          <DollarSign className="h-5 w-5 text-accent" />
+          <PhilippinePeso className="h-5 w-5 text-accent" />
           Fabricator Revenue Assignment
         </CardTitle>
         <p className="text-sm text-muted-foreground">

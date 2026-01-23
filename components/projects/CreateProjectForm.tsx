@@ -20,7 +20,6 @@ import {
   Plus,
   CalendarIcon,
   Building,
-  DollarSign,
   Wallet,
   TrendingUp,
   Briefcase,

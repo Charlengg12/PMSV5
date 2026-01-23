@@ -22,7 +22,7 @@ import {
 import {
   Archive,
   Calendar,
-  DollarSign,
+  PhilippinePeso,
   Download,
   Eye,
   FileText,
@@ -374,13 +374,13 @@ export function ProjectArchives({
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground">Budget</p>
                         <p className="font-medium">
-                          ${projectBudget.toLocaleString()}
+                          ₱{projectBudget.toLocaleString()}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground">Spent</p>
                         <p className="font-medium">
-                          ${projectSpent.toLocaleString()}
+                          ₱{projectSpent.toLocaleString()}
                         </p>
                       </div>
                       <div className="text-center">
@@ -388,13 +388,13 @@ export function ProjectArchives({
                           Materials
                         </p>
                         <p className="font-medium">
-                          ${materialCost.toLocaleString()}
+                          ₱{materialCost.toLocaleString()}
                         </p>
                       </div>
                       <div className="text-center">
                         <p className="text-sm text-muted-foreground">Revenue</p>
                         <p className="font-medium text-green-600">
-                          ${projectRevenue.toLocaleString()}
+                          ₱{projectRevenue.toLocaleString()}
                         </p>
                       </div>
                     </div>
@@ -409,7 +409,7 @@ export function ProjectArchives({
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <DollarSign className="h-4 w-4 text-green-600" />
+                      <PhilippinePeso className="h-4 w-4 text-green-600" />
                       <span className="text-sm">
                         {costDocs.length} Cost Analysis Files
                       </span>
@@ -520,7 +520,7 @@ export function ProjectArchives({
                     <span className="hidden sm:inline">Documentation</span>
                   </TabsTrigger>
                   <TabsTrigger value="costs">
-                    <DollarSign className="h-4 w-4 sm:hidden" />
+                    <PhilippinePeso className="h-4 w-4 sm:hidden" />
                     <span className="hidden sm:inline">Cost Analysis</span>
                   </TabsTrigger>
                   <TabsTrigger value="team">
@@ -567,19 +567,19 @@ export function ProjectArchives({
                       <div>
                         <Label>Total Budget</Label>
                         <p className="text-lg">
-                          ${safeNumber(selectedProject.budget).toLocaleString()}
+                          ₱{safeNumber(selectedProject.budget).toLocaleString()}
                         </p>
                       </div>
                       <div>
                         <Label>Amount Spent</Label>
                         <p className="text-lg">
-                          ${safeNumber(selectedProject.spent).toLocaleString()}
+                          ₱{safeNumber(selectedProject.spent).toLocaleString()}
                         </p>
                       </div>
                       <div>
                         <Label>Material Costs</Label>
                         <p className="text-lg">
-                          $
+                          ₱
                           {calculateTotalMaterialCost(
                             selectedProject.id,
                           ).toLocaleString()}
@@ -588,7 +588,7 @@ export function ProjectArchives({
                       <div>
                         <Label>Total Revenue</Label>
                         <p className="text-lg text-green-600">
-                          $
+                          ₱
                           {safeNumber(selectedProject.revenue).toLocaleString()}
                         </p>
                       </div>
@@ -686,7 +686,7 @@ export function ProjectArchives({
                                 className="flex items-center justify-between p-3 border rounded-lg"
                               >
                                 <div className="flex items-center gap-3">
-                                  <DollarSign className="h-4 w-4 text-green-600" />
+                                  <PhilippinePeso className="h-4 w-4 text-green-600" />
                                   <div>
                                     <p className="text-sm">{doc.name}</p>
                                     <p className="text-xs text-muted-foreground">
@@ -757,7 +757,7 @@ export function ProjectArchives({
                                         Allocated:
                                       </span>
                                       <span className="ml-2">
-                                        $
+                                        ₱
                                         {safeNumber(
                                           budget.allocatedAmount,
                                         ).toLocaleString()}
@@ -768,7 +768,7 @@ export function ProjectArchives({
                                         Spent:
                                       </span>
                                       <span className="ml-2">
-                                        $
+                                        ₱
                                         {safeNumber(
                                           budget.spentAmount,
                                         ).toLocaleString()}
@@ -799,7 +799,7 @@ export function ProjectArchives({
                                   </p>
                                 </div>
                                 <p className="font-medium">
-                                  ${safeNumber(material.cost).toLocaleString()}
+                                  ₱{safeNumber(material.cost).toLocaleString()}
                                 </p>
                               </div>
                             ),
@@ -809,7 +809,7 @@ export function ProjectArchives({
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <DollarSign className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <PhilippinePeso className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg mb-2">
                         Financial Information Restricted
                       </h3>
