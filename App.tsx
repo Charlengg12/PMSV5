@@ -393,6 +393,7 @@ export default function App() {
         "worklog",
         "materials",
         "tasks",
+        "settings"
       ],
       client: ["dashboard", "project-status", "documentation"],
     } as const;
@@ -1753,7 +1754,7 @@ case "activity-logs":
         );
 
       case "settings":
-        if (currentUser.role === "admin") {
+        if (currentUser.role === "admin" || currentUser.role === "fabricator") {
           return (
             <AdminSettingsPage
               currentUser={currentUser}

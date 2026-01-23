@@ -41,6 +41,7 @@ import {
   Trash2,
   Loader2,
   Search,
+  QrCode,
 } from "lucide-react";
 import { SupervisorSignupForm } from "../auth/SupervisorSignupForm";
 import { User } from "../../types";
@@ -67,7 +68,6 @@ export function UserManagement({
   currentUser,
 }: UserManagementProps) {
   const [showSupervisorForm, setShowSupervisorForm] = useState(false);
-
   const [showSecureIds, setShowSecureIds] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [verifyPassword, setVerifyPassword] = useState("");
@@ -81,18 +81,21 @@ export function UserManagement({
   const [loadingInactive, setLoadingInactive] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedRole, setSelectedRole] = useState<string>("all"); // "all" | "admin" | "supervisor" | "fabricator" | "client"
+  const [selectedRole, setSelectedRole] = useState<string>("all");
 
   const [displayCount, setDisplayCount] = useState(5);
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+
+  // State for viewing full-size QR code
+  const [selectedQrUrl, setSelectedQrUrl] = useState<string | null>(null);
 
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
   const canManageUsers = currentUser.role === "admin";
 
-  // Fetch inactive users
+  // Fetch inactive users when modal opens
   useEffect(() => {
     if (!showInactiveModal || !canManageUsers) return;
 
@@ -119,7 +122,7 @@ export function UserManagement({
     fetchInactive();
   }, [showInactiveModal, canManageUsers]);
 
-  // Secure ID toggle
+  // Secure ID visibility toggle (requires password verification)
   const handleToggleSecureIds = () => {
     if (showSecureIds) {
       setShowSecureIds(false);
@@ -184,7 +187,6 @@ export function UserManagement({
     const phoneRegex = /^(\+639|09)\d{9}$/;
     const gcashRegex = /^09\d{9}$/;
 
-    // Check for empty required fields
     if (!editingUser.name.trim()) {
       await Swal.fire({
         icon: "error",
@@ -210,17 +212,6 @@ export function UserManagement({
         icon: "error",
         title: "Error",
         text: "Phone number is required",
-        customClass: swalCustomClasses,
-      });
-      return;
-    }
-
-    // if full name is empty return the sweet alert
-    if (!editingUser.name.trim()) {
-      await Swal.fire({
-        icon: "error",
-        title: "Invalid Name",
-        text: "Full name is required",
         customClass: swalCustomClasses,
       });
       return;
@@ -577,20 +568,16 @@ export function UserManagement({
     }
   };
 
-  // ────────────────────────────────────────────────
-  // Filtering + displayed users logic
-  // ────────────────────────────────────────────────
+  // Filtering logic
   const normalizedSearch = searchTerm.trim().toLowerCase();
 
   const filteredUsers = useMemo(() => {
     let result = users;
 
-    // Role filter
     if (selectedRole !== "all") {
       result = result.filter((user) => user.role === selectedRole);
     }
 
-    // Text search
     if (normalizedSearch) {
       result = result.filter((user) => {
         const haystack = [
@@ -622,19 +609,16 @@ export function UserManagement({
   const loadMore = useCallback(() => {
     if (!hasMore || loadingMore) return;
     setLoadingMore(true);
-    // Small delay to simulate network + give smooth feel
     setTimeout(() => {
       setDisplayCount((prev) => prev + 5);
       setLoadingMore(false);
     }, 500);
   }, [hasMore, loadingMore]);
 
-  // Reset display count when filters change
   useEffect(() => {
     setDisplayCount(5);
   }, [searchTerm, selectedRole]);
 
-  // Intersection Observer for infinite scroll
   useEffect(() => {
     if (!loadMoreTriggerRef.current) return;
 
@@ -654,7 +638,6 @@ export function UserManagement({
     };
   }, [hasMore, loadingMore, loadMore]);
 
-  // Keep selected IDs in sync when users list changes
   useEffect(() => {
     const userIds = new Set(users.map((user) => user.id));
     setSelectedUserIds((prev) => prev.filter((id) => userIds.has(id)));
@@ -666,7 +649,6 @@ export function UserManagement({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between w-full">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            {/* add user icon */}
             <UserIcon className="h-6 w-6 inline mr-2 text-blue-700" />
             User Management
           </h1>
@@ -767,7 +749,7 @@ export function UserManagement({
 
           {/* Table */}
           <div className="rounded-lg border bg-white overflow-x-auto">
-            <Table className="min-w-[600px] w-full">
+            <Table className="min-w-[1000px] w-full">
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   {canManageUsers && (
@@ -807,7 +789,7 @@ export function UserManagement({
                       />
                     </TableHead>
                   )}
-                  <TableHead className="min-w-[200px] text-white">
+                  <TableHead className="min-w-[220px] text-white">
                     Name & Email
                   </TableHead>
                   <TableHead className="min-w-[110px] text-white">
@@ -818,6 +800,9 @@ export function UserManagement({
                   </TableHead>
                   <TableHead className="min-w-[160px] text-white">
                     Contact
+                  </TableHead>
+                  <TableHead className="min-w-[140px] text-center text-white">
+                    GCash QR
                   </TableHead>
                   {showSecureIds && (
                     <TableHead className="min-w-[160px] text-white">
@@ -908,6 +893,37 @@ export function UserManagement({
                         )}
                       </TableCell>
 
+                      {/* GCash QR Display */}
+                      <TableCell className="text-center">
+                        {user.gcashQrUrl ? (
+                          <div
+                            className="inline-block cursor-pointer group relative"
+                            onClick={() => setSelectedQrUrl(user.gcashQrUrl)}
+                          >
+                            <img
+                              src={user.gcashQrUrl}
+                              alt={`${user.name}'s GCash QR Code`}
+                              className="h-14 w-14 rounded-md object-cover border border-gray-300 shadow-sm transition-all group-hover:scale-110 group-hover:shadow-md"
+                              loading="lazy"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src =
+                                  "/images/placeholder-qr.png"; // fallback image
+                                (e.target as HTMLImageElement).alt =
+                                  "QR code failed to load";
+                              }}
+                            />
+                            <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                              <QrCode className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground/60 text-xs italic flex flex-col items-center gap-1">
+                            <QrCode className="h-5 w-5 opacity-40" />
+                            <span>No QR</span>
+                          </div>
+                        )}
+                      </TableCell>
+
                       {showSecureIds && (
                         <TableCell>
                           <code className="text-xs font-mono bg-muted px-2.5 py-1 rounded break-all">
@@ -954,7 +970,7 @@ export function UserManagement({
             </Table>
           </div>
 
-          {/* Load more area */}
+          {/* Infinite scroll trigger */}
           {hasMore && (
             <div
               ref={loadMoreTriggerRef}
@@ -985,10 +1001,53 @@ export function UserManagement({
         </CardContent>
       </Card>
 
-      {/* Password Verification Modal */}
+      {/* Full-size QR Modal */}
+      {selectedQrUrl && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 backdrop-blur-sm p-4"
+          onClick={() => setSelectedQrUrl(null)}
+        >
+          <div
+            className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl max-w-4xl w-full overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-5 border-b dark:border-slate-700 flex items-center justify-between">
+              <h3 className="text-xl font-semibold flex items-center gap-3">
+                <QrCode className="h-6 w-6 text-amber-600" />
+                GCash QR Code
+              </h3>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSelectedQrUrl(null)}
+              >
+                <X className="h-6 w-6" />
+              </Button>
+            </div>
+
+            <div className="p-8 flex justify-center bg-gradient-to-b from-amber-50/40 to-transparent dark:from-amber-950/30">
+              <img
+                src={selectedQrUrl}
+                alt="Full size GCash QR Code"
+                className="max-h-[75vh] w-auto object-contain rounded-xl border-4 border-amber-300 dark:border-amber-700 shadow-2xl"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src =
+                    "/images/placeholder-qr.png";
+                }}
+              />
+            </div>
+
+            <div className="p-4 border-t dark:border-slate-700 text-center text-sm text-muted-foreground">
+              Click outside or press ESC to close
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Verification Modal for Secure IDs */}
       {showPasswordModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
+          <div className="bg-background/95 backdrop-blur-md border shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold flex items-center gap-2.5">
@@ -1059,7 +1118,7 @@ export function UserManagement({
       {/* Inactive Users Modal */}
       {showInactiveModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-background border rounded-xl shadow-2xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden">
             <div className="p-6 border-b">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold flex items-center gap-2.5">
@@ -1100,6 +1159,9 @@ export function UserManagement({
                       <TableHead className="min-w-[110px]">Role</TableHead>
                       <TableHead className="min-w-[140px]">School</TableHead>
                       <TableHead className="min-w-[160px]">Contact</TableHead>
+                      <TableHead className="min-w-[140px] text-center">
+                        GCash QR
+                      </TableHead>
                       {showSecureIds && (
                         <TableHead className="min-w-[160px]">
                           Secure ID
@@ -1144,6 +1206,35 @@ export function UserManagement({
                             </div>
                           )}
                         </TableCell>
+
+                        {/* GCash QR in Inactive Modal */}
+                        <TableCell className="text-center">
+                          {user.gcashQrUrl ? (
+                            <div
+                              className="inline-block cursor-pointer group relative"
+                              onClick={() => setSelectedQrUrl(user.gcashQrUrl)}
+                            >
+                              <img
+                                src={user.gcashQrUrl}
+                                alt={`${user.name}'s GCash QR`}
+                                className="h-14 w-14 rounded-md object-cover border border-gray-300 shadow-sm transition-all group-hover:scale-110"
+                                loading="lazy"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src =
+                                    "/images/placeholder-qr.png";
+                                }}
+                              />
+                              <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity rounded-md flex items-center justify-center">
+                                <QrCode className="h-6 w-6 text-white" />
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground/60 text-xs italic">
+                              No QR
+                            </span>
+                          )}
+                        </TableCell>
+
                         {showSecureIds && (
                           <TableCell>
                             <code className="text-xs font-mono bg-muted px-2 py-1 rounded break-all">
@@ -1179,7 +1270,7 @@ export function UserManagement({
       {/* Edit User Modal */}
       {showEditModal && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-background border rounded-xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b sticky top-0 bg-background z-10">
               <div className="flex items-center justify-between">
                 <h2 className="text-xl font-semibold">Edit User</h2>
@@ -1197,8 +1288,6 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Name</Label>
                   <Input
-                    minLength={1}
-                    maxLength={30}
                     value={editingUser.name || ""}
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, name: e.target.value })
@@ -1209,29 +1298,20 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Email</Label>
                   <Input
-                    minLength={1}
-                    maxLength={30}
                     value={editingUser.email || ""}
-                    onChange={(e) => {
-                      setEditingUser({ ...editingUser, email: e.target.value });
-                    }}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, email: e.target.value })
+                    }
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Phone</Label>
                   <Input
-                    minLength={1}
                     value={editingUser.phone || ""}
-                    maxLength={13}
-                    onChange={(e) => {
-                      let val = e.target.value.replace(/[^\d+]/g, "");
-                      if (val.includes("+")) val = "+" + val.replace(/\+/g, "");
-                      val = val.startsWith("+")
-                        ? val.slice(0, 13)
-                        : val.slice(0, 11);
-                      setEditingUser({ ...editingUser, phone: val });
-                    }}
+                    onChange={(e) =>
+                      setEditingUser({ ...editingUser, phone: e.target.value })
+                    }
                   />
                 </div>
 
@@ -1239,22 +1319,18 @@ export function UserManagement({
                   <Label>GCash Number</Label>
                   <Input
                     value={editingUser.gcashNumber || ""}
-                    minLength={1}
-                    maxLength={11}
-                    onChange={(e) => {
-                      const val = e.target.value
-                        .replace(/[^\d]/g, "")
-                        .slice(0, 11);
-                      setEditingUser({ ...editingUser, gcashNumber: val });
-                    }}
+                    onChange={(e) =>
+                      setEditingUser({
+                        ...editingUser,
+                        gcashNumber: e.target.value,
+                      })
+                    }
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>School / Institution</Label>
                   <Input
-                    minLength={1}
-                    maxLength={30}
                     value={editingUser.school || ""}
                     onChange={(e) =>
                       setEditingUser({ ...editingUser, school: e.target.value })
@@ -1288,8 +1364,6 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Secure ID</Label>
                   <Input
-                    minLength={1}
-                    maxLength={20}
                     value={editingUser.secureId || ""}
                     onChange={(e) =>
                       setEditingUser({
@@ -1303,8 +1377,6 @@ export function UserManagement({
                 <div className="space-y-2">
                   <Label>Employee #</Label>
                   <Input
-                    minLength={1}
-                    maxLength={20}
                     value={editingUser.employeeNumber || ""}
                     onChange={(e) =>
                       setEditingUser({
