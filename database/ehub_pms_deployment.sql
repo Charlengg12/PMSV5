@@ -27,6 +27,19 @@ CREATE TABLE IF NOT EXISTS `users` (
   INDEX `idx_employee_number` (`employee_number`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Password resets table
+CREATE TABLE IF NOT EXISTS `password_resets` (
+  `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `user_id` VARCHAR(255) NOT NULL,
+  `token_hash` CHAR(64) NOT NULL,
+  `expires_at` DATETIME NOT NULL,
+  `used_at` DATETIME DEFAULT NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_password_resets_token` (`token_hash`),
+  INDEX `idx_password_resets_user` (`user_id`),
+  INDEX `idx_password_resets_expires` (`expires_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Projects table
 CREATE TABLE IF NOT EXISTS `projects` (
   `id` VARCHAR(255) NOT NULL PRIMARY KEY,
