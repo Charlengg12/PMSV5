@@ -272,6 +272,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
         { title: "Work Log", url: "#worklog", icon: Calendar },
         { title: "Materials", url: "#materials", icon: Package },
         { title: "Tasks", url: "#tasks", icon: CheckSquare },
+        { title: "Settings", url: "#settings", icon: BarChart3 },
       ];
     }
 
