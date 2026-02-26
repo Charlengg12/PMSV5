@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, ChangeEvent } from "react";
+import React, { useState, useEffect, useRef, ChangeEvent } from "react";
 import { apiService } from "../../utils/apiService";
 import {
   Activity,
@@ -14,22 +14,18 @@ import {
   RefreshCw,
   Download,
   ChevronUp,
-  Plus,
-  Edit3,
-  Trash2,
-  LogIn,
   X,
 } from "lucide-react";
 import { format } from "date-fns";
 
 interface LogEntry {
   id: number;
-  user_name: string;
-  user_role: string;
-  action: string;
-  description: string;
-  ip_address: string;
-  created_at: string;
+  user_name: string | null;
+  user_role: string | null;
+  action: string | null;
+  description: string | null;
+  ip_address: string | null;
+  created_at: string | null;
 }
 
 const ITEMS_PER_PAGE = 5;
@@ -53,6 +49,28 @@ export function ActivityLogs() {
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   const isFiltering = searchTerm.trim() !== "" || selectedAction !== "";
+
+  const safeText = (value: unknown, fallback = "N/A"): string => {
+    if (typeof value !== "string") return fallback;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : fallback;
+  };
+
+  const safeDate = (value: unknown): Date | null => {
+    if (!value) return null;
+    const parsed = new Date(String(value));
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  };
+
+  const formatDateSafe = (
+    value: unknown,
+    pattern: string,
+    fallback = "N/A",
+  ): string => {
+    const parsed = safeDate(value);
+    if (!parsed) return fallback;
+    return format(parsed, pattern);
+  };
 
   useEffect(() => {
     fetchLogs();
@@ -164,12 +182,12 @@ export function ActivityLogs() {
     const csv = [
       ["Timestamp", "User", "Role", "Action", "Description", "IP Address"],
       ...filteredLogs.map((log) => [
-        format(new Date(log.created_at), "MMM d, yyyy h:mm a"),
-        log.user_name,
-        log.user_role,
+        formatDateSafe(log.created_at, "MMM d, yyyy h:mm a"),
+        safeText(log.user_name),
+        safeText(log.user_role),
         getActionLabel(log.action),
-        log.description,
-        log.ip_address,
+        safeText(log.description),
+        safeText(log.ip_address),
       ]),
     ]
       .map((row) => row.map((cell) => `"${cell}"`).join(","))
@@ -183,21 +201,23 @@ export function ActivityLogs() {
     a.click();
     setShowExportModal(false);
   };
-  const getActionLabel = (action: string): string => {
-    const upper = action.toUpperCase();
+  const getActionLabel = (action: string | null): string => {
+    const normalized = safeText(action, "");
+    if (!normalized) return "Unknown";
+    const upper = normalized.toUpperCase();
     if (upper.includes("DEACTIVATE") || upper.includes("DELETE"))
       return "Delete";
     if (upper.includes("CREATE") || upper.includes("ADD")) return "Add";
     if (upper.includes("UPDATE") || upper.includes("EDIT")) return "Edit";
     if (upper.includes("LOGIN") || upper.includes("SIGN_IN")) return "Login";
-    return action
+    return normalized
       .split(/[_-]/)
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
       .join(" ");
   };
 
-  const getActionColor = (action: string) => {
-    const upper = action.toUpperCase();
+  const getActionColor = (action: string | null) => {
+    const upper = safeText(action, "").toUpperCase();
     if (upper.includes("DELETE") || upper.includes("DEACTIVATE")) {
       return "border-l-4 border-l-red-500 bg-red-50 dark:bg-red-950 dark:text-red-200 text-red-800";
     }
@@ -213,8 +233,8 @@ export function ActivityLogs() {
     return "border-l-4 border-l-gray-500 bg-gray-50 dark:bg-gray-900 dark:text-gray-200 text-gray-800";
   };
 
-  const getRoleIcon = (role: string) => {
-    const r = role.toLowerCase().trim();
+  const getRoleIcon = (role: string | null) => {
+    const r = safeText(role, "").toLowerCase().trim();
     if (r.includes("admin"))
       return (
         <Shield className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
@@ -251,12 +271,12 @@ export function ActivityLogs() {
       result = result.filter((log) => {
         const actionLabel = getActionLabel(log.action).toLowerCase();
         return (
-          log.user_name.toLowerCase().includes(term) ||
-          log.user_role.toLowerCase().includes(term) ||
+          safeText(log.user_name, "").toLowerCase().includes(term) ||
+          safeText(log.user_role, "").toLowerCase().includes(term) ||
           actionLabel.includes(term) ||
-          log.description.toLowerCase().includes(term) ||
-          log.ip_address.toLowerCase().includes(term) ||
-          format(new Date(log.created_at), "MMM d, yyyy h:mm a")
+          safeText(log.description, "").toLowerCase().includes(term) ||
+          safeText(log.ip_address, "").toLowerCase().includes(term) ||
+          formatDateSafe(log.created_at, "MMM d, yyyy h:mm a", "")
             .toLowerCase()
             .includes(term)
         );
@@ -274,8 +294,10 @@ export function ActivityLogs() {
     setSelectedAction(e.target.value);
   };
 
-  const getUserInitials = (name: string): string => {
-    return name
+  const getUserInitials = (name: string | null): string => {
+    const normalizedName = safeText(name, "");
+    if (!normalizedName) return "?";
+    return normalizedName
       .split(" ")
       .map((n) => n[0])
       .join("")
@@ -509,10 +531,10 @@ export function ActivityLogs() {
                         <td className="px-4 py-4">
                           <div className="flex flex-col">
                             <div className="font-medium text-gray-900 dark:text-white text-sm">
-                              {format(new Date(log.created_at), "MMM d, yyyy")}
+                              {formatDateSafe(log.created_at, "MMM d, yyyy")}
                             </div>
                             <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                              {format(new Date(log.created_at), "h:mm a")}
+                              {formatDateSafe(log.created_at, "h:mm a")}
                             </div>
                           </div>
                         </td>
@@ -525,11 +547,11 @@ export function ActivityLogs() {
                             </div>
                             <div>
                               <div className="font-medium text-gray-900 dark:text-white text-sm">
-                                {log.user_name}
+                                {safeText(log.user_name)}
                               </div>
                               <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 capitalize">
                                 {getRoleIcon(log.user_role)}
-                                <span>{log.user_role}</span>
+                                <span>{safeText(log.user_role)}</span>
                               </div>
                             </div>
                           </div>
@@ -544,13 +566,13 @@ export function ActivityLogs() {
                         <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
                           <div
                             className="line-clamp-2 max-w-xs"
-                            title={log.description}
+                            title={safeText(log.description)}
                           >
-                            {log.description}
+                            {safeText(log.description)}
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-mono text-gray-600 dark:text-gray-400">
-                          {log.ip_address}
+                          {safeText(log.ip_address)}
                         </td>
                       </tr>
                     ))}
