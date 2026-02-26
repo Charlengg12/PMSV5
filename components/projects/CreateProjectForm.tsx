@@ -25,7 +25,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { addDays, format, setHours } from "date-fns";
-import { Project, User } from "../../types";
+import { FabricatorBudget, Project, User } from "../../types";
 
 const MAX_ALLOCATION_VALUE = 999_999_999.99;
 const MAX_ALLOCATION_INTEGER_DIGITS = 9;
@@ -370,6 +370,32 @@ export function CreateProjectForm({
       const initialStatus: Project["status"] = shouldSupervisorAssign
         ? "0_Created"
         : "1_Assigned_to_FAB";
+      const assignedFabricatorIds = shouldSupervisorAssign
+        ? []
+        : formData.fabricatorIds;
+
+      const initialFabricatorBudgets: FabricatorBudget[] = (() => {
+        if (assignedFabricatorIds.length === 0) return [];
+
+        const totalFabAllocationCents = Math.max(0, Math.round(fabAlloc * 100));
+        const memberCount = assignedFabricatorIds.length;
+        const baseShareCents = Math.floor(totalFabAllocationCents / memberCount);
+        const remainderCents = totalFabAllocationCents % memberCount;
+
+        return assignedFabricatorIds.map((fabricatorId, index) => {
+          const shareCents =
+            baseShareCents + (index < remainderCents ? 1 : 0);
+          const share = shareCents / 100;
+
+          return {
+            fabricatorId,
+            allocatedAmount: share,
+            spentAmount: 0,
+            allocatedRevenue: share,
+            description: "Initial revenue allocation from project creation",
+          };
+        });
+      })();
 
       const newProject: Omit<Project, "id"> = {
         name: formData.name,
@@ -381,16 +407,14 @@ export function CreateProjectForm({
         endDate: format(formData.endDate, "yyyy-MM-dd"),
         progress: 0,
         supervisorId: formData.supervisorId,
-        fabricatorIds: formData.supervisorAssignsFabricators
-          ? []
-          : formData.fabricatorIds,
+        fabricatorIds: assignedFabricatorIds,
         budget: operationalBudget,
         revenue: calculatedRevenue,
         spent: 0,
         documentationUrl: formData.documentationUrl || undefined,
         createdBy: currentUser.id,
         createdAt: new Date().toISOString(),
-        fabricatorBudgets: [],
+        fabricatorBudgets: initialFabricatorBudgets,
         broadcastToSupervisors: formData.broadcastToSupervisors,
         fabricatorAllocation: fabAlloc,
         materialsAllocation: matAlloc,

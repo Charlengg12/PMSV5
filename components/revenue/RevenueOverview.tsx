@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -122,6 +122,25 @@ export function RevenueOverview({
   const canViewProjectRevenue =
     currentUser.role === "admin" || currentUser.role === "supervisor";
   const canEditSpent = canViewProjectRevenue && Boolean(onUpdateProject);
+
+  const getFabricatorRevenueForProject = (
+    project: Project,
+    fabricatorId: string
+  ): number => {
+    const explicit = project.fabricatorBudgets?.find(
+      (fb) => fb.fabricatorId === fabricatorId
+    );
+    if (explicit) {
+      return toNumberValue(explicit.allocatedRevenue);
+    }
+
+    // Backward compatibility for projects without initialized per-fabricator budgets
+    if (!project.fabricatorIds.includes(fabricatorId)) return 0;
+    if (project.fabricatorIds.length === 0) return 0;
+    const totalFabAllocation = toNumberValue(project.fabricatorAllocation);
+    if (totalFabAllocation <= 0) return 0;
+    return totalFabAllocation / project.fabricatorIds.length;
+  };
 
   // Calculate totals
   const totalProjectRevenue = filteredProjects.reduce(
@@ -269,10 +288,7 @@ export function RevenueOverview({
 
   if (currentUser.role === "fabricator") {
     const totalAllocatedRevenue = filteredProjects.reduce((sum, project) => {
-      const fabricatorBudget = project.fabricatorBudgets?.find(
-        (fb) => fb.fabricatorId === currentUser.id
-      );
-      return sum + (fabricatorBudget?.allocatedRevenue || 0);
+      return sum + getFabricatorRevenueForProject(project, currentUser.id);
     }, 0);
 
     return (
@@ -300,10 +316,10 @@ export function RevenueOverview({
 
         <div className="grid gap-4">
           {filteredProjects.map((project) => {
-            const fabricatorBudget = project.fabricatorBudgets?.find(
-              (fb) => fb.fabricatorId === currentUser.id
+            const myRevenue = getFabricatorRevenueForProject(
+              project,
+              currentUser.id
             );
-            const myRevenue = fabricatorBudget?.allocatedRevenue || 0;
             const revenuePercentage =
               project.revenue > 0
                 ? ((myRevenue / project.revenue) * 100).toFixed(1)
