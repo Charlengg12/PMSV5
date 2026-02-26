@@ -78,6 +78,51 @@ const sanitizeSpentInput = (value: string) => {
   return next;
 };
 
+type ProjectFinancialSnapshot = {
+  budget: number;
+  spent: number;
+  revenue: number;
+  fabricatorAllocation: number;
+  materialsAllocation: number;
+  supervisorAllocation: number;
+  companyAllocation: number;
+  hasStructuredAllocations: boolean;
+};
+
+const getProjectFinancialSnapshot = (
+  project: Project,
+): ProjectFinancialSnapshot => {
+  const fabricatorAllocation = toNumberValue(project.fabricatorAllocation);
+  const materialsAllocation = toNumberValue(project.materialsAllocation);
+  const supervisorAllocation = toNumberValue(project.supervisorAllocation);
+  const companyAllocation = toNumberValue(project.companyAllocation);
+  const spent = toNumberValue(project.spent);
+
+  const allocationBudget =
+    fabricatorAllocation + materialsAllocation + supervisorAllocation;
+  const allocationRevenue = allocationBudget + companyAllocation;
+  const hasStructuredAllocations =
+    fabricatorAllocation > 0 ||
+    materialsAllocation > 0 ||
+    supervisorAllocation > 0 ||
+    companyAllocation > 0;
+
+  return {
+    budget: hasStructuredAllocations
+      ? allocationBudget
+      : toNumberValue(project.budget),
+    spent,
+    revenue: hasStructuredAllocations
+      ? allocationRevenue
+      : toNumberValue(project.revenue),
+    fabricatorAllocation,
+    materialsAllocation,
+    supervisorAllocation,
+    companyAllocation,
+    hasStructuredAllocations,
+  };
+};
+
 export function RevenueOverview({
   projects,
   currentUser,
@@ -119,6 +164,12 @@ export function RevenueOverview({
   };
 
   const filteredProjects = getFilteredProjects();
+  const financialByProject = filteredProjects.reduce<
+    Record<string, ProjectFinancialSnapshot>
+  >((acc, project) => {
+    acc[project.id] = getProjectFinancialSnapshot(project);
+    return acc;
+  }, {});
   const canViewProjectRevenue =
     currentUser.role === "admin" || currentUser.role === "supervisor";
   const canEditSpent = canViewProjectRevenue && Boolean(onUpdateProject);
@@ -144,15 +195,15 @@ export function RevenueOverview({
 
   // Calculate totals
   const totalProjectRevenue = filteredProjects.reduce(
-    (sum, p) => sum + toNumberValue(p.revenue),
+    (sum, p) => sum + (financialByProject[p.id]?.revenue ?? 0),
     0
   );
   const totalProjectBudget = filteredProjects.reduce(
-    (sum, p) => sum + toNumberValue(p.budget),
+    (sum, p) => sum + (financialByProject[p.id]?.budget ?? 0),
     0
   );
   const totalProjectSpent = filteredProjects.reduce(
-    (sum, p) => sum + toNumberValue(p.spent),
+    (sum, p) => sum + (financialByProject[p.id]?.spent ?? 0),
     0
   );
   const projectProfit = totalProjectRevenue - totalProjectSpent;
@@ -179,7 +230,8 @@ export function RevenueOverview({
     const monthMatch = profitMonth === "all" || d.getMonth() + 1 === profitMonth;
     const dayMatch = profitDay === "all" || d.getDate() === profitDay;
     if (!yearMatch || !monthMatch || !dayMatch) return sum;
-    return sum + (toNumberValue(project.revenue) - toNumberValue(project.spent));
+    const financial = getProjectFinancialSnapshot(project);
+    return sum + (financial.revenue - financial.spent);
   }, 0);
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -316,13 +368,14 @@ export function RevenueOverview({
 
         <div className="grid gap-4">
           {filteredProjects.map((project) => {
+            const financial = getProjectFinancialSnapshot(project);
             const myRevenue = getFabricatorRevenueForProject(
               project,
               currentUser.id
             );
             const revenuePercentage =
-              project.revenue > 0
-                ? ((myRevenue / project.revenue) * 100).toFixed(1)
+              financial.revenue > 0
+                ? ((myRevenue / financial.revenue) * 100).toFixed(1)
                 : "0";
 
             return (
@@ -357,9 +410,9 @@ export function RevenueOverview({
                           Total Project Value
                         </span>
                       </div>
-                      <p className={`text-lg ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <p className={`text-lg ${financial.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {peso}
-                        {project.revenue.toLocaleString()}
+                        {financial.revenue.toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -543,63 +596,86 @@ export function RevenueOverview({
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-4">
-                {filteredProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-4 ${project.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
-                  >
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{project.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {project.clientName}
-                      </p>
-                    </div>
+                {filteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(project);
+                  return (
+                    <div
+                      key={project.id}
+                      className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-4 ${financial.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
+                    >
+                      <div className="space-y-1">
+                        <h4 className="font-medium">{project.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {project.clientName}
+                        </p>
+                        {financial.hasStructuredAllocations && (
+                          <div className="mt-1 rounded-md border bg-muted/40 px-2 py-1.5">
+                            <p className="text-xs font-medium text-foreground">
+                              Financial Structure
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              Fabricator: {peso}
+                              {formatCompactAmount(financial.fabricatorAllocation)}{" "}
+                              | Materials: {peso}
+                              {formatCompactAmount(financial.materialsAllocation)}{" "}
+                              | Supervisor: {peso}
+                              {formatCompactAmount(financial.supervisorAllocation)}{" "}
+                              | Company: {peso}
+                              {formatCompactAmount(financial.companyAllocation)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
 
-                    <div className="text-left sm:text-right space-y-2 sm:space-y-1">
-                      <p className={`text-sm ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        Revenue: {peso}
-                        {formatCompactAmount(project.revenue)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Spent: {peso}
-                        {formatCompactAmount(project.spent)} / {peso}
-                        {formatCompactAmount(project.budget)}
-                      </p>
+                      <div className="text-left sm:text-right space-y-2 sm:space-y-1">
+                        <p className={`text-sm ${financial.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          Revenue: {peso}
+                          {formatCompactAmount(financial.revenue)}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Spent: {peso}
+                          {formatCompactAmount(financial.spent)} / {peso}
+                          {formatCompactAmount(financial.budget)}
+                        </p>
 
-                      {canEditSpent && (
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
-                          <Input
-                            type="text"
-                            value={spentEdits[project.id] || ""}
-                            onChange={(e) => {
-                              const sanitized = sanitizeSpentInput(
-                                e.target.value
-                              );
-                              if (sanitized === null) return;
-                              setSpentEdits((prev) => ({
-                                ...prev,
-                                [project.id]: sanitized,
-                              }));
-                            }}
-                            placeholder="Spent"
-                            className="w-full sm:w-28 text-right"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdateSpent(project)}
-                            disabled={
-                              !spentEdits[project.id]?.trim() ||
-                              spentEdits[project.id] === project.spent?.toString()
-                            }
-                            className="w-full sm:w-auto"
-                          >
-                            Update
-                          </Button>
-                        </div>
-                      )}
+                        {canEditSpent && (
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
+                            <Input
+                              type="text"
+                              value={spentEdits[project.id] || ""}
+                              onChange={(e) => {
+                                const sanitized = sanitizeSpentInput(
+                                  e.target.value
+                                );
+                                if (sanitized === null) return;
+                                setSpentEdits((prev) => ({
+                                  ...prev,
+                                  [project.id]: sanitized,
+                                }));
+                              }}
+                              placeholder="Spent"
+                              className="w-full sm:w-28 text-right"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleUpdateSpent(project)}
+                              disabled={
+                                !spentEdits[project.id]?.trim() ||
+                                toNumberValue(spentEdits[project.id]) ===
+                                  financial.spent
+                              }
+                              className="w-full sm:w-auto"
+                            >
+                              Update
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>
