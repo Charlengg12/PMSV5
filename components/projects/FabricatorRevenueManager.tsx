@@ -26,6 +26,7 @@ export function FabricatorRevenueManager({
   const [revenueAllocations, setRevenueAllocations] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const totalFabricatorAllocation = Number(project.fabricatorAllocation) || 0;
 
   // Initialize revenue allocations from existing data
   useEffect(() => {
@@ -60,10 +61,22 @@ export function FabricatorRevenueManager({
   const handleRevenueChange = (fabricatorId: string, value: string) => {
     // Allow only numbers and decimals
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      setRevenueAllocations(prev => ({
-        ...prev,
-        [fabricatorId]: value
-      }));
+      const nextAllocations = {
+        ...revenueAllocations,
+        [fabricatorId]: value,
+      };
+      const nextTotalAllocated = Object.values(nextAllocations).reduce((sum, val) => {
+        return sum + (parseFloat(val) || 0);
+      }, 0);
+
+      if (nextTotalAllocated > totalFabricatorAllocation) {
+        setError(
+          `Total assigned amount (₱${nextTotalAllocated.toLocaleString()}) cannot exceed allocated fabricator budget (₱${totalFabricatorAllocation.toLocaleString()}).`,
+        );
+        return;
+      }
+
+      setRevenueAllocations(nextAllocations);
       setError('');
       setSuccess(false);
     }
@@ -78,9 +91,11 @@ export function FabricatorRevenueManager({
   const handleSave = () => {
     const totalAllocated = getTotalAllocated();
     
-    // Validate that total doesn't exceed project revenue
-    if (totalAllocated > project.revenue) {
-      setError(`Total allocated revenue (₱${totalAllocated.toLocaleString()}) exceeds project revenue (₱${project.revenue.toLocaleString()})`);
+    // Validate that total doesn't exceed allocated fabricator budget
+    if (totalAllocated > totalFabricatorAllocation) {
+      setError(
+        `Total assigned amount (₱${totalAllocated.toLocaleString()}) cannot exceed allocated fabricator budget (₱${totalFabricatorAllocation.toLocaleString()}).`,
+      );
       return;
     }
 
@@ -112,7 +127,7 @@ export function FabricatorRevenueManager({
   };
 
   const totalAllocated = getTotalAllocated();
-  const remainingRevenue = project.revenue - totalAllocated;
+  const remainingAllocation = totalFabricatorAllocation - totalAllocated;
 
   return (
     <Card>
@@ -122,28 +137,28 @@ export function FabricatorRevenueManager({
           Fabricator Revenue Assignment
         </CardTitle>
         <p className="text-sm text-muted-foreground">
-          Assign revenue amounts to each fabricator working on this project
+          Assign amounts to each fabricator without exceeding the total allocated fabricator budget
         </p>
       </CardHeader>
       <CardContent className="space-y-6 px-4 pb-6 sm:px-6">
         {/* Project Revenue Overview */}
         <div className="grid grid-cols-1 gap-4 p-4 bg-muted/50 rounded-lg sm:grid-cols-3">
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Total Project Revenue</p>
+            <p className="text-sm text-muted-foreground mb-1">Total Allocated Budget (Fabricators)</p>
             <p className="text-xl">
-              ₱{project.revenue.toLocaleString()}
+              ₱{totalFabricatorAllocation.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Allocated Revenue</p>
+            <p className="text-sm text-muted-foreground mb-1">Total Assigned Amount</p>
             <p className="text-xl text-accent">
               ₱{totalAllocated.toLocaleString()}
             </p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground mb-1">Remaining Revenue</p>
-            <p className={`text-xl ${remainingRevenue < 0 ? 'text-destructive' : 'text-green-600'}`}>
-              ₱{remainingRevenue.toLocaleString()}
+            <p className="text-sm text-muted-foreground mb-1">Remaining Allocated Budget</p>
+            <p className={`text-xl ${remainingAllocation < 0 ? 'text-destructive' : 'text-green-600'}`}>
+              ₱{remainingAllocation.toLocaleString()}
             </p>
           </div>
         </div>
@@ -158,7 +173,10 @@ export function FabricatorRevenueManager({
           {project.fabricatorIds.map((fabricatorId, index) => {
             const fabricator = users.find(u => u.id === fabricatorId);
             const currentRevenue = parseFloat(revenueAllocations[fabricatorId] || '0');
-            const percentage = project.revenue > 0 ? ((currentRevenue / project.revenue) * 100).toFixed(1) : '0';
+            const percentage =
+              totalFabricatorAllocation > 0
+                ? ((currentRevenue / totalFabricatorAllocation) * 100).toFixed(1)
+                : '0';
 
             return (
               <div key={fabricatorId} className="border rounded-lg p-4 space-y-3">
@@ -192,7 +210,7 @@ export function FabricatorRevenueManager({
                   </div>
                   {currentRevenue > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      This fabricator will receive ₱{currentRevenue.toLocaleString()} ({percentage}% of project revenue)
+                      This fabricator will receive ₱{currentRevenue.toLocaleString()} ({percentage}% of allocated fabricator budget)
                     </p>
                   )}
                 </div>
@@ -236,8 +254,10 @@ export function FabricatorRevenueManager({
             variant="outline"
             size="sm"
             className="w-full sm:w-auto"
+            disabled={project.fabricatorIds.length === 0}
             onClick={() => {
-              const equalShare = (project.revenue / project.fabricatorIds.length).toFixed(2);
+              if (project.fabricatorIds.length === 0) return;
+              const equalShare = (totalFabricatorAllocation / project.fabricatorIds.length).toFixed(2);
               const newAllocations: Record<string, string> = {};
               project.fabricatorIds.forEach(fabId => {
                 newAllocations[fabId] = equalShare;
