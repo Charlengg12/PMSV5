@@ -7,7 +7,7 @@ import { Label } from "../ui/label";
 import { Input } from "../ui/input";
 import {
   Calendar,
-  DollarSign,
+  PhilippinePeso,
   Users,
   Building,
   FileText,
@@ -477,7 +477,7 @@ export function ProjectsGrid({
                     } else {
                       return (
                         <div className="flex items-center gap-2 text-xs">
-                          <DollarSign className="h-3 w-3" />
+                          <PhilippinePeso className="h-3 w-3" />
                           <span>
                             Labor Pool: ₱
                             {Number(

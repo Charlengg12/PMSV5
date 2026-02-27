@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { PhilippinePeso, Building } from "lucide-react";
-import { Project, User } from "../../types";
+import { Material, Project, User } from "../../types";
 
 interface RevenueOverviewProps {
   projects: Project[];
+  materials: Material[];
   currentUser: User;
   onUpdateProject?: (updatedProject: Project) => void;
 }
@@ -78,8 +79,79 @@ const sanitizeSpentInput = (value: string) => {
   return next;
 };
 
+type ProjectFinancialSnapshot = {
+  budget: number;
+  spent: number;
+  revenue: number;
+  grossProjectTotal: number;
+  projectBudget: number;
+  projectSpent: number;
+  projectTotal: number;
+  totalProjectCost: number;
+  totalProjectCostQuantity: number;
+  companyProfit: number;
+  fabricatorAllocation: number;
+  materialsAllocation: number;
+  supervisorAllocation: number;
+  companyAllocation: number;
+  hasStructuredAllocations: boolean;
+};
+
+const getProjectFinancialSnapshot = (
+  project: Project,
+  quantityBasedMaterialsCost: number,
+): ProjectFinancialSnapshot => {
+  const fabricatorAllocation = toNumberValue(project.fabricatorAllocation);
+  const materialsAllocation = toNumberValue(project.materialsAllocation);
+  const supervisorAllocation = toNumberValue(project.supervisorAllocation);
+  const companyAllocation = toNumberValue(project.companyAllocation);
+  const fallbackRevenue = toNumberValue(project.revenue);
+  const totalProjectCostQuantity =
+    quantityBasedMaterialsCost > 0 ? quantityBasedMaterialsCost : materialsAllocation;
+  const grossProjectTotal =
+    fallbackRevenue > 0
+      ? fallbackRevenue
+      : fabricatorAllocation +
+        materialsAllocation +
+        supervisorAllocation +
+        companyAllocation;
+  const projectBudget = fabricatorAllocation + supervisorAllocation;
+  const projectSpent = companyAllocation;
+  const totalProjectCost =
+    fabricatorAllocation +
+    totalProjectCostQuantity +
+    supervisorAllocation +
+    companyAllocation;
+  const projectTotal = totalProjectCost;
+  const companyProfit = grossProjectTotal - projectTotal;
+  const hasStructuredAllocations =
+    fabricatorAllocation > 0 ||
+    materialsAllocation > 0 ||
+    supervisorAllocation > 0 ||
+    companyAllocation > 0;
+
+  return {
+    budget: projectBudget,
+    spent: projectSpent,
+    revenue: grossProjectTotal,
+    grossProjectTotal,
+    projectBudget,
+    projectSpent,
+    projectTotal,
+    totalProjectCost,
+    totalProjectCostQuantity,
+    companyProfit,
+    fabricatorAllocation,
+    materialsAllocation,
+    supervisorAllocation,
+    companyAllocation,
+    hasStructuredAllocations,
+  };
+};
+
 export function RevenueOverview({
   projects,
+  materials,
   currentUser,
   onUpdateProject,
 }: RevenueOverviewProps) {
@@ -119,24 +191,70 @@ export function RevenueOverview({
   };
 
   const filteredProjects = getFilteredProjects();
+  const materialCostByProjectId = materials.reduce<Record<string, number>>(
+    (acc, material) => {
+      const projectId = material.projectId;
+      if (!projectId) return acc;
+      const quantity = toNumberValue(material.quantity);
+      const unitCost = toNumberValue(material.cost);
+      acc[projectId] = (acc[projectId] || 0) + quantity * unitCost;
+      return acc;
+    },
+    {},
+  );
+  const financialByProject = filteredProjects.reduce<
+    Record<string, ProjectFinancialSnapshot>
+  >((acc, project) => {
+    acc[project.id] = getProjectFinancialSnapshot(
+      project,
+      materialCostByProjectId[project.id] || 0,
+    );
+    return acc;
+  }, {});
   const canViewProjectRevenue =
     currentUser.role === "admin" || currentUser.role === "supervisor";
   const canEditSpent = canViewProjectRevenue && Boolean(onUpdateProject);
 
+  const getFabricatorRevenueForProject = (
+    project: Project,
+    fabricatorId: string
+  ): number => {
+    const explicit = project.fabricatorBudgets?.find(
+      (fb) => fb.fabricatorId === fabricatorId
+    );
+    if (explicit) {
+      return toNumberValue(explicit.allocatedRevenue);
+    }
+
+    // Backward compatibility for projects without initialized per-fabricator budgets
+    if (!project.fabricatorIds.includes(fabricatorId)) return 0;
+    if (project.fabricatorIds.length === 0) return 0;
+    const totalFabAllocation = toNumberValue(project.fabricatorAllocation);
+    if (totalFabAllocation <= 0) return 0;
+    return totalFabAllocation / project.fabricatorIds.length;
+  };
+
   // Calculate totals
   const totalProjectRevenue = filteredProjects.reduce(
-    (sum, p) => sum + toNumberValue(p.revenue),
+    (sum, p) => sum + (financialByProject[p.id]?.grossProjectTotal ?? 0),
     0
   );
   const totalProjectBudget = filteredProjects.reduce(
-    (sum, p) => sum + toNumberValue(p.budget),
+    (sum, p) => sum + (financialByProject[p.id]?.projectBudget ?? 0),
     0
   );
   const totalProjectSpent = filteredProjects.reduce(
-    (sum, p) => sum + toNumberValue(p.spent),
+    (sum, p) => sum + (financialByProject[p.id]?.projectSpent ?? 0),
     0
   );
-  const projectProfit = totalProjectRevenue - totalProjectSpent;
+  const totalProjectTotal = filteredProjects.reduce(
+    (sum, p) => sum + (financialByProject[p.id]?.projectTotal ?? 0),
+    0
+  );
+  const totalProjectCostQuantity = filteredProjects.reduce(
+    (sum, p) => sum + (financialByProject[p.id]?.totalProjectCostQuantity ?? 0),
+    0
+  );
 
   const getProjectDate = (project: Project) => {
     const raw = project.createdAt || project.endDate || project.startDate;
@@ -160,7 +278,11 @@ export function RevenueOverview({
     const monthMatch = profitMonth === "all" || d.getMonth() + 1 === profitMonth;
     const dayMatch = profitDay === "all" || d.getDate() === profitDay;
     if (!yearMatch || !monthMatch || !dayMatch) return sum;
-    return sum + (toNumberValue(project.revenue) - toNumberValue(project.spent));
+    const financial = getProjectFinancialSnapshot(
+      project,
+      materialCostByProjectId[project.id] || 0,
+    );
+    return sum + financial.companyProfit;
   }, 0);
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -171,7 +293,7 @@ export function RevenueOverview({
       Swal.fire({
         icon: "warning",
         title: "Amount Required",
-        text: "Please enter a spent amount before updating.",
+        text: "Please enter a project allocation amount before updating.",
         customClass: swalCustomClasses,
       });
       return;
@@ -192,16 +314,16 @@ export function RevenueOverview({
       Swal.fire({
         icon: "warning",
         title: "Amount Too Large",
-        text: `Spent amount must be less than or equal to ${peso}${MAX_SPENT_VALUE.toLocaleString()}.`,
+        text: `Project allocation must be less than or equal to ${peso}${MAX_SPENT_VALUE.toLocaleString()}.`,
         customClass: swalCustomClasses,
       });
       return;
     }
 
     const confirmed = await Swal.fire({
-      title: "Update Spent Amount?",
+      title: "Update Project Allocation?",
       html: `Are you sure you want to update <strong>${project.name}</strong><br/>
-             Spent: <strong>${peso}${newSpent.toLocaleString()}</strong> ?`,
+             Project Allocation: <strong>${peso}${newSpent.toLocaleString()}</strong> ?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Yes, Update",
@@ -213,7 +335,7 @@ export function RevenueOverview({
 
     const loadingSwal = Swal.fire({
       title: "Updating...",
-      text: "Saving new spent amount...",
+      text: "Saving new project allocation...",
       allowOutsideClick: false,
       allowEscapeKey: false,
       showConfirmButton: false,
@@ -228,6 +350,7 @@ export function RevenueOverview({
       onUpdateProject?.({
         ...project,
         spent: newSpent,
+        companyAllocation: newSpent,
       });
 
       setSpentEdits((prev) => ({
@@ -245,7 +368,7 @@ export function RevenueOverview({
       Swal.fire({
         icon: "success",
         title: "Updated",
-        text: `Spent amount for ${project.name} has been updated.`,
+        text: `Project allocation for ${project.name} has been updated.`,
         timer: 1800,
         showConfirmButton: false,
         customClass: swalCustomClasses,
@@ -269,10 +392,7 @@ export function RevenueOverview({
 
   if (currentUser.role === "fabricator") {
     const totalAllocatedRevenue = filteredProjects.reduce((sum, project) => {
-      const fabricatorBudget = project.fabricatorBudgets?.find(
-        (fb) => fb.fabricatorId === currentUser.id
-      );
-      return sum + (fabricatorBudget?.allocatedRevenue || 0);
+      return sum + getFabricatorRevenueForProject(project, currentUser.id);
     }, 0);
 
     return (
@@ -300,13 +420,14 @@ export function RevenueOverview({
 
         <div className="grid gap-4">
           {filteredProjects.map((project) => {
-            const fabricatorBudget = project.fabricatorBudgets?.find(
-              (fb) => fb.fabricatorId === currentUser.id
+            const financial = getProjectFinancialSnapshot(project);
+            const myRevenue = getFabricatorRevenueForProject(
+              project,
+              currentUser.id
             );
-            const myRevenue = fabricatorBudget?.allocatedRevenue || 0;
             const revenuePercentage =
-              project.revenue > 0
-                ? ((myRevenue / project.revenue) * 100).toFixed(1)
+              financial.revenue > 0
+                ? ((myRevenue / financial.revenue) * 100).toFixed(1)
                 : "0";
 
             return (
@@ -341,9 +462,9 @@ export function RevenueOverview({
                           Total Project Value
                         </span>
                       </div>
-                      <p className={`text-lg ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <p className={`text-lg ${financial.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                         {peso}
-                        {project.revenue.toLocaleString()}
+                        {financial.revenue.toLocaleString()}
                       </p>
                     </div>
                   </div>
@@ -400,7 +521,7 @@ export function RevenueOverview({
       </div>
 
       {canViewProjectRevenue && (
-        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Project Revenue</CardTitle>
@@ -412,7 +533,7 @@ export function RevenueOverview({
                 {formatCompactAmount(totalProjectRevenue)}
               </div>
               <p className="text-xs text-muted-foreground">
-                From {filteredProjects.length} projects
+                Gross Project Total
               </p>
             </CardContent>
           </Card>
@@ -442,30 +563,42 @@ export function RevenueOverview({
                 {formatCompactAmount(totalProjectSpent)}
               </div>
               <p className="text-xs text-muted-foreground">
-                {totalProjectBudget > 0
-                  ? `${Math.round((totalProjectSpent / totalProjectBudget) * 100)}% of budget`
-                  : "No budget set"}
+                Project Allocation
               </p>
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm">Project Total</CardTitle>
+              <PhilippinePeso className={`h-10 w-4 ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className={`text-2xl ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {peso}
+                {formatCompactAmount(totalProjectTotal)}
+              </div>
+              <p className="text-xs text-muted-foreground">Total Project Cost</p>
+            </CardContent>
+          </Card>
+
           {currentUser.role === "admin" && (
-            <Card className="h-full">
-              <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between pb-2">
-                <div className="flex-1 min-w-0">
-                  <CardTitle className="text-sm">Company Profit</CardTitle>
-                  <div className="mt-8">
-                    <p className={`text-2xl ${filteredProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {peso}
-                      {formatCompactAmount(filteredProfit)}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Total Profit</p>
-                  </div>
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm">Company Profit</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 p-4 pt-0">
+                <div>
+                  <p className={`text-2xl ${filteredProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {peso}
+                    {formatCompactAmount(filteredProfit)}
+                  </p>
+                  <p className="text-xs text-muted-foreground">Net Company</p>
                 </div>
 
-                <div className="flex flex-col gap-2 shrink-0">
+                <div className="grid grid-cols-3 gap-2">
                   <select
-                    className="h-9 w-20 rounded-md border border-input bg-background px-2 text-xs"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                     value={profitYear}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -481,7 +614,7 @@ export function RevenueOverview({
                   </select>
 
                   <select
-                    className="h-9 w-20 rounded-md border border-input bg-background px-2 text-xs"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                     value={profitMonth}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -497,7 +630,7 @@ export function RevenueOverview({
                   </select>
 
                   <select
-                    className="h-9 w-20 rounded-md border border-input bg-background px-2 text-xs"
+                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
                     value={profitDay}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -512,8 +645,25 @@ export function RevenueOverview({
                     ))}
                   </select>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {currentUser.role === "admin" && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm">Total Project Cost Quantity</CardTitle>
+                <PhilippinePeso className={`h-10 w-4 ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`} />
               </CardHeader>
-              <CardContent className="p-4 pt-0" />
+              <CardContent className="p-4 pt-0">
+                <div className={`text-2xl ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {peso}
+                  {formatCompactAmount(totalProjectCostQuantity)}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Quantity-based total used in project cost
+                </p>
+              </CardContent>
             </Card>
           )}
         </div>
@@ -527,63 +677,110 @@ export function RevenueOverview({
             </CardHeader>
             <CardContent className="p-4 sm:p-6">
               <div className="space-y-4">
-                {filteredProjects.map((project) => (
-                  <div
-                    key={project.id}
-                    className={`flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 border rounded-lg gap-4 ${project.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'}`}
-                  >
-                    <div className="space-y-1">
-                      <h4 className="font-medium">{project.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {project.clientName}
-                      </p>
-                    </div>
+                {filteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(project);
+                  return (
+                    <div
+                      key={project.id}
+                      className={`grid gap-4 rounded-lg border p-4 ${financial.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'} lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]`}
+                    >
+                      <div className="space-y-3">
+                        <h4 className="font-medium">{project.name}</h4>
+                        <p className="text-sm text-muted-foreground">
+                          {project.clientName}
+                        </p>
+                        {financial.hasStructuredAllocations && (
+                          <div className="mt-1 rounded-md border bg-muted/40 px-2 py-1.5">
+                            <p className="text-xs font-medium text-foreground">
+                              Financial Structure
+                            </p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">
+                              Fabricator: {peso}
+                              {formatCompactAmount(financial.fabricatorAllocation)}{" "}
+                              | Materials: {peso}
+                              {formatCompactAmount(financial.materialsAllocation)}{" "}
+                              | Supervisor: {peso}
+                              {formatCompactAmount(financial.supervisorAllocation)}{" "}
+                              | Company: {peso}
+                              {formatCompactAmount(financial.companyAllocation)}
+                            </p>
+                          </div>
+                        )}
 
-                    <div className="text-left sm:text-right space-y-2 sm:space-y-1">
-                      <p className={`text-sm ${project.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        Revenue: {peso}
-                        {formatCompactAmount(project.revenue)}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Spent: {peso}
-                        {formatCompactAmount(project.spent)} / {peso}
-                        {formatCompactAmount(project.budget)}
-                      </p>
-
-                      {canEditSpent && (
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
-                          <Input
-                            type="text"
-                            value={spentEdits[project.id] || ""}
-                            onChange={(e) => {
-                              const sanitized = sanitizeSpentInput(
-                                e.target.value
-                              );
-                              if (sanitized === null) return;
-                              setSpentEdits((prev) => ({
-                                ...prev,
-                                [project.id]: sanitized,
-                              }));
-                            }}
-                            placeholder="Spent"
-                            className="w-full sm:w-28 text-right"
-                          />
-                          <Button
-                            size="sm"
-                            onClick={() => handleUpdateSpent(project)}
-                            disabled={
-                              !spentEdits[project.id]?.trim() ||
-                              spentEdits[project.id] === project.spent?.toString()
-                            }
-                            className="w-full sm:w-auto"
-                          >
-                            Update
-                          </Button>
+                        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                          <div className="rounded-md border bg-muted/30 p-2">
+                            <p className="text-xs text-muted-foreground">Gross Project Total</p>
+                            <p className="text-sm font-semibold">
+                              {peso}{formatCompactAmount(financial.grossProjectTotal)}
+                            </p>
+                          </div>
+                          <div className="rounded-md border bg-muted/30 p-2">
+                            <p className="text-xs text-muted-foreground">Project Budget</p>
+                            <p className="text-sm font-semibold">
+                              {peso}{formatCompactAmount(financial.projectBudget)}
+                            </p>
+                          </div>
+                          <div className="rounded-md border bg-muted/30 p-2">
+                            <p className="text-xs text-muted-foreground">Project Allocation</p>
+                            <p className="text-sm font-semibold">
+                              {peso}{formatCompactAmount(financial.projectSpent)}
+                            </p>
+                          </div>
+                          <div className="rounded-md border bg-muted/30 p-2">
+                            <p className="text-xs text-muted-foreground">Project Total</p>
+                            <p className="text-sm font-semibold">
+                              {peso}{formatCompactAmount(financial.projectTotal)}
+                            </p>
+                          </div>
+                          <div className="rounded-md border bg-muted/30 p-2">
+                            <p className="text-xs text-muted-foreground">Net Company</p>
+                            <p className={`text-sm font-semibold ${financial.companyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {peso}{formatCompactAmount(financial.companyProfit)}
+                            </p>
+                          </div>
                         </div>
-                      )}
+                      </div>
+
+                      <div className="space-y-2 lg:border-l lg:pl-4">
+                        <p className="text-sm font-medium text-muted-foreground">Update Allocation</p>
+                        {canEditSpent && (
+                          <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
+                            <Input
+                              type="text"
+                              value={spentEdits[project.id] || ""}
+                              onChange={(e) => {
+                                const sanitized = sanitizeSpentInput(
+                                  e.target.value
+                                );
+                                if (sanitized === null) return;
+                                setSpentEdits((prev) => ({
+                                  ...prev,
+                                  [project.id]: sanitized,
+                                }));
+                              }}
+                              placeholder="Project Allocation"
+                              className="w-full text-left sm:w-42 sm:text-right"
+                            />
+                            <Button
+                              size="sm"
+                              onClick={() => handleUpdateSpent(project)}
+                              disabled={
+                                !spentEdits[project.id]?.trim() ||
+                                toNumberValue(spentEdits[project.id]) ===
+                                  financial.projectSpent
+                              }
+                              className="w-full sm:w-auto"
+                            >
+                              Update
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </CardContent>
           </Card>

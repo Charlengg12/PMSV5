@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Separator } from "../ui/separator";
 import {
   Calendar as CalendarIcon,
-  DollarSign,
+  PhilippinePeso,
   Users,
   Building,
   Link,
@@ -24,7 +24,7 @@ import {
   FileText as FileIcon,
   Link as LinkIcon,
   Users as UsersIcon,
-  DollarSign as RevenueIcon,
+  PhilippinePeso as RevenueIcon,
   UserMinus, // Added icon for unassigning
   Trash2,
 } from "lucide-react";
@@ -1007,7 +1007,7 @@ export function ProjectDetails({
                       <Card>
                         <CardContent className="pt-6 px-4 sm:px-6 pb-4">
                           <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Budget</span>
                           </div>
                           {isEditing && currentUser.role === "admin" ? (
@@ -1033,7 +1033,7 @@ export function ProjectDetails({
                       <Card>
                         <CardContent className="pt-6 px-4 sm:px-6 pb-4">
                           <div className="flex items-center gap-2 mb-1">
-                            <DollarSign className="h-4 w-4 text-muted-foreground" />
+                            <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                             <span className="text-sm">Spent</span>
                           </div>
                           {isEditing && currentUser.role === "admin" ? (
@@ -1061,7 +1061,7 @@ export function ProjectDetails({
                   <Card>
                     <CardContent className="pt-6 px-4 sm:px-6 pb-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">
                           {currentUser.role === "fabricator"
                             ? "Project Value"
@@ -1244,7 +1244,7 @@ export function ProjectDetails({
                                     variant="outline"
                                     className="shrink-0 gap-1"
                                   >
-                                    <DollarSign className="h-3 w-3" />₱
+                                    <PhilippinePeso className="h-3 w-3" />₱
                                     {fabricatorBudget.allocatedRevenue.toLocaleString()}{" "}
                                     revenue
                                   </Badge>

@@ -11,7 +11,7 @@ import {
   Search,
   Building,
   Calendar,
-  DollarSign,
+  PhilippinePeso,
   Users,
   X
 } from 'lucide-react';
@@ -179,7 +179,7 @@ export function AdminProjectsManager({
                   <span>{new Date(project.endDate).toLocaleDateString()}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <DollarSign className="h-3 w-3 text-muted-foreground" />
+                  <PhilippinePeso className="h-3 w-3 text-muted-foreground" />
                   <span className="text-muted-foreground">Budget:</span>
                   <span>₱{project.budget.toLocaleString()}</span>
                 </div>

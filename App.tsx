@@ -1790,6 +1790,7 @@ case "activity-logs":
         return (
           <RevenueOverview
             projects={projects}
+            materials={materials}
             currentUser={currentUser}
             onUpdateProject={handleUpdateProject}
           />
