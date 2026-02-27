@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -58,24 +58,102 @@ export function FabricatorRevenueManager({
     return users.find(u => u.id === fabricatorId)?.name || 'Unknown Fabricator';
   };
 
+  const rebalanceAllocations = (
+    changedFabricatorId: string,
+    rawValue: string,
+  ): Record<string, string> => {
+    const allFabricatorIds = project.fabricatorIds;
+    if (allFabricatorIds.length === 0) {
+      return {};
+    }
+
+    if (allFabricatorIds.length === 1) {
+      return {
+        [changedFabricatorId]: totalFabricatorAllocation.toFixed(2),
+      };
+    }
+
+    const parsedValue = Math.max(0, parseFloat(rawValue) || 0);
+    const changedValue = Math.min(parsedValue, totalFabricatorAllocation);
+
+    const otherFabricatorIds = allFabricatorIds.filter((id) => id !== changedFabricatorId);
+    const currentOtherValues = otherFabricatorIds.map((id) =>
+      Math.max(0, parseFloat(revenueAllocations[id]) || 0),
+    );
+    const currentOthersTotal = currentOtherValues.reduce((sum, value) => sum + value, 0);
+    const remainingBudget = Math.max(0, totalFabricatorAllocation - changedValue);
+
+    const nextAllocations: Record<string, string> = {};
+    nextAllocations[changedFabricatorId] = rawValue;
+
+    if (remainingBudget === 0) {
+      otherFabricatorIds.forEach((id) => {
+        nextAllocations[id] = '0.00';
+      });
+      return nextAllocations;
+    }
+
+    const distributedOthers = new Array(otherFabricatorIds.length).fill(0);
+
+    if (currentOthersTotal > 0) {
+      let assignedTotal = 0;
+
+      otherFabricatorIds.forEach((_, index) => {
+        if (index === otherFabricatorIds.length - 1) {
+          distributedOthers[index] = Number((remainingBudget - assignedTotal).toFixed(2));
+          return;
+        }
+
+        const proportionalValue =
+          (currentOtherValues[index] / currentOthersTotal) * remainingBudget;
+        const rounded = Number(proportionalValue.toFixed(2));
+        distributedOthers[index] = rounded;
+        assignedTotal += rounded;
+      });
+    } else {
+      const equalShare = Number((remainingBudget / otherFabricatorIds.length).toFixed(2));
+      otherFabricatorIds.forEach((_, index) => {
+        distributedOthers[index] = equalShare;
+      });
+
+      const distributedTotal = distributedOthers.reduce((sum, value) => sum + value, 0);
+      const roundingDiff = Number((remainingBudget - distributedTotal).toFixed(2));
+      distributedOthers[distributedOthers.length - 1] = Number(
+        (distributedOthers[distributedOthers.length - 1] + roundingDiff).toFixed(2),
+      );
+    }
+
+    otherFabricatorIds.forEach((id, index) => {
+      nextAllocations[id] = distributedOthers[index].toFixed(2);
+    });
+
+    return nextAllocations;
+  };
+
   const handleRevenueChange = (fabricatorId: string, value: string) => {
     // Allow only numbers and decimals
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
-      const nextAllocations = {
-        ...revenueAllocations,
-        [fabricatorId]: value,
-      };
-      const nextTotalAllocated = Object.values(nextAllocations).reduce((sum, val) => {
-        return sum + (parseFloat(val) || 0);
-      }, 0);
-
-      if (nextTotalAllocated > totalFabricatorAllocation) {
-        setError(
-          `Total assigned amount (₱${nextTotalAllocated.toLocaleString()}) cannot exceed allocated fabricator budget (₱${totalFabricatorAllocation.toLocaleString()}).`,
-        );
+      if (value === '') {
+        const zeroedAllocations = rebalanceAllocations(fabricatorId, '0');
+        setRevenueAllocations({
+          ...zeroedAllocations,
+          [fabricatorId]: '',
+        });
+        setError('');
+        setSuccess(false);
         return;
       }
 
+      const numericValue = parseFloat(value) || 0;
+      if (numericValue > totalFabricatorAllocation) {
+        setError(
+          `Total assigned amount (₱${numericValue.toLocaleString()}) cannot exceed allocated fabricator budget (₱${totalFabricatorAllocation.toLocaleString()}).`,
+        );
+        setSuccess(false);
+        return;
+      }
+
+      const nextAllocations = rebalanceAllocations(fabricatorId, value);
       setRevenueAllocations(nextAllocations);
       setError('');
       setSuccess(false);
@@ -286,3 +364,4 @@ export function FabricatorRevenueManager({
     </Card>
   );
 }
+
