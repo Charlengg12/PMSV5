@@ -12,6 +12,11 @@ import { Separator } from "../ui/separator";
 import {
   Calendar as CalendarIcon,
   PhilippinePeso,
+  Wallet,
+  Briefcase,
+  TrendingUp,
+  Hammer,
+  UserCog,
   Users,
   Building,
   Link,
@@ -323,6 +328,27 @@ export function ProjectDetails({
     if (sanitized === null) return;
     setFinancialEdits((prev) => ({ ...prev, [field]: sanitized }));
   };
+
+  const toAmount = (value: unknown) => {
+    if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+    if (typeof value === "string") {
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+  };
+
+  const displayBudget =
+    isEditing && currentUser.role === "admin"
+      ? clampFinancialValue(financialEdits.budget)
+      : toAmount(editedProject.budget);
+  const displayRevenue =
+    isEditing && currentUser.role === "admin"
+      ? clampFinancialValue(financialEdits.revenue)
+      : toAmount(editedProject.revenue);
+  const displayProfit = displayRevenue - displayBudget;
+  const displayFabricatorAllocation = toAmount(editedProject.fabricatorAllocation);
+  const displaySupervisorAllocation = toAmount(editedProject.supervisorAllocation);
 
   // ────────────────────────────────────────────────
   //  NEW: Unassign Client Handler
@@ -1000,73 +1026,12 @@ export function ProjectDetails({
 
               <div className="space-y-5">
                 <h3 className="text-lg font-medium">Financial Overview</h3>
-                <div className="grid gap-4 md:grid-cols-3">
-                  {(currentUser.role === "admin" ||
-                    currentUser.role === "supervisor") && (
-                    <>
-                      <Card>
-                        <CardContent className="pt-6 px-4 sm:px-6 pb-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Budget</span>
-                          </div>
-                          {isEditing && currentUser.role === "admin" ? (
-                            <Input
-                              type="number"
-                              min="0"
-                              max={MAX_FINANCIAL_VALUE}
-                              step="0.01"
-                              value={financialEdits.budget}
-                              onChange={(e) =>
-                                updateFinancialEdit("budget", e.target.value)
-                              }
-                              className="text-2xl font-semibold"
-                            />
-                          ) : (
-                            <p className="text-2xl font-bold">
-                              ₱{editedProject.budget?.toLocaleString() || "0"}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-
-                      <Card>
-                        <CardContent className="pt-6 px-4 sm:px-6 pb-4">
-                          <div className="flex items-center gap-2 mb-1">
-                            <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">Spent</span>
-                          </div>
-                          {isEditing && currentUser.role === "admin" ? (
-                            <Input
-                              type="number"
-                              min="0"
-                              max={MAX_FINANCIAL_VALUE}
-                              step="0.01"
-                              value={financialEdits.spent}
-                              onChange={(e) =>
-                                updateFinancialEdit("spent", e.target.value)
-                              }
-                              className="text-2xl font-semibold"
-                            />
-                          ) : (
-                            <p className="text-2xl font-bold">
-                              ₱{editedProject.spent?.toLocaleString() || "0"}
-                            </p>
-                          )}
-                        </CardContent>
-                      </Card>
-                    </>
-                  )}
-
-                  <Card>
-                    <CardContent className="pt-6 px-4 sm:px-6 pb-4">
-                      <div className="flex items-center gap-2 mb-1">
-                        <PhilippinePeso className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-sm">
-                          {currentUser.role === "fabricator"
-                            ? "Project Value"
-                            : "Revenue"}
-                        </span>
+                <div className="grid gap-4 md:grid-cols-6">
+                  <Card className="md:col-span-2 border-blue-200 bg-blue-50/50">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-blue-700">
+                        <Wallet className="h-4 w-4" />
+                        <span className="text-sm font-semibold">Revenue</span>
                       </div>
                       {isEditing && currentUser.role === "admin" ? (
                         <Input
@@ -1082,9 +1047,86 @@ export function ProjectDetails({
                         />
                       ) : (
                         <p className="text-2xl font-bold">
-                          ₱{editedProject.revenue?.toLocaleString() || "0"}
+                          {"\u20B1"}{displayRevenue.toLocaleString()}
                         </p>
                       )}
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Total Client Price
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="md:col-span-2 border-orange-200 bg-orange-50/50">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-orange-700">
+                        <Briefcase className="h-4 w-4" />
+                        <span className="text-sm font-semibold">Budget</span>
+                      </div>
+                      {isEditing && currentUser.role === "admin" ? (
+                        <Input
+                          type="number"
+                          min="0"
+                          max={MAX_FINANCIAL_VALUE}
+                          step="0.01"
+                          value={financialEdits.budget}
+                          onChange={(e) =>
+                            updateFinancialEdit("budget", e.target.value)
+                          }
+                          className="text-2xl font-semibold"
+                        />
+                      ) : (
+                        <p className="text-2xl font-bold">
+                          {"\u20B1"}{displayBudget.toLocaleString()}
+                        </p>
+                      )}
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Operational Expenses
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="md:col-span-2 border-emerald-200 bg-emerald-50/50">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-emerald-700">
+                        <TrendingUp className="h-4 w-4" />
+                        <span className="text-sm font-semibold">Profit</span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {"\u20B1"}{displayProfit.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Net Income
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="md:col-span-3 border-slate-200 bg-slate-50/60">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-slate-700">
+                        <Hammer className="h-4 w-4" />
+                        <span className="text-sm font-semibold">
+                          Fabricator Allocation
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {"\u20B1"}{displayFabricatorAllocation.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Allocated to fabricator labor
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="md:col-span-3 border-teal-200 bg-teal-50/50">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-teal-700">
+                        <UserCog className="h-4 w-4" />
+                        <span className="text-sm font-semibold">
+                          Supervisor Allocation
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {"\u20B1"}{displaySupervisorAllocation.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Oversight and admin fees
+                      </p>
                     </CardContent>
                   </Card>
                 </div>
