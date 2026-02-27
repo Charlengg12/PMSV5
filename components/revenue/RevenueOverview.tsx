@@ -1,15 +1,24 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
 import { Input } from "../ui/input";
-import { PhilippinePeso, Building } from "lucide-react";
+import { PhilippinePeso, Building, Mail, Phone } from "lucide-react";
 import { Material, Project, User } from "../../types";
 
 interface RevenueOverviewProps {
   projects: Project[];
   materials: Material[];
   currentUser: User;
+  users: User[];
   onUpdateProject?: (updatedProject: Project) => void;
 }
 
@@ -153,12 +162,16 @@ export function RevenueOverview({
   projects,
   materials,
   currentUser,
+  users,
   onUpdateProject,
 }: RevenueOverviewProps) {
   const [spentEdits, setSpentEdits] = useState<Record<string, string>>({});
   const [profitYear, setProfitYear] = useState<number | "all">("all");
   const [profitMonth, setProfitMonth] = useState<number | "all">("all");
   const [profitDay, setProfitDay] = useState<number | "all">("all");
+  const [selectedFabricatorId, setSelectedFabricatorId] = useState<
+    string | null
+  >(null);
   const peso = "\u20B1";
 
   useEffect(() => {
@@ -191,6 +204,17 @@ export function RevenueOverview({
   };
 
   const filteredProjects = getFilteredProjects();
+  const fabricators = users.filter((user) => user.role === "fabricator");
+  const fabricatorAssignments = fabricators.map((fabricator) => ({
+    fabricator,
+    assignedProjects: filteredProjects.filter((project) =>
+      project.fabricatorIds.includes(fabricator.id),
+    ),
+  }));
+  const selectedAssignment =
+    fabricatorAssignments.find(
+      (assignment) => assignment.fabricator.id === selectedFabricatorId,
+    ) ?? null;
   const materialCostByProjectId = materials.reduce<Record<string, number>>(
     (acc, material) => {
       const projectId = material.projectId;
@@ -669,13 +693,13 @@ export function RevenueOverview({
         </div>
       )}
 
-      <div className="border-t pt-6">
+      <div className="border-t pt-6 flex flex-col gap-6">
         {canViewProjectRevenue && (
-          <Card>
-            <CardHeader>
+          <Card className="order-2">
+            <CardHeader className="pb-0">
               <CardTitle>Project Financial Details</CardTitle>
             </CardHeader>
-            <CardContent className="p-4 sm:p-6">
+            <CardContent className="p-4 pt-0 sm:p-6 sm:pt-1">
               <div className="space-y-4">
                 {filteredProjects.map((project) => {
                   const financial =
@@ -784,6 +808,122 @@ export function RevenueOverview({
               </div>
             </CardContent>
           </Card>
+        )}
+
+        {currentUser.role === "admin" && (
+          <>
+            <Card className="order-1">
+              <CardHeader className="pb-0">
+                <CardTitle>Fabricator Project Assignments</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4 pt-0 sm:p-6 sm:pt-1">
+              {fabricatorAssignments.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No fabricators available.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  {fabricatorAssignments.map(({ fabricator, assignedProjects }) => (
+                    <div
+                      key={fabricator.id}
+                      className="rounded-lg border p-3"
+                    >
+                      <div className="grid gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.6fr)_minmax(160px,0.9fr)_minmax(190px,1fr)_minmax(120px,0.6fr)_minmax(180px,0.8fr)]">
+                        <div>
+                          <p className="font-medium">{fabricator.name}</p>
+                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                            <Mail size={13} className="shrink-0" />
+                            <span className="break-all">{fabricator.email}</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-start">
+                          <Badge variant="secondary" className="font-medium capitalize">
+                            {fabricator.role}
+                          </Badge>
+                        </div>
+
+                        <div className="text-muted-foreground text-sm">
+                          {fabricator.school || "—"}
+                        </div>
+
+                        <div className="text-sm">
+                          {fabricator.phone ? (
+                            <div className="flex items-center gap-1.5">
+                              <Phone size={14} className="shrink-0 text-muted-foreground" />
+                              {fabricator.phone}
+                            </div>
+                          ) : (
+                            <div className="text-muted-foreground">—</div>
+                          )}
+                          {fabricator.gcashNumber && (
+                            <div className="text-xs text-muted-foreground/80 mt-1 italic">
+                              GCash: {fabricator.gcashNumber}
+                            </div>
+                          )}
+                        </div>
+
+                        <div>
+                          <code className="text-xs font-mono text-muted-foreground">
+                            {fabricator.employeeNumber || "—"}
+                          </code>
+                        </div>
+
+                        <div className="flex md:justify-end">
+                          <button
+                            type="button"
+                            className="text-sm font-medium text-primary hover:underline underline-offset-4"
+                            onClick={() => setSelectedFabricatorId(fabricator.id)}
+                          >
+                            View Projects
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Dialog
+            open={Boolean(selectedFabricatorId)}
+            onOpenChange={(open) => {
+              if (!open) setSelectedFabricatorId(null);
+            }}
+          >
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>
+                  Projects for {selectedAssignment?.fabricator.name ?? "Fabricator"}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedAssignment?.assignedProjects.length ?? 0} assigned project
+                  {(selectedAssignment?.assignedProjects.length ?? 0) !== 1
+                    ? "s"
+                    : ""}
+                </DialogDescription>
+              </DialogHeader>
+
+              {selectedAssignment?.assignedProjects.length ? (
+                <div className="space-y-2">
+                  {selectedAssignment.assignedProjects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      {project.name}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No assigned projects.
+                </p>
+              )}
+            </DialogContent>
+          </Dialog>
+        </>
         )}
       </div>
     </div>
