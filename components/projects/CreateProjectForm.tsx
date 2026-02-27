@@ -24,6 +24,8 @@ import {
   Wallet,
   TrendingUp,
   Briefcase,
+  Hammer,
+  UserCheck,
 } from "lucide-react";
 import { addDays, format, setHours } from "date-fns";
 import { Project, User } from "../../types";
@@ -154,6 +156,8 @@ export function CreateProjectForm({
   const revenueDisplay = formatCurrency(calculatedRevenue);
   const budgetDisplay = formatCurrency(operationalBudget);
   const profitDisplay = formatCurrency(projectedProfit);
+  const fabricatorDisplay = formatCurrency(fabAlloc);
+  const supervisorDisplay = formatCurrency(supAlloc);
 
   useEffect(() => {
     setFormData((prev) => ({
@@ -853,6 +857,38 @@ export function CreateProjectForm({
                     </p>
                     <span className="text-xs text-muted-foreground">
                       Net Income
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="bg-slate-50 dark:bg-slate-900/10 border border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium mb-1">
+                      <Hammer className="h-4 w-4" /> Fabricator Allocation
+                    </div>
+                    <p
+                      className="font-bold text-slate-900 dark:text-slate-100 leading-tight whitespace-nowrap"
+                      style={{ fontSize: getAmountFontSize(fabricatorDisplay) }}
+                    >
+                      {fabricatorDisplay}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      Allocated to fabricator labor
+                    </span>
+                  </div>
+
+                  <div className="bg-teal-50 dark:bg-teal-900/10 border border-teal-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-2 text-teal-700 dark:text-teal-300 font-medium mb-1">
+                      <UserCheck className="h-4 w-4" /> Supervisor Allocation
+                    </div>
+                    <p
+                      className="font-bold text-teal-900 dark:text-teal-100 leading-tight whitespace-nowrap"
+                      style={{ fontSize: getAmountFontSize(supervisorDisplay) }}
+                    >
+                      {supervisorDisplay}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      Oversight and admin fees
                     </span>
                   </div>
                 </div>
