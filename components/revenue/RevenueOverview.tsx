@@ -172,6 +172,8 @@ export function RevenueOverview({
   const [selectedFabricatorId, setSelectedFabricatorId] = useState<
     string | null
   >(null);
+  const [showProjectTotals, setShowProjectTotals] = useState(false);
+  const [showMaterialTotals, setShowMaterialTotals] = useState(false);
   const peso = "\u20B1";
 
   useEffect(() => {
@@ -357,7 +359,7 @@ export function RevenueOverview({
 
     if (!confirmed.isConfirmed) return;
 
-    const loadingSwal = Swal.fire({
+    Swal.fire({
       title: "Updating...",
       text: "Saving new project allocation...",
       allowOutsideClick: false,
@@ -387,7 +389,7 @@ export function RevenueOverview({
         await delay(MIN_LOADING_TIME - elapsed);
       }
 
-      loadingSwal.close();
+      Swal.close();
 
       Swal.fire({
         icon: "success",
@@ -403,7 +405,7 @@ export function RevenueOverview({
         await delay(MIN_LOADING_TIME - elapsed);
       }
 
-      loadingSwal.close();
+      Swal.close();
 
       Swal.fire({
         icon: "error",
@@ -444,7 +446,10 @@ export function RevenueOverview({
 
         <div className="grid gap-4">
           {filteredProjects.map((project) => {
-            const financial = getProjectFinancialSnapshot(project);
+            const financial = getProjectFinancialSnapshot(
+              project,
+              materialCostByProjectId[project.id] || 0,
+            );
             const myRevenue = getFabricatorRevenueForProject(
               project,
               currentUser.id
@@ -602,7 +607,14 @@ export function RevenueOverview({
                 {peso}
                 {formatCompactAmount(totalProjectTotal)}
               </div>
-              <p className="text-xs text-muted-foreground">Total Project Cost</p>
+              <button
+                type="button"
+                className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
+                onClick={() => setShowProjectTotals(true)}
+              >
+                Total Project Cost · {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""}
+              </button>
             </CardContent>
           </Card>
 
@@ -684,9 +696,13 @@ export function RevenueOverview({
                   {peso}
                   {formatCompactAmount(totalProjectCostQuantity)}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
+                  onClick={() => setShowMaterialTotals(true)}
+                >
                   Quantity-based total used in project cost
-                </p>
+                </button>
               </CardContent>
             </Card>
           )}
@@ -704,7 +720,10 @@ export function RevenueOverview({
                 {filteredProjects.map((project) => {
                   const financial =
                     financialByProject[project.id] ??
-                    getProjectFinancialSnapshot(project);
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
                   return (
                     <div
                       key={project.id}
@@ -923,8 +942,85 @@ export function RevenueOverview({
               )}
             </DialogContent>
           </Dialog>
-        </>
+          </>
         )}
+
+        <Dialog open={showProjectTotals} onOpenChange={setShowProjectTotals}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Project Total Breakdown</DialogTitle>
+              <DialogDescription>
+                {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""} included in total
+              </DialogDescription>
+            </DialogHeader>
+
+            {filteredProjects.length ? (
+              <div className="space-y-2">
+                {filteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      <span className="text-muted-foreground">
+                        {peso}
+                        {formatCompactAmount(financial.projectTotal)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No projects available.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showMaterialTotals} onOpenChange={setShowMaterialTotals}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Material Cost Breakdown</DialogTitle>
+              <DialogDescription>
+                {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""} included
+              </DialogDescription>
+            </DialogHeader>
+
+            {filteredProjects.length ? (
+              <div className="space-y-2">
+                {filteredProjects.map((project) => {
+                  const materialTotal = materialCostByProjectId[project.id] || 0;
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      <span className="text-muted-foreground">
+                        {peso}
+                        {formatCompactAmount(materialTotal)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No projects available.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
