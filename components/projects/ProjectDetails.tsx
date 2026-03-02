@@ -16,6 +16,7 @@ import {
   Briefcase,
   TrendingUp,
   Hammer,
+  Package,
   UserCog,
   Users,
   Building,
@@ -338,17 +339,30 @@ export function ProjectDetails({
     return 0;
   };
 
+  const toRoundedAmount = (value: unknown) => {
+    const numeric = toAmount(value);
+    return Number.isFinite(numeric) ? Math.round(numeric) : 0;
+  };
+
+  const displayFabricatorAllocation = toRoundedAmount(editedProject.fabricatorAllocation);
+  const displayMaterialsAllocation = toRoundedAmount(editedProject.materialsAllocation);
+  const displaySupervisorAllocation = toRoundedAmount(editedProject.supervisorAllocation);
+  const displayCompanyAllocation = toRoundedAmount(editedProject.companyAllocation);
   const displayBudget =
-    isEditing && currentUser.role === "admin"
-      ? clampFinancialValue(financialEdits.budget)
-      : toAmount(editedProject.budget);
+    displayFabricatorAllocation +
+    displayMaterialsAllocation +
+    displaySupervisorAllocation +
+    displayCompanyAllocation;
   const displayRevenue =
     isEditing && currentUser.role === "admin"
       ? clampFinancialValue(financialEdits.revenue)
-      : toAmount(editedProject.revenue);
-  const displayProfit = displayRevenue - displayBudget;
-  const displayFabricatorAllocation = toAmount(editedProject.fabricatorAllocation);
-  const displaySupervisorAllocation = toAmount(editedProject.supervisorAllocation);
+      : toRoundedAmount(editedProject.revenue);
+  const displayProfit =
+    displayRevenue -
+    (displayFabricatorAllocation +
+      displayMaterialsAllocation +
+      displaySupervisorAllocation +
+      displayCompanyAllocation);
 
   // ────────────────────────────────────────────────
   //  NEW: Unassign Client Handler
@@ -1026,8 +1040,8 @@ export function ProjectDetails({
 
               <div className="space-y-5">
                 <h3 className="text-lg font-medium">Financial Overview</h3>
-                <div className="grid gap-4 md:grid-cols-6">
-                  <Card className="md:col-span-2 border-blue-200 bg-blue-50/50">
+                <div className="grid gap-4 md:grid-cols-1">
+                  <Card className="border-blue-200 bg-blue-50/50">
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-blue-700">
                         <Wallet className="h-4 w-4" />
@@ -1055,7 +1069,10 @@ export function ProjectDetails({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="md:col-span-2 border-orange-200 bg-orange-50/50">
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card className="border-orange-200 bg-orange-50/50">
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-orange-700">
                         <Briefcase className="h-4 w-4" />
@@ -1083,7 +1100,7 @@ export function ProjectDetails({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="md:col-span-2 border-emerald-200 bg-emerald-50/50">
+                  <Card className="border-emerald-200 bg-emerald-50/50">
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-emerald-700">
                         <TrendingUp className="h-4 w-4" />
@@ -1097,7 +1114,23 @@ export function ProjectDetails({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="md:col-span-3 border-slate-200 bg-slate-50/60">
+                  <Card className="border-indigo-200 bg-indigo-50/50">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-indigo-700">
+                        <Building className="h-4 w-4" />
+                        <span className="text-sm font-semibold">
+                          Company Allocation
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {"\u20B1"}{displayCompanyAllocation.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Company costs
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-slate-200 bg-slate-50/60">
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-slate-700">
                         <Hammer className="h-4 w-4" />
@@ -1113,7 +1146,7 @@ export function ProjectDetails({
                       </p>
                     </CardContent>
                   </Card>
-                  <Card className="md:col-span-3 border-teal-200 bg-teal-50/50">
+                  <Card className="border-teal-200 bg-teal-50/50">
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-teal-700">
                         <UserCog className="h-4 w-4" />
@@ -1126,6 +1159,22 @@ export function ProjectDetails({
                       </p>
                       <p className="text-sm text-muted-foreground mt-2 font-medium">
                         Oversight and admin fees
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card className="border-amber-200 bg-amber-50/50">
+                    <CardContent className="pt-6 px-4 sm:px-6 pb-5">
+                      <div className="flex items-center gap-2 mb-1 text-amber-700">
+                        <Package className="h-4 w-4" />
+                        <span className="text-sm font-semibold">
+                          Materials Allocation
+                        </span>
+                      </div>
+                      <p className="text-2xl font-bold">
+                        {"\u20B1"}{displayMaterialsAllocation.toLocaleString()}
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                        Expected material expenses
                       </p>
                     </CardContent>
                   </Card>
