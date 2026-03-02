@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
+import { Calendar } from "../ui/calendar";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +12,19 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Input } from "../ui/input";
-import { PhilippinePeso, Building, Mail, Phone } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { format } from "date-fns";
+import {
+  PhilippinePeso,
+  Building,
+  Mail,
+  Phone,
+  Calendar as CalendarIcon,
+  Wallet,
+  Briefcase,
+  Hammer,
+  Package,
+} from "lucide-react";
 import { Material, Project, User } from "../../types";
 
 interface RevenueOverviewProps {
@@ -50,19 +63,24 @@ const toNumberValue = (value: unknown) => {
   return 0;
 };
 
+const normalizeAllocation = (value: number) => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.abs(value) < 0.005 ? 0 : value;
+};
+
 const formatCompactAmount = (value: number | string | null | undefined) => {
   const numericValue = toNumberValue(value);
   if (!Number.isFinite(numericValue)) return "0";
   const absValue = Math.abs(numericValue);
   const formatScaled = (denominator: number, suffix: string) => {
-    const scaled = Math.trunc((numericValue / denominator) * 10) / 10;
+    const scaled = Math.round((numericValue / denominator) * 10) / 10;
     const formatted = scaled.toFixed(1).replace(/\.0$/, "");
     return `${formatted} ${suffix}`;
   };
   if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
   if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
   if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
-  return Math.trunc(numericValue).toLocaleString();
+  return Math.round(numericValue).toLocaleString();
 };
 
 const sanitizeSpentInput = (value: string) => {
@@ -110,20 +128,30 @@ const getProjectFinancialSnapshot = (
   project: Project,
   quantityBasedMaterialsCost: number,
 ): ProjectFinancialSnapshot => {
-  const fabricatorAllocation = toNumberValue(project.fabricatorAllocation);
-  const materialsAllocation = toNumberValue(project.materialsAllocation);
-  const supervisorAllocation = toNumberValue(project.supervisorAllocation);
-  const companyAllocation = toNumberValue(project.companyAllocation);
-  const fallbackRevenue = toNumberValue(project.revenue);
+  const fabricatorAllocation = normalizeAllocation(
+    toNumberValue(project.fabricatorAllocation)
+  );
+  const materialsAllocation = normalizeAllocation(
+    toNumberValue(project.materialsAllocation)
+  );
+  const supervisorAllocation = normalizeAllocation(
+    toNumberValue(project.supervisorAllocation)
+  );
+  const companyAllocation = normalizeAllocation(
+    toNumberValue(project.companyAllocation)
+  );
+  const fallbackRevenue = normalizeAllocation(toNumberValue(project.revenue));
   const totalProjectCostQuantity =
-    quantityBasedMaterialsCost > 0 ? quantityBasedMaterialsCost : materialsAllocation;
+    quantityBasedMaterialsCost > 0
+      ? normalizeAllocation(quantityBasedMaterialsCost)
+      : materialsAllocation;
+  const totalAllocationCost =
+    fabricatorAllocation +
+    materialsAllocation +
+    supervisorAllocation +
+    companyAllocation;
   const grossProjectTotal =
-    fallbackRevenue > 0
-      ? fallbackRevenue
-      : fabricatorAllocation +
-        materialsAllocation +
-        supervisorAllocation +
-        companyAllocation;
+    fallbackRevenue > 0 ? fallbackRevenue : totalAllocationCost;
   const projectBudget = fabricatorAllocation + supervisorAllocation;
   const projectSpent = companyAllocation;
   const totalProjectCost =
@@ -166,14 +194,17 @@ export function RevenueOverview({
   onUpdateProject,
 }: RevenueOverviewProps) {
   const [spentEdits, setSpentEdits] = useState<Record<string, string>>({});
-  const [profitYear, setProfitYear] = useState<number | "all">("all");
-  const [profitMonth, setProfitMonth] = useState<number | "all">("all");
-  const [profitDay, setProfitDay] = useState<number | "all">("all");
+  const [profitDate, setProfitDate] = useState<Date | null>(null);
+  const [showProfitCalendar, setShowProfitCalendar] = useState(false);
   const [selectedFabricatorId, setSelectedFabricatorId] = useState<
     string | null
   >(null);
   const [showProjectTotals, setShowProjectTotals] = useState(false);
   const [showMaterialTotals, setShowMaterialTotals] = useState(false);
+  const [showRevenueTotals, setShowRevenueTotals] = useState(false);
+  const [showCompanyTotals, setShowCompanyTotals] = useState(false);
+  const [showLaborTotals, setShowLaborTotals] = useState(false);
+  const [showProfitTotals, setShowProfitTotals] = useState(false);
   const peso = "\u20B1";
 
   useEffect(() => {
@@ -288,28 +319,26 @@ export function RevenueOverview({
     return isNaN(d.getTime()) ? null : d;
   };
 
-  const availableYears = Array.from(
-    new Set(
-      projects
-        .map(getProjectDate)
-        .filter((d): d is Date => Boolean(d))
-        .map((d) => d.getFullYear())
-    )
-  ).sort((a, b) => b - a);
+  const isProfitDateMatch = (project: Project) => {
+    if (!profitDate) return true;
+    const d = getProjectDate(project);
+    if (!d) return false;
+    return (
+      d.getFullYear() === profitDate.getFullYear() &&
+      d.getMonth() === profitDate.getMonth() &&
+      d.getDate() === profitDate.getDate()
+    );
+  };
 
   const filteredProfit = projects.reduce((sum, project) => {
-    const d = getProjectDate(project);
-    if (!d) return sum;
-    const yearMatch = profitYear === "all" || d.getFullYear() === profitYear;
-    const monthMatch = profitMonth === "all" || d.getMonth() + 1 === profitMonth;
-    const dayMatch = profitDay === "all" || d.getDate() === profitDay;
-    if (!yearMatch || !monthMatch || !dayMatch) return sum;
+    if (!isProfitDateMatch(project)) return sum;
     const financial = getProjectFinancialSnapshot(
       project,
       materialCostByProjectId[project.id] || 0,
     );
     return sum + financial.companyProfit;
   }, 0);
+  const profitFilteredProjects = filteredProjects.filter(isProfitDateMatch);
 
   const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -347,9 +376,9 @@ export function RevenueOverview({
     }
 
     const confirmed = await Swal.fire({
-      title: "Update Project Allocation?",
+      title: "Update Company Allocation?",
       html: `Are you sure you want to update <strong>${project.name}</strong><br/>
-             Project Allocation: <strong>${peso}${newSpent.toLocaleString()}</strong> ?`,
+             Company Allocation: <strong>${peso}${newSpent.toLocaleString()}</strong> ?`,
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Yes, Update",
@@ -551,158 +580,232 @@ export function RevenueOverview({
 
       {canViewProjectRevenue && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Card>
+          <Card
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowRevenueTotals(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setShowRevenueTotals(true);
+              }
+            }}
+            className="cursor-pointer transition-shadow hover:shadow-md"
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Project Revenue</CardTitle>
-              <PhilippinePeso className={`h-10 w-4 ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <CardTitle className="text-sm">Client Budget</CardTitle>
+              <Wallet className={`h-5 w-5 ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className={`text-2xl ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectRevenue)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Gross Project Total
-              </p>
+              <p className="text-xs text-muted-foreground">Client Budget</p>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Project Budget</CardTitle>
-              <PhilippinePeso className={`h-10 w-4 ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className={`text-2xl ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {peso}
-                {formatCompactAmount(totalProjectBudget)}
-              </div>
-              <p className="text-xs text-muted-foreground">Total allocated budget</p>
-            </CardContent>
-          </Card>
+          {currentUser.role === "admin" && (
+            <Card
+              role="button"
+              tabIndex={0}
+              onClick={() => setShowProfitTotals(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setShowProfitTotals(true);
+                }
+              }}
+              className="cursor-pointer transition-shadow hover:shadow-md"
+            >
+              <CardHeader className="flex items-start justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm">Project Profit</CardTitle>
+                <div
+                  className="flex items-center gap-2"
+                  onClick={(event) => event.stopPropagation()}
+                  onKeyDown={(event) => event.stopPropagation()}
+                >
+                  {profitDate && (
+                    <button
+                      type="button"
+                      className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setProfitDate(null);
+                      }}
+                      onKeyDown={(event) => event.stopPropagation()}
+                    >
+                      All dates
+                    </button>
+                  )}
+                  <Popover
+                    open={showProfitCalendar}
+                    onOpenChange={setShowProfitCalendar}
+                  >
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-8 px-2 text-xs"
+                        onClick={(event) => event.stopPropagation()}
+                        onKeyDown={(event) => event.stopPropagation()}
+                      >
+                        <CalendarIcon className="mr-1 h-3.5 w-3.5" />
+                        <span className="max-w-[140px] truncate">
+                          {profitDate
+                            ? format(profitDate, "MMM d, yyyy")
+                            : "Select date"}
+                        </span>
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent
+                      className="min-w-[280px] p-0 overflow-hidden"
+                      align="end"
+                      side="bottom"
+                      sideOffset={6}
+                      collisionPadding={12}
+                      onOpenAutoFocus={(event) => event.preventDefault()}
+                    >
+                      <Calendar
+                        mode="single"
+                        selected={profitDate ?? undefined}
+                        onSelect={(date) => {
+                          if (!date) return;
+                          setProfitDate(
+                            new Date(
+                              date.getFullYear(),
+                              date.getMonth(),
+                              date.getDate(),
+                            ),
+                          );
+                          setShowProfitCalendar(false);
+                        }}
+                        initialFocus
+                        fixedWeeks
+                        showOutsideDays={false}
+                        weekStartsOn={0}
+                        className="rounded-md border p-2"
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 pt-0">
+                <p className={`text-2xl ${filteredProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {peso}
+                  {formatCompactAmount(filteredProfit)}
+                </p>
+                <p className="text-xs text-muted-foreground">Project Profit</p>
+              </CardContent>
+            </Card>
+          )}
 
-          <Card>
+          <Card
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowProjectTotals(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setShowProjectTotals(true);
+              }
+            }}
+            className="cursor-pointer transition-shadow hover:shadow-md"
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Project Spent</CardTitle>
-              <PhilippinePeso className={`h-10 w-4 ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
-            </CardHeader>
-            <CardContent className="p-4 pt-0">
-              <div className={`text-2xl ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                {peso}
-                {formatCompactAmount(totalProjectSpent)}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Project Allocation
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Project Total</CardTitle>
-              <PhilippinePeso className={`h-10 w-4 ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <CardTitle className="text-sm">Total Cost</CardTitle>
+              <Briefcase className={`h-5 w-5 ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} />
             </CardHeader>
             <CardContent className="p-4 pt-0">
               <div className={`text-2xl ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {peso}
                 {formatCompactAmount(totalProjectTotal)}
               </div>
-              <button
-                type="button"
-                className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
-                onClick={() => setShowProjectTotals(true)}
-              >
-                Total Project Cost · {filteredProjects.length} project
+              <p className="text-xs text-muted-foreground">
+                Total Cost Â· {filteredProjects.length} project
                 {filteredProjects.length !== 1 ? "s" : ""}
-              </button>
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowCompanyTotals(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setShowCompanyTotals(true);
+              }
+            }}
+            className="cursor-pointer transition-shadow hover:shadow-md"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm">Company Allocation</CardTitle>
+              <Building className={`h-5 w-5 ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className={`text-2xl ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {peso}
+                {formatCompactAmount(totalProjectSpent)}
+              </div>
+              <p className="text-xs text-muted-foreground">Company costs</p>
+            </CardContent>
+          </Card>
+
+          <Card
+            role="button"
+            tabIndex={0}
+            onClick={() => setShowLaborTotals(true)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                setShowLaborTotals(true);
+              }
+            }}
+            className="cursor-pointer transition-shadow hover:shadow-md"
+          >
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm">Labor Allocation</CardTitle>
+              <Hammer className={`h-5 w-5 ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className={`text-2xl ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                {peso}
+                {formatCompactAmount(totalProjectBudget)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Fabricator + Supervisor
+              </p>
             </CardContent>
           </Card>
 
           {currentUser.role === "admin" && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm">Company Profit</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 p-4 pt-0">
-                <div>
-                  <p className={`text-2xl ${filteredProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {peso}
-                    {formatCompactAmount(filteredProfit)}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Net Company</p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                    value={profitYear}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setProfitYear(value === "all" ? "all" : Number(value));
-                    }}
-                  >
-                    <option value="all">Year</option>
-                    {availableYears.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                    value={profitMonth}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setProfitMonth(value === "all" ? "all" : Number(value));
-                    }}
-                  >
-                    <option value="all">Month</option>
-                    {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                      <option key={month} value={month}>
-                        {month}
-                      </option>
-                    ))}
-                  </select>
-
-                  <select
-                    className="h-9 w-full rounded-md border border-input bg-background px-2 text-xs"
-                    value={profitDay}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setProfitDay(value === "all" ? "all" : Number(value));
-                    }}
-                  >
-                    <option value="all">Day</option>
-                    {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
-                      <option key={day} value={day}>
-                        {day}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {currentUser.role === "admin" && (
-            <Card>
+            <Card
+              role="button"
+              tabIndex={0}
+              onClick={() => setShowMaterialTotals(true)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setShowMaterialTotals(true);
+                }
+              }}
+              className="cursor-pointer transition-shadow hover:shadow-md"
+            >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Total Project Cost Quantity</CardTitle>
-                <PhilippinePeso className={`h-10 w-4 ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                <CardTitle className="text-sm">Total Cost Quantity</CardTitle>
+                <Package className={`h-5 w-5 ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`} />
               </CardHeader>
               <CardContent className="p-4 pt-0">
                 <div className={`text-2xl ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                   {peso}
                   {formatCompactAmount(totalProjectCostQuantity)}
                 </div>
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-foreground hover:underline underline-offset-4"
-                  onClick={() => setShowMaterialTotals(true)}
-                >
+                <p className="text-xs text-muted-foreground">
                   Quantity-based total used in project cost
-                </button>
+                </p>
               </CardContent>
             </Card>
           )}
@@ -754,31 +857,31 @@ export function RevenueOverview({
 
                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Gross Project Total</p>
+                            <p className="text-xs text-muted-foreground">Client Budget</p>
                             <p className="text-sm font-semibold">
                               {peso}{formatCompactAmount(financial.grossProjectTotal)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Project Budget</p>
+                            <p className="text-xs text-muted-foreground">Operational Expenses</p>
                             <p className="text-sm font-semibold">
                               {peso}{formatCompactAmount(financial.projectBudget)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Project Allocation</p>
+                            <p className="text-xs text-muted-foreground">Company Allocation</p>
                             <p className="text-sm font-semibold">
                               {peso}{formatCompactAmount(financial.projectSpent)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Project Total</p>
+                            <p className="text-xs text-muted-foreground">Total Cost</p>
                             <p className="text-sm font-semibold">
                               {peso}{formatCompactAmount(financial.projectTotal)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Net Company</p>
+                            <p className="text-xs text-muted-foreground">Project Profit</p>
                             <p className={`text-sm font-semibold ${financial.companyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
                               {peso}{formatCompactAmount(financial.companyProfit)}
                             </p>
@@ -787,7 +890,9 @@ export function RevenueOverview({
                       </div>
 
                       <div className="space-y-2 lg:border-l lg:pl-4">
-                        <p className="text-sm font-medium text-muted-foreground">Update Allocation</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Update Company Allocation
+                        </p>
                         {canEditSpent && (
                           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-end">
                             <Input
@@ -803,7 +908,7 @@ export function RevenueOverview({
                                   [project.id]: sanitized,
                                 }));
                               }}
-                              placeholder="Project Allocation"
+                              placeholder="Company Allocation"
                               className="w-full text-left sm:w-42 sm:text-right"
                             />
                             <Button
@@ -863,7 +968,7 @@ export function RevenueOverview({
                         </div>
 
                         <div className="text-muted-foreground text-sm">
-                          {fabricator.school || "—"}
+                          {fabricator.school || "â€”"}
                         </div>
 
                         <div className="text-sm">
@@ -873,7 +978,7 @@ export function RevenueOverview({
                               {fabricator.phone}
                             </div>
                           ) : (
-                            <div className="text-muted-foreground">—</div>
+                            <div className="text-muted-foreground">â€”</div>
                           )}
                           {fabricator.gcashNumber && (
                             <div className="text-xs text-muted-foreground/80 mt-1 italic">
@@ -884,7 +989,7 @@ export function RevenueOverview({
 
                         <div>
                           <code className="text-xs font-mono text-muted-foreground">
-                            {fabricator.employeeNumber || "—"}
+                            {fabricator.employeeNumber || "â€”"}
                           </code>
                         </div>
 
@@ -948,7 +1053,7 @@ export function RevenueOverview({
         <Dialog open={showProjectTotals} onOpenChange={setShowProjectTotals}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Project Total Breakdown</DialogTitle>
+              <DialogTitle>Total Cost Breakdown</DialogTitle>
               <DialogDescription>
                 {filteredProjects.length} project
                 {filteredProjects.length !== 1 ? "s" : ""} included in total
@@ -999,7 +1104,13 @@ export function RevenueOverview({
             {filteredProjects.length ? (
               <div className="space-y-2">
                 {filteredProjects.map((project) => {
-                  const materialTotal = materialCostByProjectId[project.id] || 0;
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
+                  const materialTotal = financial.totalProjectCostQuantity;
                   return (
                     <div
                       key={project.id}
@@ -1021,7 +1132,178 @@ export function RevenueOverview({
             )}
           </DialogContent>
         </Dialog>
+
+        <Dialog open={showRevenueTotals} onOpenChange={setShowRevenueTotals}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Client Budget Breakdown</DialogTitle>
+              <DialogDescription>
+                {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""} included
+              </DialogDescription>
+            </DialogHeader>
+
+            {filteredProjects.length ? (
+              <div className="space-y-2">
+                {filteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      <span className="text-muted-foreground">
+                        {peso}
+                        {formatCompactAmount(financial.grossProjectTotal)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No projects available.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showCompanyTotals} onOpenChange={setShowCompanyTotals}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Company Allocation Breakdown</DialogTitle>
+              <DialogDescription>
+                {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""} included
+              </DialogDescription>
+            </DialogHeader>
+
+            {filteredProjects.length ? (
+              <div className="space-y-2">
+                {filteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      <span className="text-muted-foreground">
+                        {peso}
+                        {formatCompactAmount(financial.companyAllocation)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No projects available.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showProfitTotals} onOpenChange={setShowProfitTotals}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Project Profit Breakdown</DialogTitle>
+              <DialogDescription>
+                {profitFilteredProjects.length} project
+                {profitFilteredProjects.length !== 1 ? "s" : ""} included
+              </DialogDescription>
+            </DialogHeader>
+
+            {profitFilteredProjects.length ? (
+              <div className="space-y-2">
+                {profitFilteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      <span
+                        className={`text-muted-foreground ${
+                          financial.companyProfit >= 0
+                            ? "text-green-600"
+                            : "text-red-600"
+                        }`}
+                      >
+                        {peso}
+                        {formatCompactAmount(financial.companyProfit)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No projects available.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showLaborTotals} onOpenChange={setShowLaborTotals}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Labor Allocation Breakdown</DialogTitle>
+              <DialogDescription>
+                {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""} included
+              </DialogDescription>
+            </DialogHeader>
+
+            {filteredProjects.length ? (
+              <div className="space-y-2">
+                {filteredProjects.map((project) => {
+                  const financial =
+                    financialByProject[project.id] ??
+                    getProjectFinancialSnapshot(
+                      project,
+                      materialCostByProjectId[project.id] || 0,
+                    );
+                  return (
+                    <div
+                      key={project.id}
+                      className="flex items-center justify-between rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                    >
+                      <span className="font-medium">{project.name}</span>
+                      <span className="text-muted-foreground">
+                        {peso}
+                        {formatCompactAmount(financial.projectBudget)}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No projects available.
+              </p>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "../ui/button";
 import Swal from "sweetalert2";
 import { Input } from "../ui/input";
@@ -25,6 +25,7 @@ import {
   Briefcase,
   Hammer,
   UserCheck,
+  Package,
 } from "lucide-react";
 import { addDays, format, setHours } from "date-fns";
 import { FabricatorBudget, Project, User } from "../../types";
@@ -102,7 +103,7 @@ export function CreateProjectForm({
     materialsAllocation: "",
     supervisorAllocation: "",
     companyAllocation: "",
-    totalProjectPrice: "",
+    clientBudget: "",
     supervisorAssignsFabricators: false,
     broadcastToSupervisors: false,
     documentationUrl: "",
@@ -145,30 +146,20 @@ export function CreateProjectForm({
   const matAlloc = parseFloat(formData.materialsAllocation) || 0;
   const supAlloc = parseFloat(formData.supervisorAllocation) || 0;
   const compAlloc = parseFloat(formData.companyAllocation) || 0;
+  const clientBudget = parseFloat(formData.clientBudget) || 0;
   const today = normalizeDate(new Date());
   const minEndDate = addDays(normalizeDate(formData.startDate), 1);
 
-  const operationalBudget = fabAlloc + matAlloc + supAlloc;
-  const calculatedRevenue = operationalBudget + compAlloc;
-  const projectedProfit = compAlloc;
+  const totalCost = fabAlloc + matAlloc + supAlloc + compAlloc;
+  const operationalBudget = fabAlloc + matAlloc + supAlloc + compAlloc;
+  const projectedProfit = clientBudget - totalCost;
 
-  const revenueDisplay = formatCurrency(calculatedRevenue);
+  const revenueDisplay = formatCurrency(clientBudget);
   const budgetDisplay = formatCurrency(operationalBudget);
   const profitDisplay = formatCurrency(projectedProfit);
   const fabricatorDisplay = formatCurrency(fabAlloc);
+  const materialsDisplay = formatCurrency(matAlloc);
   const supervisorDisplay = formatCurrency(supAlloc);
-
-  useEffect(() => {
-    setFormData((prev) => ({
-      ...prev,
-      totalProjectPrice: calculatedRevenue.toFixed(2),
-    }));
-  }, [
-    formData.fabricatorAllocation,
-    formData.materialsAllocation,
-    formData.supervisorAllocation,
-    formData.companyAllocation,
-  ]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -179,6 +170,13 @@ export function CreateProjectForm({
 
     if (!formData.description.trim()) {
       newErrors.description = "Project description is required";
+    }
+
+    const parsedClientBudget = parseFloat(formData.clientBudget);
+    if (!formData.clientBudget.trim()) {
+      newErrors.clientBudget = "Client budget is required";
+    } else if (!Number.isFinite(parsedClientBudget) || parsedClientBudget < 0) {
+      newErrors.clientBudget = "Client budget must be zero or a positive number";
     }
 
     if (!formData.supervisorId && !formData.broadcastToSupervisors) {
@@ -205,7 +203,7 @@ export function CreateProjectForm({
       (parseFloat(formData.supervisorAllocation) || 0) < 0 ||
       (parseFloat(formData.companyAllocation) || 0) < 0
     ) {
-      newErrors.totalProjectPrice =
+      newErrors.clientBudget =
         "Allocations must be zero or positive numbers";
     }
 
@@ -225,7 +223,8 @@ export function CreateProjectForm({
       | "fabricatorAllocation"
       | "materialsAllocation"
       | "supervisorAllocation"
-      | "companyAllocation",
+      | "companyAllocation"
+      | "clientBudget",
     value: string,
   ) => {
     const sanitized = sanitizeAllocationInput(value);
@@ -254,6 +253,7 @@ export function CreateProjectForm({
     const fields = [];
     if (!formData.name.trim()) fields.push("Project Name");
     if (!formData.description.trim()) fields.push("Description");
+    if (!formData.clientBudget.trim()) fields.push("Client Budget");
     if (!formData.supervisorId && !formData.broadcastToSupervisors)
       fields.push("Supervisor");
     if (
@@ -413,7 +413,7 @@ export function CreateProjectForm({
         supervisorId: formData.supervisorId,
         fabricatorIds: assignedFabricatorIds,
         budget: operationalBudget,
-        revenue: calculatedRevenue,
+        revenue: clientBudget,
         spent: 0,
         documentationUrl: formData.documentationUrl || undefined,
         createdBy: currentUser.id,
@@ -840,7 +840,7 @@ export function CreateProjectForm({
                 <div className="grid gap-4 md:grid-cols-3">
                   <div className="bg-blue-50 dark:bg-blue-900/10 border border-blue-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
                     <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300 font-medium mb-1">
-                      <Briefcase className="h-4 w-4" /> Revenue
+                      <Briefcase className="h-4 w-4" /> Client Budget
                     </div>
                     <p
                       className="font-bold text-blue-900 dark:text-blue-100 leading-tight whitespace-nowrap"
@@ -849,7 +849,7 @@ export function CreateProjectForm({
                       {revenueDisplay}
                     </p>
                     <span className="text-xs text-muted-foreground">
-                      Total Client Price
+                      Client-provided budget
                     </span>
                   </div>
 
@@ -884,7 +884,7 @@ export function CreateProjectForm({
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-4 md:grid-cols-3">
                   <div className="bg-slate-50 dark:bg-slate-900/10 border border-slate-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
                     <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-medium mb-1">
                       <Hammer className="h-4 w-4" /> Fabricator Allocation
@@ -897,6 +897,21 @@ export function CreateProjectForm({
                     </p>
                     <span className="text-xs text-muted-foreground">
                       Allocated to fabricator labor
+                    </span>
+                  </div>
+
+                  <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+                    <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-medium mb-1">
+                      <Package className="h-4 w-4" /> Materials Allocation
+                    </div>
+                    <p
+                      className="font-bold text-amber-900 dark:text-amber-100 leading-tight whitespace-nowrap"
+                      style={{ fontSize: getAmountFontSize(materialsDisplay) }}
+                    >
+                      {materialsDisplay}
+                    </p>
+                    <span className="text-xs text-muted-foreground">
+                      Expected material expenses
                     </span>
                   </div>
 
@@ -917,9 +932,32 @@ export function CreateProjectForm({
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="clientBudget">Client Budget (?)</Label>
+                    <Input
+                      id="clientBudget"
+                      type="number"
+                      min="0"
+                      max={MAX_ALLOCATION_VALUE}
+                      step="0.01"
+                      value={formData.clientBudget}
+                      onChange={(e) =>
+                        handleAllocationChange("clientBudget", e.target.value)
+                      }
+                      placeholder="0.00"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Amount charged to the client.
+                    </p>
+                    {errors.clientBudget && (
+                      <p className="text-sm text-destructive">
+                        {errors.clientBudget}
+                      </p>
+                    )}
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="fabricatorAllocation">
-                      Fabricator Allocation (₱)
+                      Fabricator Allocation (?)
                     </Label>
                     <Input
                       id="fabricatorAllocation"
@@ -942,7 +980,7 @@ export function CreateProjectForm({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="materialsAllocation">
-                      Materials Allocation (₱)
+                      Materials Allocation (?)
                     </Label>
                     <Input
                       id="materialsAllocation"
@@ -965,7 +1003,7 @@ export function CreateProjectForm({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="supervisorAllocation">
-                      Supervisor Allocation (₱)
+                      Supervisor Allocation (?)
                     </Label>
                     <Input
                       id="supervisorAllocation"
@@ -988,7 +1026,7 @@ export function CreateProjectForm({
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="companyAllocation">
-                      Company Allocation (₱)
+                      Company Allocation (?)
                     </Label>
                     <Input
                       id="companyAllocation"
@@ -1008,24 +1046,6 @@ export function CreateProjectForm({
                     <p className="text-xs text-muted-foreground">
                       Company margin and other costs.
                     </p>
-                  </div>
-                  <div className="space-y-2 md:col-span-2">
-                    <Label className="flex items-center justify-between">
-                      <span>Total Project Price (₱)</span>
-                      <span className="text-muted-foreground">
-                        Auto-calculated
-                      </span>
-                    </Label>
-                    <Input
-                      readOnly
-                      value={calculatedRevenue.toFixed(2)}
-                      placeholder="0.00"
-                    />
-                    {errors.totalProjectPrice && (
-                      <p className="text-sm text-destructive">
-                        {errors.totalProjectPrice}
-                      </p>
-                    )}
                   </div>
                 </div>
               </div>
