@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import Swal from "sweetalert2";
 import { apiService } from "../../utils/apiService";
 import { Button } from "../ui/button";
@@ -674,18 +674,12 @@ export function TaskManager({
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 pointer-events-none text-[#e28a33]" />
             <Input
               placeholder="Search task..."
+              type="search"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-10 w-full"
+              className="pl-10 pr-2 w-full"
             />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+            
           </div>
           <p className="text-sm text-muted-foreground mt-1 px-2">
             <span className="text-[#e28a33]">Note: </span>

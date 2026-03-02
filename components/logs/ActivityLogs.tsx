@@ -425,7 +425,7 @@ export function ActivityLogs() {
         <div className="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-white dark:bg-gray-800">
           <div className="relative w-full max-w-md">
             <input
-              type="text"
+              type="search"
               value={searchTerm}
               onChange={handleSearchChange}
               placeholder="Search by user, action, or description..."

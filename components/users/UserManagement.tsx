@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useState, useRef, useCallback } from "react";
 import { apiService } from "../../utils/apiService";
 import { mapUserDataFromBackend } from "../../utils/userDataMapper";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -709,6 +709,7 @@ export function UserManagement({
               <Search className="absolute left-3 top-4.5 -translate-y-1/2 h-4 w-4 text-[#e28a33] pointer-events-none" />
               <Input
                 placeholder="Search user...."
+                type="search"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-muted/40 border-muted-foreground/30"
@@ -748,8 +749,8 @@ export function UserManagement({
           </div>
 
           {/* Table */}
-          <div className="rounded-lg border bg-white overflow-x-auto">
-            <Table className="min-w-[1000px] w-full">
+          <div className="w-full rounded-lg border bg-white overflow-x-auto">
+            <Table className="w-full">
               <TableHeader className="bg-muted/50">
                 <TableRow>
                   {canManageUsers && (
