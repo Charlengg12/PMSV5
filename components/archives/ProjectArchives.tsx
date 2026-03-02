@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -280,6 +280,7 @@ export function ProjectArchives({
               <Label htmlFor="search">Search Projects</Label>
               <Input
                 id="search"
+                type="search"
                 placeholder="Search by name, description, or client..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Swal from "sweetalert2";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -758,18 +758,11 @@ export function ReportsManager({
         <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 pointer-events-none text-[#e28a33]" />
         <Input
           placeholder="Search reports..."
+          type="search"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 pr-10 w-full"
+          className="pl-10 pr-2 w-full"
         />
-        {searchTerm && (
-          <button
-            onClick={() => setSearchTerm("")}
-            className="absolute right-2 top-4.5 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
         <p className="text-sm text-muted-foreground px-2">
           <span className="text-[#e28a33]">Note:</span> Search by report title,
           description, project name, creator name, or report type
