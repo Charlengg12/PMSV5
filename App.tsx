@@ -1792,6 +1792,7 @@ case "activity-logs":
             projects={projects}
             materials={materials}
             currentUser={currentUser}
+            users={users}
             onUpdateProject={handleUpdateProject}
           />
         );
