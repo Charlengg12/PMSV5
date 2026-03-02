@@ -1045,7 +1045,7 @@ export function ProjectDetails({
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-blue-700">
                         <Wallet className="h-4 w-4" />
-                        <span className="text-sm font-semibold">Revenue</span>
+                        <span className="text-sm font-semibold">Client Budget</span>
                       </div>
                       {isEditing && currentUser.role === "admin" ? (
                         <Input
@@ -1065,7 +1065,7 @@ export function ProjectDetails({
                         </p>
                       )}
                       <p className="text-sm text-muted-foreground mt-2 font-medium">
-                        Total Client Price
+                        Client Budget
                       </p>
                     </CardContent>
                   </Card>
@@ -1076,7 +1076,7 @@ export function ProjectDetails({
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
                       <div className="flex items-center gap-2 mb-1 text-orange-700">
                         <Briefcase className="h-4 w-4" />
-                        <span className="text-sm font-semibold">Budget</span>
+                        <span className="text-sm font-semibold">Total Cost</span>
                       </div>
                       {isEditing && currentUser.role === "admin" ? (
                         <Input
@@ -1096,7 +1096,7 @@ export function ProjectDetails({
                         </p>
                       )}
                       <p className="text-sm text-muted-foreground mt-2 font-medium">
-                        Operational Expenses
+                        Total Cost
                       </p>
                     </CardContent>
                   </Card>
