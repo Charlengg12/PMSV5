@@ -1,23 +1,22 @@
-::-webkit-scrollbar{
-    width: 4px;
-    height: 4px;
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
 }
-::-webkit-scrollbar-track{
-    background: #031d7b4f;
+::-webkit-scrollbar-track {
+  background: #031d7b4f;
 }
-::-webkit-scrollbar-thumb{
-    background: #ffbf00;
+::-webkit-scrollbar-thumb {
+  background: #ffbf00;
 }
-::-webkit-scrollbar-thumb:hover{
-    background: #555
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
-.swal-container{
-    background-color: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(5px);
-    z-index: 10000;
-    position: fixed;
-    top: 0;
-
+.swal-container {
+  background-color: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(5px);
+  z-index: 10000;
+  position: fixed;
+  top: 0;
 }
 .swal-popup {
   border-radius: 15px;
@@ -35,7 +34,7 @@
 }
 .swal-title {
   font-weight: bold;
-  color: #333333;   
+  color: #333333;
   padding-top: 10px;
 }
 .swal-content {
@@ -44,13 +43,13 @@
   margin-top: -10px;
 }
 .swal-confirm-button {
-    background-color: #103055;
-    color: white;
-    border-radius: 8px;
-    padding: 10px 28px;
-    font-weight: normal;
-    border: none;
-    box-shadow: none;
+  background-color: #103055;
+  color: white;
+  border-radius: 8px;
+  padding: 10px 28px;
+  font-weight: normal;
+  border: none;
+  box-shadow: none;
 }
 .swal-cancel-button {
   background-color: white;
@@ -58,25 +57,24 @@
   border-radius: 8px;
   padding: 10px 28px;
   font-weight: normal;
-  border: 1px solid #343434; 
+  border: 1px solid #343434;
   box-shadow: none;
 }
-.swal-confirm-button:hover{
-    transform: translateY(-5px);
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-    background-color: #103055;
-    background-color: #e28a33;
-
+.swal-confirm-button:hover {
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  background-color: #103055;
+  background-color: #e28a33;
 }
 .swal-cancel-button:hover {
-    transform: translateY(-5px);
-    transition: all 0.3s ease;
-    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
-    background-color: white;
+  transform: translateY(-5px);
+  transition: all 0.3s ease;
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
+  background-color: white;
 }
 .swal2-actions {
-  gap: 5px; 
+  gap: 5px;
   margin-top: 20px;
 }
 .swal-icon {
@@ -97,72 +95,72 @@
   object-fit: contain;
 }
 .swal2-close {
-    font-size: 24px;
-    color: #aaaaaa;
+  font-size: 24px;
+  color: #aaaaaa;
 }
-.swal2-loader{
-    border-color: #103055 rgba(0, 0, 0, 0) #e28a33 rgba(0, 0, 0, 0) !important;
-    border-width: 2px !important;
+.swal2-loader {
+  border-color: #103055 rgba(0, 0, 0, 0) #e28a33 rgba(0, 0, 0, 0) !important;
+  border-width: 2px !important;
 }
 
 #successAlert {
-    animation: slide 0.5s ease-in-out;
+  animation: slide 0.5s ease-in-out;
 }
 
 @keyframes slide {
-    from {
-        transform: translateX(100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateX(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
 }
-button:hover{
-    cursor:pointer;
+button:hover {
+  cursor: pointer;
 }
-button[data-slot="checkbox"]:hover{
-    transform: none;
-    box-shadow: none;
-    transition: none;
+button[data-slot="checkbox"]:hover {
+  transform: none;
+  box-shadow: none;
+  transition: none;
 }
 
 /* table tr:nth-child(even) {
     background-color: #e7e7e7e2;
 } */
-table thead {
-    background-color: #103055;
+table:not(.rdp-table) thead {
+  background-color: #103055;
 }
-table thead th {
-    /* color: white; */
-    padding: 20px;
+table:not(.rdp-table) thead th {
+  /* color: white; */
+  padding: 20px;
 }
 table tr:hover {
-    background: fixed;
+  background: fixed;
 }
-.modal{
-    animation: slidefromtop 0.3s ease-in-out;
-    border-radius: 6px;
+.modal {
+  animation: slidefromtop 0.3s ease-in-out;
+  border-radius: 6px;
 }
 @keyframes slidefromtop {
-    from {
-        transform: translateY(-100%);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 /* .loader div {
     animation: rotate 1.5s linear infinite;

@@ -13,6 +13,14 @@ import {
 } from "../ui/dialog";
 import { Input } from "../ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
 import { format } from "date-fns";
 import {
   PhilippinePeso,
@@ -77,7 +85,8 @@ const formatCompactAmount = (value: number | string | null | undefined) => {
     const formatted = scaled.toFixed(1).replace(/\.0$/, "");
     return `${formatted} ${suffix}`;
   };
-  if (absValue >= 1_000_000_000_000) return formatScaled(1_000_000_000_000, "T");
+  if (absValue >= 1_000_000_000_000)
+    return formatScaled(1_000_000_000_000, "T");
   if (absValue >= 1_000_000_000) return formatScaled(1_000_000_000, "B");
   if (absValue >= 1_000_000) return formatScaled(1_000_000, "M");
   return Math.round(numericValue).toLocaleString();
@@ -129,16 +138,16 @@ const getProjectFinancialSnapshot = (
   quantityBasedMaterialsCost: number,
 ): ProjectFinancialSnapshot => {
   const fabricatorAllocation = normalizeAllocation(
-    toNumberValue(project.fabricatorAllocation)
+    toNumberValue(project.fabricatorAllocation),
   );
   const materialsAllocation = normalizeAllocation(
-    toNumberValue(project.materialsAllocation)
+    toNumberValue(project.materialsAllocation),
   );
   const supervisorAllocation = normalizeAllocation(
-    toNumberValue(project.supervisorAllocation)
+    toNumberValue(project.supervisorAllocation),
   );
   const companyAllocation = normalizeAllocation(
-    toNumberValue(project.companyAllocation)
+    toNumberValue(project.companyAllocation),
   );
   const fallbackRevenue = normalizeAllocation(toNumberValue(project.revenue));
   const totalProjectCostQuantity =
@@ -274,10 +283,10 @@ export function RevenueOverview({
 
   const getFabricatorRevenueForProject = (
     project: Project,
-    fabricatorId: string
+    fabricatorId: string,
   ): number => {
     const explicit = project.fabricatorBudgets?.find(
-      (fb) => fb.fabricatorId === fabricatorId
+      (fb) => fb.fabricatorId === fabricatorId,
     );
     if (explicit) {
       return toNumberValue(explicit.allocatedRevenue);
@@ -294,23 +303,23 @@ export function RevenueOverview({
   // Calculate totals
   const totalProjectRevenue = filteredProjects.reduce(
     (sum, p) => sum + (financialByProject[p.id]?.grossProjectTotal ?? 0),
-    0
+    0,
   );
   const totalProjectBudget = filteredProjects.reduce(
     (sum, p) => sum + (financialByProject[p.id]?.projectBudget ?? 0),
-    0
+    0,
   );
   const totalProjectSpent = filteredProjects.reduce(
     (sum, p) => sum + (financialByProject[p.id]?.projectSpent ?? 0),
-    0
+    0,
   );
   const totalProjectTotal = filteredProjects.reduce(
     (sum, p) => sum + (financialByProject[p.id]?.projectTotal ?? 0),
-    0
+    0,
   );
   const totalProjectCostQuantity = filteredProjects.reduce(
     (sum, p) => sum + (financialByProject[p.id]?.totalProjectCostQuantity ?? 0),
-    0
+    0,
   );
 
   const getProjectDate = (project: Project) => {
@@ -340,7 +349,8 @@ export function RevenueOverview({
   }, 0);
   const profitFilteredProjects = filteredProjects.filter(isProfitDateMatch);
 
-  const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const delay = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
   const handleUpdateSpent = async (project: Project) => {
     const newSpentStr = spentEdits[project.id] ?? "";
@@ -454,15 +464,21 @@ export function RevenueOverview({
       <div className="space-y-6">
         <h2>My Revenue & Projects</h2>
 
-        <Card className={`border-2 ${totalAllocatedRevenue >= 0 ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'}`}>
+        <Card
+          className={`border-2 ${totalAllocatedRevenue >= 0 ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"}`}
+        >
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <PhilippinePeso className={`h-5 w-5 ${totalAllocatedRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <PhilippinePeso
+                className={`h-5 w-5 ${totalAllocatedRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+              />
               Total Allocated Revenue
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-3xl ${totalAllocatedRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <div
+              className={`text-3xl ${totalAllocatedRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+            >
               {peso}
               {formatCompactAmount(totalAllocatedRevenue)}
             </div>
@@ -481,7 +497,7 @@ export function RevenueOverview({
             );
             const myRevenue = getFabricatorRevenueForProject(
               project,
-              currentUser.id
+              currentUser.id,
             );
             const revenuePercentage =
               financial.revenue > 0
@@ -494,7 +510,9 @@ export function RevenueOverview({
                   <CardTitle className="text-lg flex items-center justify-between">
                     <span>{project.name}</span>
                     {myRevenue > 0 && (
-                      <span className={`text-base ${myRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <span
+                        className={`text-base ${myRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+                      >
                         {peso}
                         {myRevenue.toLocaleString()}
                       </span>
@@ -520,7 +538,9 @@ export function RevenueOverview({
                           Total Project Value
                         </span>
                       </div>
-                      <p className={`text-lg ${financial.revenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <p
+                        className={`text-lg ${financial.revenue >= 0 ? "text-green-600" : "text-red-600"}`}
+                      >
                         {peso}
                         {financial.revenue.toLocaleString()}
                       </p>
@@ -528,13 +548,17 @@ export function RevenueOverview({
                   </div>
 
                   {myRevenue > 0 && (
-                    <div className={`mt-4 p-3 rounded-lg border ${myRevenue >= 0 ? 'bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800'}`}>
+                    <div
+                      className={`mt-4 p-3 rounded-lg border ${myRevenue >= 0 ? "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800" : "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800"}`}
+                    >
                       <div className="flex items-center justify-between">
                         <div>
                           <p className="text-sm text-muted-foreground mb-1">
                             Your Allocated Revenue
                           </p>
-                          <p className={`text-xl ${myRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          <p
+                            className={`text-xl ${myRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+                          >
                             {peso}
                             {myRevenue.toLocaleString()}
                           </p>
@@ -572,7 +596,7 @@ export function RevenueOverview({
         <h2 className="text-xl sm:text-2xl font-bold">
           <PhilippinePeso className="inline-block mr-2 mb-1 text-blue-700" />
           Revenue
-          </h2>
+        </h2>
         <p className="text-sm text-muted-foreground">
           Overview of project financials
         </p>
@@ -594,10 +618,14 @@ export function RevenueOverview({
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Client Budget</CardTitle>
-              <Wallet className={`h-5 w-5 ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <Wallet
+                className={`h-5 w-5 ${totalProjectRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+              />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className={`text-2xl ${totalProjectRevenue >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div
+                className={`text-2xl ${totalProjectRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {peso}
                 {formatCompactAmount(totalProjectRevenue)}
               </div>
@@ -660,7 +688,7 @@ export function RevenueOverview({
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent
-                      className="min-w-[280px] p-0 overflow-hidden"
+                      className="min-w-[356px] p-0 overflow-hidden"
                       align="end"
                       side="bottom"
                       sideOffset={6}
@@ -692,7 +720,9 @@ export function RevenueOverview({
                 </div>
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <p className={`text-2xl ${filteredProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <p
+                  className={`text-2xl ${filteredProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
                   {peso}
                   {formatCompactAmount(filteredProfit)}
                 </p>
@@ -715,15 +745,19 @@ export function RevenueOverview({
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Total Cost</CardTitle>
-              <Briefcase className={`h-5 w-5 ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <Briefcase
+                className={`h-5 w-5 ${totalProjectTotal >= 0 ? "text-green-600" : "text-red-600"}`}
+              />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className={`text-2xl ${totalProjectTotal >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div
+                className={`text-2xl ${totalProjectTotal >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {peso}
                 {formatCompactAmount(totalProjectTotal)}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total Cost Â· {filteredProjects.length} project
+                Total Cost · {filteredProjects.length} project
                 {filteredProjects.length !== 1 ? "s" : ""}
               </p>
             </CardContent>
@@ -743,10 +777,14 @@ export function RevenueOverview({
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Company Allocation</CardTitle>
-              <Building className={`h-5 w-5 ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <Building
+                className={`h-5 w-5 ${totalProjectSpent >= 0 ? "text-green-600" : "text-red-600"}`}
+              />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className={`text-2xl ${totalProjectSpent >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div
+                className={`text-2xl ${totalProjectSpent >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {peso}
                 {formatCompactAmount(totalProjectSpent)}
               </div>
@@ -768,10 +806,14 @@ export function RevenueOverview({
           >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm">Labor Allocation</CardTitle>
-              <Hammer className={`h-5 w-5 ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+              <Hammer
+                className={`h-5 w-5 ${totalProjectBudget >= 0 ? "text-green-600" : "text-red-600"}`}
+              />
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className={`text-2xl ${totalProjectBudget >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              <div
+                className={`text-2xl ${totalProjectBudget >= 0 ? "text-green-600" : "text-red-600"}`}
+              >
                 {peso}
                 {formatCompactAmount(totalProjectBudget)}
               </div>
@@ -796,10 +838,14 @@ export function RevenueOverview({
             >
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm">Total Cost Quantity</CardTitle>
-                <Package className={`h-5 w-5 ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`} />
+                <Package
+                  className={`h-5 w-5 ${totalProjectCostQuantity >= 0 ? "text-green-600" : "text-red-600"}`}
+                />
               </CardHeader>
               <CardContent className="p-4 pt-0">
-                <div className={`text-2xl ${totalProjectCostQuantity >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <div
+                  className={`text-2xl ${totalProjectCostQuantity >= 0 ? "text-green-600" : "text-red-600"}`}
+                >
                   {peso}
                   {formatCompactAmount(totalProjectCostQuantity)}
                 </div>
@@ -830,7 +876,7 @@ export function RevenueOverview({
                   return (
                     <div
                       key={project.id}
-                      className={`grid gap-4 rounded-lg border p-4 ${financial.revenue >= 0 ? 'border-green-200 dark:border-green-800' : 'border-red-200 dark:border-red-800'} lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]`}
+                      className={`grid gap-4 rounded-lg border p-4 ${financial.revenue >= 0 ? "border-green-200 dark:border-green-800" : "border-red-200 dark:border-red-800"} lg:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]`}
                     >
                       <div className="space-y-3">
                         <h4 className="font-medium">{project.name}</h4>
@@ -844,11 +890,17 @@ export function RevenueOverview({
                             </p>
                             <p className="text-xs text-muted-foreground leading-relaxed">
                               Fabricator: {peso}
-                              {formatCompactAmount(financial.fabricatorAllocation)}{" "}
+                              {formatCompactAmount(
+                                financial.fabricatorAllocation,
+                              )}{" "}
                               | Materials: {peso}
-                              {formatCompactAmount(financial.materialsAllocation)}{" "}
+                              {formatCompactAmount(
+                                financial.materialsAllocation,
+                              )}{" "}
                               | Supervisor: {peso}
-                              {formatCompactAmount(financial.supervisorAllocation)}{" "}
+                              {formatCompactAmount(
+                                financial.supervisorAllocation,
+                              )}{" "}
                               | Company: {peso}
                               {formatCompactAmount(financial.companyAllocation)}
                             </p>
@@ -857,33 +909,50 @@ export function RevenueOverview({
 
                         <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Client Budget</p>
+                            <p className="text-xs text-muted-foreground">
+                              Client Budget
+                            </p>
                             <p className="text-sm font-semibold">
-                              {peso}{formatCompactAmount(financial.grossProjectTotal)}
+                              {peso}
+                              {formatCompactAmount(financial.grossProjectTotal)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Operational Expenses</p>
+                            <p className="text-xs text-muted-foreground">
+                              Operational Expenses
+                            </p>
                             <p className="text-sm font-semibold">
-                              {peso}{formatCompactAmount(financial.projectBudget)}
+                              {peso}
+                              {formatCompactAmount(financial.projectBudget)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Company Allocation</p>
+                            <p className="text-xs text-muted-foreground">
+                              Company Allocation
+                            </p>
                             <p className="text-sm font-semibold">
-                              {peso}{formatCompactAmount(financial.projectSpent)}
+                              {peso}
+                              {formatCompactAmount(financial.projectSpent)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Total Cost</p>
+                            <p className="text-xs text-muted-foreground">
+                              Total Cost
+                            </p>
                             <p className="text-sm font-semibold">
-                              {peso}{formatCompactAmount(financial.projectTotal)}
+                              {peso}
+                              {formatCompactAmount(financial.projectTotal)}
                             </p>
                           </div>
                           <div className="rounded-md border bg-muted/30 p-2">
-                            <p className="text-xs text-muted-foreground">Project Profit</p>
-                            <p className={`text-sm font-semibold ${financial.companyProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                              {peso}{formatCompactAmount(financial.companyProfit)}
+                            <p className="text-xs text-muted-foreground">
+                              Project Profit
+                            </p>
+                            <p
+                              className={`text-sm font-semibold ${financial.companyProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                            >
+                              {peso}
+                              {formatCompactAmount(financial.companyProfit)}
                             </p>
                           </div>
                         </div>
@@ -900,7 +969,7 @@ export function RevenueOverview({
                               value={spentEdits[project.id] || ""}
                               onChange={(e) => {
                                 const sanitized = sanitizeSpentInput(
-                                  e.target.value
+                                  e.target.value,
                                 );
                                 if (sanitized === null) return;
                                 setSpentEdits((prev) => ({
@@ -941,112 +1010,137 @@ export function RevenueOverview({
                 <CardTitle>Fabricator Project Assignments</CardTitle>
               </CardHeader>
               <CardContent className="p-4 pt-0 sm:p-6 sm:pt-1">
-              {fabricatorAssignments.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
-                  No fabricators available.
-                </p>
-              ) : (
-                <div className="space-y-3">
-                  {fabricatorAssignments.map(({ fabricator, assignedProjects }) => (
-                    <div
-                      key={fabricator.id}
-                      className="rounded-lg border p-3"
-                    >
-                      <div className="grid gap-3 md:grid-cols-[minmax(0,1.6fr)_minmax(120px,0.6fr)_minmax(160px,0.9fr)_minmax(190px,1fr)_minmax(120px,0.6fr)_minmax(180px,0.8fr)]">
-                        <div>
-                          <p className="font-medium">{fabricator.name}</p>
-                          <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
-                            <Mail size={13} className="shrink-0" />
-                            <span className="break-all">{fabricator.email}</span>
-                          </div>
-                        </div>
+                {fabricatorAssignments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No fabricators available.
+                  </p>
+                ) : (
+                  <div className="rounded-lg border">
+                    <Table className="min-w-[980px]">
+                      <TableHeader className="bg-[#103055] [&_th]:text-white">
+                        <TableRow className="hover:bg-transparent">
+                          <TableHead className="!p-2">Fabricator</TableHead>
+                          <TableHead className="!p-2">Role</TableHead>
+                          <TableHead className="!p-2">School</TableHead>
+                          <TableHead className="!p-2">Contact</TableHead>
+                          <TableHead className="!p-2">Employee No.</TableHead>
+                          <TableHead className="!p-2 text-right">
+                            Action
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {fabricatorAssignments.map(({ fabricator }) => (
+                          <TableRow key={fabricator.id}>
+                              <TableCell className="!p-2 align-top whitespace-normal min-w-[240px]">
+                                <p className="font-medium">{fabricator.name}</p>
+                                <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                                  <Mail size={13} className="shrink-0 mt-0.5" />
+                                  <span className="break-words [overflow-wrap:anywhere]">
+                                    {fabricator.email}
+                                  </span>
+                                </div>
+                              </TableCell>
 
-                        <div className="flex items-start">
-                          <Badge variant="secondary" className="font-medium capitalize">
-                            {fabricator.role}
-                          </Badge>
-                        </div>
+                              <TableCell className="!p-2 align-top">
+                                <Badge
+                                  variant="secondary"
+                                  className="font-medium capitalize"
+                                >
+                                  {fabricator.role}
+                                </Badge>
+                              </TableCell>
 
-                        <div className="text-muted-foreground text-sm">
-                          {fabricator.school || "â€”"}
-                        </div>
+                              <TableCell className="!p-2 align-top text-muted-foreground whitespace-normal min-w-[180px]">
+                                {fabricator.school || "—"}
+                              </TableCell>
 
-                        <div className="text-sm">
-                          {fabricator.phone ? (
-                            <div className="flex items-center gap-1.5">
-                              <Phone size={14} className="shrink-0 text-muted-foreground" />
-                              {fabricator.phone}
-                            </div>
-                          ) : (
-                            <div className="text-muted-foreground">â€”</div>
-                          )}
-                          {fabricator.gcashNumber && (
-                            <div className="text-xs text-muted-foreground/80 mt-1 italic">
-                              GCash: {fabricator.gcashNumber}
-                            </div>
-                          )}
-                        </div>
+                              <TableCell className="!p-2 align-top whitespace-normal min-w-[220px]">
+                                {fabricator.phone ? (
+                                  <div className="flex items-center gap-1.5 text-sm">
+                                    <Phone
+                                      size={14}
+                                      className="shrink-0 text-muted-foreground"
+                                    />
+                                    {fabricator.phone}
+                                  </div>
+                                ) : (
+                                  <div className="text-sm text-muted-foreground">
+                                    —
+                                  </div>
+                                )}
+                                {fabricator.gcashNumber && (
+                                  <div className="text-xs text-muted-foreground/80 mt-1 italic">
+                                    GCash: {fabricator.gcashNumber}
+                                  </div>
+                                )}
+                              </TableCell>
 
-                        <div>
-                          <code className="text-xs font-mono text-muted-foreground">
-                            {fabricator.employeeNumber || "â€”"}
-                          </code>
-                        </div>
+                              <TableCell className="!p-2 align-top">
+                                <code className="text-xs font-mono text-muted-foreground">
+                                  {fabricator.employeeNumber || "—"}
+                                </code>
+                              </TableCell>
 
-                        <div className="flex md:justify-end">
-                          <button
-                            type="button"
-                            className="text-sm font-medium text-primary hover:underline underline-offset-4"
-                            onClick={() => setSelectedFabricatorId(fabricator.id)}
-                          >
-                            View Projects
-                          </button>
-                        </div>
+                              <TableCell className="!p-2 align-top text-right">
+                                <button
+                                  type="button"
+                                  className="text-sm font-medium text-primary hover:underline underline-offset-4"
+                                  onClick={() =>
+                                    setSelectedFabricatorId(fabricator.id)
+                                  }
+                                >
+                                  View Projects
+                                </button>
+                              </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Dialog
+              open={Boolean(selectedFabricatorId)}
+              onOpenChange={(open) => {
+                if (!open) setSelectedFabricatorId(null);
+              }}
+            >
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>
+                    Projects for{" "}
+                    {selectedAssignment?.fabricator.name ?? "Fabricator"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {selectedAssignment?.assignedProjects.length ?? 0} assigned
+                    project
+                    {(selectedAssignment?.assignedProjects.length ?? 0) !== 1
+                      ? "s"
+                      : ""}
+                  </DialogDescription>
+                </DialogHeader>
+
+                {selectedAssignment?.assignedProjects.length ? (
+                  <div className="space-y-2">
+                    {selectedAssignment.assignedProjects.map((project) => (
+                      <div
+                        key={project.id}
+                        className="rounded-md border bg-muted/30 px-3 py-2 text-sm"
+                      >
+                        {project.name}
                       </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Dialog
-            open={Boolean(selectedFabricatorId)}
-            onOpenChange={(open) => {
-              if (!open) setSelectedFabricatorId(null);
-            }}
-          >
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>
-                  Projects for {selectedAssignment?.fabricator.name ?? "Fabricator"}
-                </DialogTitle>
-                <DialogDescription>
-                  {selectedAssignment?.assignedProjects.length ?? 0} assigned project
-                  {(selectedAssignment?.assignedProjects.length ?? 0) !== 1
-                    ? "s"
-                    : ""}
-                </DialogDescription>
-              </DialogHeader>
-
-              {selectedAssignment?.assignedProjects.length ? (
-                <div className="space-y-2">
-                  {selectedAssignment.assignedProjects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="rounded-md border bg-muted/30 px-3 py-2 text-sm"
-                    >
-                      {project.name}
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No assigned projects.
-                </p>
-              )}
-            </DialogContent>
-          </Dialog>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No assigned projects.
+                  </p>
+                )}
+              </DialogContent>
+            </Dialog>
           </>
         )}
 
@@ -1306,4 +1400,3 @@ export function RevenueOverview({
     </div>
   );
 }
-
