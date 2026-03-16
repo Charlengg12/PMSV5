@@ -156,7 +156,7 @@ export function LoginForm({
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 ease-in-out relative">
+    <div className="h-screen overflow-hidden bg-slate-100 dark:bg-slate-950 text-slate-900 dark:text-slate-100 transition-colors duration-500 ease-in-out relative font-[Manrope]">
       <button
         onClick={toggleDarkMode}
         className="absolute top-6 right-6 z-20 p-2 rounded-lg bg-slate-900/10 dark:bg-white/10 hover:bg-slate-900/20 dark:hover:bg-white/20 text-slate-900 dark:text-white transition-all duration-500 ease-in-out"
@@ -221,7 +221,7 @@ export function LoginForm({
                           onChange={(e) => handleInputChange("identifier", e.target.value)}
                           required
                           disabled={isLoading || showLoginAnimation}
-                          className="h-10 pl-10 border-slate-200 dark:border-slate-700 bg-white  text-slate-900 dark:text-white placeholder:text-slate-400 focus-visible:ring-2  dark:focus-visible:ring-white/60 transition-colors duration-500 ease-in-out"
+                          className="h-10 pl-10 border-slate-200 dark:border-slate-700 bg-white  text-slate-00 dark:text-white placeholder:text-slate-400 focus-visible:ring-2  dark:focus-visible:ring-white/60 transition-colors duration-500 ease-in-out font-[Manrope]"
                         />
                       </div>
                       <p className="text-[11px] text-slate-400 dark:text-slate-500 transition-colors duration-500 ease-in-out">
@@ -237,7 +237,7 @@ export function LoginForm({
                         <button
                           type="button"
                           onClick={onShowForgotPassword}
-                          className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors duration-500 ease-in-out"
+                          className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors duration-500 ease-in-out font-[Manrope]"
                           disabled={isLoading || showLoginAnimation}
                         >
                           Forgot Password?

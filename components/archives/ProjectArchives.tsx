@@ -196,7 +196,7 @@ export function ProjectArchives({
       confirmButtonText: "Confirm",
       customClass: {
         container: "swal-container !z-[10000]",
-        popup: "swal-popup",
+        popup: "swal-popup swal-actions-right",
         title: "swal-title",
         htmlContainer: "swal-content",
         confirmButton: "swal-confirm-button",
@@ -212,7 +212,7 @@ export function ProjectArchives({
           showConfirmButton: false,
           customClass: {
             container: "swal-container !z-[10000]",
-            popup: "swal-popup",
+            popup: "swal-popup swal-actions-right",
             title: "swal-title",
             htmlContainer: "swal-content",
             confirmButton: "swal-confirm-button",
@@ -234,7 +234,7 @@ export function ProjectArchives({
             icon: "success",
             customClass: {
               container: "swal-container !z-[10000]",
-              popup: "swal-popup",
+              popup: "swal-popup swal-actions-right",
               title: "swal-title",
               htmlContainer: "swal-content",
               confirmButton: "swal-confirm-button",
@@ -249,12 +249,14 @@ export function ProjectArchives({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="flex items-center gap-2 text-xl sm:text-2xl">
-            <Archive className="h-5 w-5 sm:h-6 sm:w-6 text-blue-700" />
-            Archive
-          </h2>
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Archive className="h-6 w-6 text-blue-700" />
+            <h1 className="text-3xl font-bold tracking-tight">
+              Project Archives
+            </h1>
+          </div>
           <p className="text-sm text-muted-foreground">
             Completed projects with documentation and cost analysis
           </p>
@@ -270,9 +272,9 @@ export function ProjectArchives({
       </div>
 
       {/* Filters */}
-      <Card className="p-4 sm:p-6">
+      <Card className="p-4 sm:p-6 border border-border/60 shadow-sm rounded-[24px]">
         <CardHeader className="p-0">
-          <CardTitle className="text-base">Filter Archives</CardTitle>
+          <CardTitle className="text-lg font-semibold">Filter Archives</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -324,12 +326,12 @@ export function ProjectArchives({
           return (
             <Card
               key={project.id}
-              className="hover:shadow-md transition-shadow p-4 sm:p-6"
+              className="hover:shadow-md transition-shadow p-4 sm:p-6 border border-border/60 bg-card rounded-[24px]"
             >
               <CardHeader className="p-0">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex-1">
-                    <CardTitle className="text-lg">
+                    <CardTitle className="text-xl font-semibold">
                       {safeText(project.name)}
                     </CardTitle>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -428,7 +430,7 @@ export function ProjectArchives({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full lg:flex-1 bg-green-200 hover:bg-green-700"
+                      className="w-full lg:flex-1 bg-green-200 hover:bg-green-400"
                       onClick={() => handleViewDetails(project)}
                     >
                       <Eye className="h-4 w-4 mr-2" />
@@ -453,7 +455,7 @@ export function ProjectArchives({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full lg:flex-1 text-primary bg-blue-200 hover:bg-blue-700"
+                          className="w-full lg:flex-1 text-primary bg-blue-200 hover:bg-blue-400"
                           onClick={() => {
                             setSelectedProject(project);
                             setShowEditDialog(true);
@@ -465,7 +467,7 @@ export function ProjectArchives({
                         <Button
                           variant="outline"
                           size="sm"
-                          className="w-full lg:flex-1 bg-red-200 text-destructive hover:text-white hover:bg-red-700"
+                          className="w-full lg:flex-1 bg-red-200 text-destructive hover:text-white hover:bg-red-400"
                           onClick={() => handleDeleteClick(project)}
                         >
                           <Trash2 className="h-4 w-4 mr-2 " />
@@ -482,7 +484,7 @@ export function ProjectArchives({
       </div>
 
       {filteredProjects.length === 0 && (
-        <Card className="p-4 sm:p-6">
+        <Card className="p-4 sm:p-6 rounded-[24px]">
           <CardContent>
             <div className="text-center py-12">
               <Archive className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
@@ -534,7 +536,7 @@ export function ProjectArchives({
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label>Project Description</Label>
-                      <p className="text-sm mt-1">
+                      <p className="text-sm mt-1 overflow-hidden text-ellipsis">
                         {safeText(selectedProject.description)}
                       </p>
                     </div>
