@@ -116,7 +116,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       },
       customClass: {
         container: "swal-container",
-        popup: "swal-popup",
+        popup: "swal-popup swal-actions-right",
         title: "swal-title",
         htmlContainer: "swal-content",
         confirmButton: "swal-confirm-button",

@@ -74,8 +74,16 @@
   background-color: white;
 }
 .swal2-actions {
-  gap: 5px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
   margin-top: 20px;
+}
+.swal2-actions .swal2-confirm {
+  order: 2;
+}
+.swal2-actions .swal2-cancel {
+  order: 1;
 }
 .swal-actions-right .swal2-actions {
   justify-content: flex-end;
