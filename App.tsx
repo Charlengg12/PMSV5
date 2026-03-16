@@ -23,6 +23,7 @@ import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
 import { ActivityLogs } from "./components/logs/ActivityLogs";
 import { TeamOverview } from "./components/team/TeamOverview";
 import { ClientBilling } from "./components/revenue/ClientBilling";
+import { LayoutDashboard } from "lucide-react";
 // import { AdminProjectsManager } from './components/admin/AdminProjectsManager';
 // import { AdminTasksManager } from './components/admin/AdminTasksManager';
 import {
@@ -1595,6 +1596,17 @@ export default function App() {
       case "dashboard":
         return (
           <div className="space-y-6">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <LayoutDashboard className="h-6 w-6 text-orange-400" />
+                <h1 className="text-3xl font-bold tracking-tight">
+                  Dashboard
+                </h1>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                View your latest project activity, task progress, and team summary.
+              </p>
+            </div>
             <DashboardStats
               projects={projects}
               tasks={tasks}

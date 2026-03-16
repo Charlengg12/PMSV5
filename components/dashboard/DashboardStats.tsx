@@ -211,30 +211,34 @@ export function DashboardStats({
         {stats.map((stat, index) => (
           <Card
             key={stat.title}
-            className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-all cursor-pointer md:hover:scale-105 active:scale-95 p-4 sm:p-6"
+            className="cursor-pointer overflow-hidden rounded-[24px] border border-[#e8ebf0] bg-white p-0 shadow-[0_12px_30px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_40px_rgba(15,23,42,0.1)] dark:border-slate-700 dark:bg-slate-900"
             onClick={stat.onClick}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 bg-gradient-to-br from-primary/5 to-transparent px-0">
-              <CardTitle className="text-xs md:text-sm font-medium">
-                {stat.title}
-              </CardTitle>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0 p-5 pb-4">
+              <div>
+                <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {stat.title}
+                </CardTitle>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-white">
+                  {stat.value}
+                </div>
+              </div>
               <div
-                className={`p-1.5 md:p-2 rounded-lg ${
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${
                   index === 0
-                    ? "bg-primary/10 text-primary"
+                    ? "border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300"
                     : index === 1
-                      ? "bg-accent/10 text-accent"
+                      ? "border-emerald-100 bg-emerald-50 text-emerald-600 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-300"
                       : index === 2
-                        ? "bg-secondary/10 text-secondary"
-                        : "bg-accent/10 text-accent"
+                        ? "border-violet-100 bg-violet-50 text-violet-600 dark:border-violet-900/60 dark:bg-violet-950/50 dark:text-violet-300"
+                        : "border-amber-100 bg-amber-50 text-amber-600 dark:border-amber-900/60 dark:bg-amber-950/50 dark:text-amber-300"
                 }`}
               >
-                <stat.icon className="h-4 w-4 md:h-5 md:w-5 dark:text-white" />
+                <stat.icon className="h-5 w-5" />
               </div>
             </CardHeader>
-            <CardContent className="pt-4 px-0">
-              <div className="text-2xl md:text-3xl font-bold">{stat.value}</div>
-              <p className="text-[10px] md:text-sm text-muted-foreground mt-1 truncate">
+            <CardContent className="border-t border-dashed border-[#e8ebf0] px-5 py-4 dark:border-slate-700/80">
+              <p className="text-sm text-slate-500 dark:text-slate-400">
                 {stat.description}
               </p>
             </CardContent>
