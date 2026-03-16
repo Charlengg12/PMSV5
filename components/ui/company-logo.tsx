@@ -48,7 +48,7 @@ export function CompanyLogo({
       {showText && (
         <div className="flex flex-col">
           <span
-            className={`${textSizeClasses[size]} leading-none tracking-tight text-primary font-bold`}
+            className={`${textSizeClasses[size]} leading-none tracking-tight text-primary dark:text-orange-300 font-bold`}
           >
             Ehub
           </span>
