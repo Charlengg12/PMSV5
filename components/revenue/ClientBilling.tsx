@@ -39,6 +39,7 @@ import {
   RefreshCcw,
   X,
   CreditCard,
+  Search,
 } from "lucide-react";
 import { format } from "date-fns";
 import Swal from "sweetalert2";
@@ -49,6 +50,7 @@ export function ClientBilling() {
 
   // -- Filter State --
   const [statusFilter, setStatusFilter] = useState("all");
+  const [projectSearch, setProjectSearch] = useState("");
 
   // -- Modal State --
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -91,9 +93,20 @@ export function ClientBilling() {
   const selectedProjectData = billingData.find((p) => p.id === selectedProject);
 
   const getFilteredData = () => {
-    if (statusFilter === "all") return billingData;
-
     return billingData.filter((item) => {
+      const matchesSearch =
+        projectSearch.trim() === "" ||
+        String(item.title || "")
+          .toLowerCase()
+          .includes(projectSearch.toLowerCase().trim()) ||
+        String(item.client_name || "")
+          .toLowerCase()
+          .includes(projectSearch.toLowerCase().trim());
+
+      if (!matchesSearch) return false;
+
+      if (statusFilter === "all") return true;
+
       const cost = parseFloat(item.total_cost || 0);
       const paid = parseFloat(item.total_paid || 0);
       const balance = parseFloat(item.balance || 0);
@@ -355,29 +368,23 @@ export function ClientBilling() {
   const totalReceivable = totalRevenue - totalCollected;
 
   return (
-    <div className="flex flex-col gap-6 min-h-screen">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6 mb-6">
-        {/* Left Side: Text Content */}
-        <div className="space-y-1">
-          {/* Title Row - Flex container handles the vertical centering */}
-          <div className="flex items-center gap-3">
-            {/* Icon: Fixed to h-6 w-6 (24px) on all screens. No resizing. */}
-            <CreditCard className="h-6 w-6 dark:text-blue-400 shrink-0" />
-            <h2 className="text-xl sm:text-2xl font-bold">Client Billing</h2>
-          </div>
-
+    <div className="flex min-h-screen flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-left">
+          <h2 className="text-xl font-bold sm:text-2xl">
+            <CreditCard className="mr-2 mb-1 inline-block h-6 w-6 text-orange-400" />
+            Client Billing
+          </h2>
           <p className="text-sm text-muted-foreground">
-            Manage invoices, track payments, and receivables.
+            Manage invoices, track payments, and receivables
           </p>
         </div>
 
-        {/* Right Side: Actions */}
-        <div className="flex flex-col-reverse sm:flex-row items-center gap-3 w-full sm:w-auto">
+        <div className="flex w-full flex-col-reverse items-center gap-3 sm:w-auto sm:flex-row">
           <Button
             variant="outline"
             onClick={fetchData}
-            className="h-10 w-full sm:w-10 sm:px-0 shrink-0"
+            className="h-11 w-full shrink-0 rounded-2xl border-[#d9e5f2] bg-white font-semibold text-[#123a68] shadow-sm hover:bg-[#f8fbff] hover:text-[#123a68] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-11 sm:px-0"
           >
             <RefreshCcw
               className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
@@ -387,7 +394,7 @@ export function ClientBilling() {
 
           <Button
             onClick={() => setIsModalOpen(true)}
-            className="w-full sm:w-auto flex-1 sm:flex-none shadow-sm"
+            className="w-full flex-1 rounded-2xl bg-[#123a68] shadow-sm hover:bg-[#0f3055] dark:bg-blue-700 dark:hover:bg-blue-600 sm:w-auto sm:flex-none"
           >
             <Plus className="mr-2 h-4 w-4" />
             <span className="whitespace-nowrap">Record Payment</span>
@@ -396,42 +403,46 @@ export function ClientBilling() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-3">
-        <Card className="shadow-sm border-l-[6px] border-l-primary">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pl-6">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+        <Card className="overflow-hidden rounded-[1.25rem] border border-[#e7edf4] bg-white shadow-[0_10px_26px_rgba(15,23,42,0.045)] dark:border-slate-700 dark:bg-slate-900">
+          <CardHeader className="flex flex-row items-center justify-between px-5 pb-0 pt-4">
+            <CardTitle className="text-sm font-medium text-[#5b6b82] dark:text-slate-300">
               Total Contract Value
             </CardTitle>
-            <Wallet className="h-4 w-4 text-primary" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#dbeafe] bg-[#eff6ff] dark:border-slate-700 dark:bg-slate-800">
+              <Wallet className="h-4.5 w-4.5 text-[#2563eb]" />
+            </div>
           </CardHeader>
-          <CardContent className="pl-6 pb-6">
+          <CardContent className="px-5 pb-4 pt-2">
             <div
-              className="text-xl sm:text-2xl font-bold truncate"
+              className="truncate text-[1.45rem] font-bold leading-none tracking-[-0.03em] text-[#0f172a] dark:text-white"
               title={formatMoney(totalRevenue)}
             >
               {formatMoney(totalRevenue)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-2 text-sm leading-5 text-[#6b7b93] dark:text-slate-400">
               Across all active projects
             </p>
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-l-[6px] border-l-green-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pl-6">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="overflow-hidden rounded-[1.25rem] border border-[#e7edf4] bg-white shadow-[0_10px_26px_rgba(15,23,42,0.045)] dark:border-slate-700 dark:bg-slate-900">
+          <CardHeader className="flex flex-row items-center justify-between px-5 pb-0 pt-4">
+            <CardTitle className="text-sm font-medium text-[#5b6b82] dark:text-slate-300">
               Total Collected
             </CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#dff6e8] bg-[#f2fcf6] dark:border-slate-700 dark:bg-slate-800">
+              <TrendingUp className="h-4.5 w-4.5 text-green-600 dark:text-emerald-400" />
+            </div>
           </CardHeader>
-          <CardContent className="pl-6 pb-6">
+          <CardContent className="px-5 pb-4 pt-2">
             <div
-              className="text-xl sm:text-2xl font-bold text-green-600 truncate"
+              className="truncate text-[1.45rem] font-bold leading-none tracking-[-0.03em] text-green-600 dark:text-emerald-400"
               title={formatMoney(totalCollected)}
             >
               {formatMoney(totalCollected)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-2 text-sm leading-5 text-[#6b7b93] dark:text-slate-400">
               {totalRevenue > 0
                 ? ((totalCollected / totalRevenue) * 100).toFixed(1)
                 : 0}
@@ -440,21 +451,23 @@ export function ClientBilling() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-sm border-l-[6px] border-l-red-500">
-          <CardHeader className="flex flex-row items-center justify-between pb-2 pl-6">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
+        <Card className="overflow-hidden rounded-[1.25rem] border border-[#e7edf4] bg-white shadow-[0_10px_26px_rgba(15,23,42,0.045)] dark:border-slate-700 dark:bg-slate-900">
+          <CardHeader className="flex flex-row items-center justify-between px-5 pb-0 pt-4">
+            <CardTitle className="text-sm font-medium text-[#5b6b82] dark:text-slate-300">
               Outstanding Balance
             </CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-600" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-[#fee2e2] bg-[#fff5f5] dark:border-slate-700 dark:bg-slate-800">
+              <AlertCircle className="h-4.5 w-4.5 text-red-600 dark:text-red-400" />
+            </div>
           </CardHeader>
-          <CardContent className="pl-6 pb-6">
+          <CardContent className="px-5 pb-4 pt-2">
             <div
-              className="text-xl sm:text-2xl font-bold text-red-600 truncate"
+              className="truncate text-[1.45rem] font-bold leading-none tracking-[-0.03em] text-red-600 dark:text-red-400"
               title={formatMoney(totalReceivable)}
             >
               {formatMoney(totalReceivable)}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="mt-2 text-sm leading-5 text-[#6b7b93] dark:text-slate-400">
               Pending collection
             </p>
           </CardContent>
@@ -462,55 +475,66 @@ export function ClientBilling() {
       </div>
 
       {/* Main Table Card */}
-      <Card className="shadow-sm overflow-hidden">
-        <CardHeader className="border-b bg-card px-6 py-4">
+      <Card className="overflow-hidden rounded-[1.75rem] border border-[#e7edf4] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)] dark:border-slate-700 dark:bg-slate-900">
+        <CardHeader className="border-b border-[#edf2f7] px-6 py-5 dark:border-slate-800">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <CardTitle>Project Accounts</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-[#123a68] dark:text-white">Project Accounts</CardTitle>
+              <CardDescription className="mt-1 text-[#6b7b93] dark:text-slate-400">
                 Click on a row to view detailed payment history.
               </CardDescription>
             </div>
 
-            {/* Status Filter */}
-            <div className="w-full sm:w-[200px]">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger>
-                  <div className="flex items-center gap-2">
-                    <Filter className="h-4 w-4 text-muted-foreground" />
-                    <SelectValue placeholder="Filter by status" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Projects</SelectItem>
-                  <SelectItem value="unpaid">Unpaid</SelectItem>
-                  <SelectItem value="partial">Partially Paid</SelectItem>
-                  <SelectItem value="paid">Fully Paid</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
+              <div className="relative w-full sm:w-[260px]">
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground dark:text-slate-400" />
+                <Input
+                  value={projectSearch}
+                  onChange={(e) => setProjectSearch(e.target.value)}
+                  placeholder="Search Project..."
+                  className="h-11 rounded-2xl border-[#d9e5f2] bg-white pl-11 text-[#123a68] shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="w-full sm:w-[200px]">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-11 rounded-2xl border-[#d9e5f2] bg-white text-[#123a68] shadow-sm dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
+                      <SelectValue placeholder="Filter by status" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Projects</SelectItem>
+                    <SelectItem value="unpaid">Unpaid</SelectItem>
+                    <SelectItem value="partial">Partially Paid</SelectItem>
+                    <SelectItem value="paid">Fully Paid</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto p-5">
             <Table>
-              <TableHeader className="bg-muted/50 ">
+              <TableHeader className="bg-[#123a68] [&_tr]:border-[#123a68]">
                 <TableRow>
                   <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="min-w-[200px] text-white">
+                  <TableHead className="min-w-[220px] px-4 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-white">
                     Project / Client
                   </TableHead>
-                  <TableHead className="text-white">Status</TableHead>
-                  <TableHead className="text-right whitespace-nowrap text-white">
+                  <TableHead className="px-4 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-white">Status</TableHead>
+                  <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-semibold uppercase tracking-[0.14em] text-white">
                     Total Cost
                   </TableHead>
-                  <TableHead className="text-right whitespace-nowrap text-white">
+                  <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-semibold uppercase tracking-[0.14em] text-white">
                     Paid
                   </TableHead>
-                  <TableHead className="text-right whitespace-nowrap text-white">
+                  <TableHead className="px-4 py-4 text-right whitespace-nowrap text-xs font-semibold uppercase tracking-[0.14em] text-white">
                     Balance
                   </TableHead>
-                  <TableHead className="w-[180px] min-w-[150px] text-white">
+                  <TableHead className="w-[180px] min-w-[150px] px-4 py-4 text-xs font-semibold uppercase tracking-[0.14em] text-white">
                     Payment Progress
                   </TableHead>
                 </TableRow>
@@ -520,7 +544,7 @@ export function ClientBilling() {
                   <TableRow>
                     <TableCell
                       colSpan={7}
-                      className="text-center py-12 text-muted-foreground"
+                      className="py-14 text-center text-muted-foreground dark:text-slate-400"
                     >
                       Loading financial data...
                     </TableCell>
@@ -529,7 +553,7 @@ export function ClientBilling() {
                   <TableRow>
                     <TableCell
                       colSpan={7}
-                      className="text-center py-12 text-muted-foreground"
+                      className="py-14 text-center text-muted-foreground dark:text-slate-400"
                     >
                       No projects found matching that filter.
                     </TableCell>
@@ -547,22 +571,22 @@ export function ClientBilling() {
                       <>
                         <TableRow
                           key={item.id}
-                          className={`cursor-pointer transition-colors ${isExpanded ? "bg-muted/50" : "hover:bg-muted/30"}`}
+                          className={`cursor-pointer border-[#edf2f7] transition-colors dark:border-slate-800 ${isExpanded ? "bg-[#f7fbff] dark:bg-slate-800/70" : "hover:bg-[#f9fbfe] dark:hover:bg-slate-800/40"}`}
                           onClick={() => toggleRow(item.id)}
                         >
                           <TableCell className="pl-4">
                             {isExpanded ? (
-                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                              <ChevronDown className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
                             ) : (
-                              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                              <ChevronRight className="h-4 w-4 text-muted-foreground dark:text-slate-400" />
                             )}
                           </TableCell>
                           <TableCell>
                             <div className="flex flex-col">
-                              <span className="font-semibold text-foreground">
+                              <span className="font-semibold text-[#123a68] dark:text-white">
                                 {item.title}
                               </span>
-                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                              <span className="flex items-center gap-1 text-xs text-muted-foreground dark:text-slate-400">
                                 {item.client_name || "Unknown Client"}
                               </span>
                             </div>
@@ -571,45 +595,42 @@ export function ClientBilling() {
                             {isFullyPaid ? (
                               <Badge
                                 variant="default"
-                                className="bg-green-600/15 text-green-700 hover:bg-green-600/25 border-green-200 shadow-none"
+                                className="border-green-200 bg-green-600/15 text-green-700 shadow-none hover:bg-green-600/25 dark:border-green-900 dark:bg-green-950/60 dark:text-green-300"
                               >
                                 Fully Paid
                               </Badge>
                             ) : paid > 0 ? (
                               <Badge
                                 variant="secondary"
-                                className="bg-blue-600/10 text-blue-700 hover:bg-blue-600/20 border-blue-200"
+                                className="border-blue-200 bg-blue-600/10 text-blue-700 hover:bg-blue-600/20 dark:border-blue-900 dark:bg-blue-950/60 dark:text-blue-300"
                               >
                                 Partial
                               </Badge>
                             ) : (
                               <Badge
                                 variant="outline"
-                                className="text-muted-foreground"
+                                className="text-muted-foreground dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
                               >
                                 Unpaid
                               </Badge>
                             )}
                           </TableCell>
-                          <TableCell className="text-right font-medium whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap text-right font-medium dark:text-slate-200">
                             {formatMoney(cost)}
                           </TableCell>
-                          <TableCell className="text-right text-green-600 font-medium whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap text-right font-medium text-green-600 dark:text-emerald-400">
                             {formatMoney(paid)}
                           </TableCell>
-                          <TableCell className="text-right text-red-600 font-medium whitespace-nowrap">
+                          <TableCell className="whitespace-nowrap text-right font-medium text-red-600 dark:text-red-400">
                             {formatMoney(balance)}
                           </TableCell>
                           <TableCell className="pr-6">
                             <div className="flex items-center gap-3">
                               <Progress
                                 value={percent}
-                                className="h-2 w-full"
-                                indicatorColor={
-                                  isFullyPaid ? "bg-green-600" : ""
-                                }
+                                className="h-2.5 w-full bg-[#dbeafe] dark:bg-slate-800"
                               />
-                              <span className="text-xs font-medium text-muted-foreground w-9 text-right">
+                              <span className="w-9 text-right text-xs font-medium text-muted-foreground dark:text-slate-400">
                                 {Math.min(Math.round(percent), 100)}%
                               </span>
                             </div>
@@ -618,36 +639,36 @@ export function ClientBilling() {
 
                         {/* EXPANDED HISTORY ROW */}
                         {isExpanded && (
-                          <TableRow className="bg-muted/30 hover:bg-muted/30 border-t-0 shadow-inner">
+                          <TableRow className="border-t-0 bg-[#f8fbfe] shadow-inner hover:bg-[#f8fbfe] dark:bg-slate-950/70 dark:hover:bg-slate-950/70">
                             <TableCell colSpan={7} className="p-0">
                               <div className="py-4 px-4 md:pl-14 md:pr-4 overflow-x-auto">
-                                <div className="bg-card rounded-lg border shadow-sm">
-                                  <div className="flex items-center justify-between p-3 border-b bg-muted/20">
-                                    <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                <div className="rounded-[1.25rem] border border-[#e7edf4] bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+                                  <div className="flex items-center justify-between border-b border-[#edf2f7] bg-[#f8fbfe] p-4 dark:border-slate-800 dark:bg-slate-950">
+                                    <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:text-slate-400">
                                       Transaction History
                                     </h4>
-                                    <span className="text-xs text-muted-foreground">
+                                    <span className="text-xs text-muted-foreground dark:text-slate-500">
                                       ID: {item.id}
                                     </span>
                                   </div>
                                   {item.payment_history &&
                                   item.payment_history.length > 0 ? (
                                     <Table>
-                                      <TableHeader>
+                                      <TableHeader className="bg-[#123a68] [&_tr]:border-[#123a68]">
                                         <TableRow className="hover:bg-transparent">
-                                          <TableHead className="h-9 text-xs text-white">
+                                          <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-[0.14em] !text-white">
                                             Date
                                           </TableHead>
-                                          <TableHead className="h-9 text-xs text-white">
+                                          <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-[0.14em] !text-white">
                                             Method
                                           </TableHead>
-                                          <TableHead className="h-9 text-xs text-white">
+                                          <TableHead className="h-10 px-4 text-xs font-semibold uppercase tracking-[0.14em] !text-white">
                                             Reference
                                           </TableHead>
-                                          <TableHead className="h-9 text-xs text-white text-right">
+                                          <TableHead className="h-10 px-4 text-right text-xs font-semibold uppercase tracking-[0.14em] !text-white">
                                             Amount
                                           </TableHead>
-                                          <TableHead className="h-9 text-xs text-white text-right w-[50px]"></TableHead>
+                                          <TableHead className="h-10 w-[50px] px-4 text-right text-xs font-semibold uppercase tracking-[0.14em] !text-white"></TableHead>
                                         </TableRow>
                                       </TableHeader>
                                       <TableBody>
@@ -655,24 +676,24 @@ export function ClientBilling() {
                                           (hist: any) => (
                                             <TableRow
                                               key={hist.id}
-                                              className="h-10 hover:bg-muted/20"
+                                              className="h-11 border-[#edf2f7] hover:bg-[#f8fbfe] dark:border-slate-800 dark:hover:bg-slate-800/40"
                                             >
-                                              <TableCell className="py-2 text-sm whitespace-nowrap">
+                                              <TableCell className="whitespace-nowrap py-2 text-sm dark:text-slate-200">
                                                 <div className="flex items-center gap-2">
-                                                  <CalendarIcon className="h-3 w-3 text-muted-foreground" />
+                                                  <CalendarIcon className="h-3 w-3 text-muted-foreground dark:text-slate-400" />
                                                   {format(
                                                     new Date(hist.payment_date),
                                                     "MMM d, yyyy",
                                                   )}
                                                 </div>
                                               </TableCell>
-                                              <TableCell className="py-2 text-sm">
+                                              <TableCell className="py-2 text-sm dark:text-slate-200">
                                                 {hist.method}
                                               </TableCell>
-                                              <TableCell className="py-2 text-sm font-mono text-muted-foreground">
+                                              <TableCell className="py-2 text-sm font-mono text-muted-foreground dark:text-slate-400">
                                                 {hist.reference || "-"}
                                               </TableCell>
-                                              <TableCell className="py-2 text-sm text-right font-medium">
+                                              <TableCell className="py-2 text-right text-sm font-medium dark:text-slate-200">
                                                 {formatMoney(
                                                   parseFloat(hist.amount),
                                                 )}
@@ -681,7 +702,7 @@ export function ClientBilling() {
                                                 <Button
                                                   variant="ghost"
                                                   size="icon"
-                                                  className="h-7 w-7 text-muted-foreground hover:text-red-600 hover:bg-red-50"
+                                                  className="h-8 w-8 text-muted-foreground hover:bg-red-50 hover:text-red-600 dark:text-slate-400 dark:hover:bg-red-950/40 dark:hover:text-red-400"
                                                   onClick={(e) => {
                                                     e.stopPropagation();
                                                     handleDeletePayment(
@@ -699,8 +720,8 @@ export function ClientBilling() {
                                     </Table>
                                   ) : (
                                     <div className="flex flex-col items-center justify-center py-8 text-center">
-                                      <Wallet className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                                      <p className="text-sm text-muted-foreground">
+                                      <Wallet className="mb-2 h-8 w-8 text-muted-foreground/30 dark:text-slate-600" />
+                                      <p className="text-sm text-muted-foreground dark:text-slate-400">
                                         No payment records found.
                                       </p>
                                     </div>
@@ -723,12 +744,12 @@ export function ClientBilling() {
       {/* CUSTOM MODAL */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="modal bg-card w-full max-w-lg mx-4 sm:mx-6 rounded-xl shadow-2xl border border-border overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+          <div className="modal mx-4 w-full max-w-lg overflow-hidden rounded-[1.6rem] border border-[#e5edf5] bg-white shadow-2xl animate-in fade-in zoom-in-95 duration-200 dark:border-slate-700 dark:bg-slate-950 sm:mx-6">
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b">
+            <div className="flex items-center justify-between border-b border-[#edf2f7] p-6 dark:border-slate-800">
               <div>
-                <h2 className="text-xl font-semibold">Record New Payment</h2>
-                <p className="text-sm text-muted-foreground mt-1">
+                <h2 className="text-xl font-semibold text-[#123a68] dark:text-white">Record New Payment</h2>
+                <p className="mt-1 text-sm text-muted-foreground dark:text-slate-400">
                   Enter the payment details below.
                 </p>
               </div>
@@ -736,7 +757,7 @@ export function ClientBilling() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setIsModalOpen(false)}
-                className="h-8 w-8"
+                className="h-9 w-9 rounded-2xl text-[#5b6b82] hover:bg-[#f5f8fc] hover:text-[#123a68] dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 <X className="h-4 w-4" />
               </Button>
@@ -746,14 +767,14 @@ export function ClientBilling() {
             <div className="p-6 space-y-6">
               {/* Project Select */}
               <div className="space-y-2">
-                <label className="text-sm font-medium leading-none">
+                <label className="text-sm font-medium leading-none text-[#123a68] dark:text-slate-200">
                   Select Project
                 </label>
                 <Select
                   value={selectedProject}
                   onValueChange={setSelectedProject}
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="h-11 w-full rounded-2xl border-[#d9e5f2] bg-white text-[#123a68] shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                     <SelectValue placeholder="Search or select a project..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -772,11 +793,11 @@ export function ClientBilling() {
               {/* Amount & Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">
+                  <label className="text-sm font-medium leading-none text-[#123a68] dark:text-slate-200">
                     Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-2.5 text-muted-foreground">
+                    <span className="absolute left-3 top-2.5 text-muted-foreground dark:text-slate-400">
                       ₱
                     </span>
                     <Input
@@ -784,16 +805,16 @@ export function ClientBilling() {
                       min={0}
                       max={1000000}
                       step="0.01"
-                      className="pl-7"
+                      className="h-11 rounded-2xl border-[#d9e5f2] bg-white pl-7 shadow-sm dark:border-slate-700 dark:bg-slate-900"
                       value={amount}
                       onChange={(e) => setAmount(e.target.value)}
                       placeholder="0.00"
                     />
                   </div>
                   {selectedProjectData && (
-                    <p className="text-[11px] text-muted-foreground text-right mt-1">
+                    <p className="mt-1 text-right text-[11px] text-muted-foreground dark:text-slate-400">
                       Max allowed:{" "}
-                      <span className="font-medium text-foreground">
+                      <span className="font-medium text-foreground dark:text-slate-200">
                         {formatMoney(
                           Math.min(
                             parseFloat(selectedProjectData.total_cost) -
@@ -807,13 +828,14 @@ export function ClientBilling() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">
+                  <label className="text-sm font-medium leading-none text-[#123a68] dark:text-slate-200">
                     Date Received
                   </label>
                   <Input
                     type="date"
                     value={date}
                     onChange={(e) => setDate(e.target.value)}
+                    className="h-11 rounded-2xl border-[#d9e5f2] bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
                   />
                 </div>
               </div>
@@ -821,11 +843,11 @@ export function ClientBilling() {
               {/* Method & Reference */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">
+                  <label className="text-sm font-medium leading-none text-[#123a68] dark:text-slate-200">
                     Payment Method
                   </label>
                   <Select value={method} onValueChange={setMethod}>
-                    <SelectTrigger>
+                    <SelectTrigger className="h-11 rounded-2xl border-[#d9e5f2] bg-white text-[#123a68] shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -841,24 +863,34 @@ export function ClientBilling() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">
+                  <label className="text-sm font-medium leading-none text-[#123a68] dark:text-slate-200">
                     Reference No. (Optional)
                   </label>
                   <Input
                     value={reference}
                     onChange={(e) => setReference(e.target.value)}
                     placeholder="e.g. Check #12345"
+                    className="h-11 rounded-2xl border-[#d9e5f2] bg-white shadow-sm dark:border-slate-700 dark:bg-slate-900"
                   />
                 </div>
               </div>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-end gap-3 px-6 py-4 border-t bg-muted/40">
-              <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+            <div className="flex items-center justify-end gap-3 border-t border-[#edf2f7] bg-[#f8fbfe] px-6 py-4 dark:border-slate-800 dark:bg-slate-900">
+              <Button
+                variant="outline"
+                onClick={() => setIsModalOpen(false)}
+                className="rounded-2xl border-[#d9e5f2] bg-white font-semibold text-[#123a68] hover:bg-[#f8fbff] hover:text-[#123a68] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
+              >
                 Cancel
               </Button>
-              <Button onClick={handleAddPayment}>Save Payment</Button>
+              <Button
+                onClick={handleAddPayment}
+                className="rounded-2xl bg-[#123a68] hover:bg-[#0f3055] dark:bg-blue-700 dark:hover:bg-blue-600"
+              >
+                Save Payment
+              </Button>
             </div>
           </div>
         </div>
