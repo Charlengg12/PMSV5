@@ -24,6 +24,11 @@ import {
   SquareCheckBig,
   Search,
   X,
+  Layers3,
+  MinusCircle,
+  CircleDot,
+  ArrowUpCircle,
+  Siren,
 } from "lucide-react";
 import { Task, Project, User as UserType } from "../../types";
 
@@ -209,6 +214,19 @@ export function TaskManager({
   };
 
   const roleFilteredTasks = getFilteredTasksByRole();
+  const totalTasksCount = roleFilteredTasks.length;
+  const totalLowPriorityCount = roleFilteredTasks.filter(
+    (task) => task.priority === "low",
+  ).length;
+  const totalMediumPriorityCount = roleFilteredTasks.filter(
+    (task) => task.priority === "medium",
+  ).length;
+  const totalHighPriorityCount = roleFilteredTasks.filter(
+    (task) => task.priority === "high",
+  ).length;
+  const totalUrgentPriorityCount = roleFilteredTasks.filter(
+    (task) => task.priority === "urgent",
+  ).length;
 
   const searchedTasks = roleFilteredTasks.filter((task) => {
     if (!searchTerm.trim()) return true;
@@ -646,15 +664,16 @@ export function TaskManager({
 
   return (
     <div className="space-y-6">
-      {/* Main Page Header (unchanged) */}
       <div className="z-10 bg-background border-b pb-4 mb-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="text-left">
-            <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
-              <SquareCheckBig className="h-6 w-6 text-blue-700" />
-              Task Management
-            </h1>
-            <p className="text-sm text-muted-foreground mt-1">
+            <div className="flex items-center gap-3">
+              <SquareCheckBig className="h-6 w-6 text-orange-400" />
+              <h1 className="text-3xl font-bold tracking-tight">
+                Task Management
+              </h1>
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
               Create, manage, and track project tasks
             </p>
           </div>
@@ -666,6 +685,103 @@ export function TaskManager({
                 Create Task
               </Button>
             )}
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5 mt-5">
+          <div className="overflow-hidden rounded-[1.5rem] border border-[#e8ebf0] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  All Tasks
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalTasksCount}
+                </div>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  Total tasks in your current view
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300">
+                <Layers3 className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[1.5rem] border border-[#e8ebf0] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Low
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalLowPriorityCount}
+                </div>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  Lower urgency work items
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                <MinusCircle className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[1.5rem] border border-[#e8ebf0] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Medium
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalMediumPriorityCount}
+                </div>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  Balanced day-to-day tasks
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300">
+                <CircleDot className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[1.5rem] border border-[#e8ebf0] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  High
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalHighPriorityCount}
+                </div>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  Important tasks needing focus
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-orange-100 bg-orange-50 text-orange-600 dark:border-orange-900/60 dark:bg-orange-950/50 dark:text-orange-300">
+                <ArrowUpCircle className="h-5 w-5" />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[1.5rem] border border-[#e8ebf0] bg-white p-5 shadow-[0_12px_30px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Urgent
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalUrgentPriorityCount}
+                </div>
+                <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+                  Highest priority tasks right now
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-red-100 bg-red-50 text-red-600 dark:border-red-900/60 dark:bg-red-950/50 dark:text-red-300">
+                <Siren className="h-5 w-5" />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -692,32 +808,38 @@ export function TaskManager({
         {searchedTasks.map((task) => (
           <div
             key={task.id}
-            className="bg-card text-card-foreground rounded-lg border shadow-sm hover:shadow-md transition-shadow p-4 sm:p-6"
+            className="rounded-[2rem] border border-[#e8ebf0] bg-white p-5 shadow-[0_16px_40px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(15,23,42,0.1)] dark:border-slate-700 dark:bg-slate-900 sm:p-6"
           >
-            <div className="flex flex-col gap-3 mb-4">
+            <div className="mb-5 flex flex-col gap-4">
               <div className="flex-1">
-                <h3 className="text-lg font-semibold leading-tight">
+                <h3 className="text-xl font-bold leading-tight text-slate-900 dark:text-slate-100">
                   {task.title}
                 </h3>
                 {task.description && (
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
                     {task.description}
                   </p>
                 )}
               </div>
               <div className="flex flex-wrap gap-1.5">
-                <Badge variant={getStatusColor(task.status)}>
+                <Badge
+                  variant={getStatusColor(task.status)}
+                  className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase"
+                >
                   {task.status}
                 </Badge>
-                <Badge variant={getPriorityColor(task.priority)}>
+                <Badge
+                  variant={getPriorityColor(task.priority)}
+                  className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase"
+                >
                   {task.priority}
                 </Badge>
               </div>
             </div>
 
-            <div className="text-sm space-y-2.5">
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-muted-foreground" />
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                <Building className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <span>
                   Project:{" "}
                   {projects.find((p) => p.id === task.projectId)?.name || "—"}
@@ -725,8 +847,8 @@ export function TaskManager({
               </div>
 
               {task.assignedTo && task.assignedTo !== ["unassigned"] && (
-                <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                  <User className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                   <span>
                     Assigned:{" "}
                     {users
@@ -738,15 +860,15 @@ export function TaskManager({
               )}
 
               {task.dueDate && (
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                  <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                   <span>
                     Due: {new Date(task.dueDate).toLocaleDateString()}
                   </span>
                 </div>
               )}
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground pt-1">
+              <div className="flex items-center gap-2 px-1 pt-1 text-xs text-slate-400 dark:text-slate-500">
                 <span>
                   By: {users.find((u) => u.id === task.createdBy)?.name || "—"}
                 </span>
@@ -755,10 +877,11 @@ export function TaskManager({
               </div>
 
               {canEditTask(task) && (
-                <div className="flex flex-wrap gap-2 mt-4">
+                <div className="mt-5 flex flex-wrap gap-2">
                   <Button
                     variant="outline"
                     size="sm"
+                    className="rounded-2xl border-[#e8ebf0] bg-white shadow-sm hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                     onClick={() => {
                       setSelectedTask(task);
                       setFormData({
@@ -780,7 +903,7 @@ export function TaskManager({
                   <Button
                     variant="outline"
                     size="sm"
-                    className="text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60"
+                    className="rounded-2xl border-destructive/30 text-destructive hover:border-destructive/60 hover:bg-red-50 hover:text-destructive dark:hover:bg-red-950/30"
                     onClick={() => confirmDelete(task)}
                   >
                     <Trash2 className="h-3.5 w-3.5 mr-1.5" />
@@ -790,7 +913,7 @@ export function TaskManager({
                   {task.status !== "completed" && (
                     <Button
                       size="sm"
-                      className="bg-green-600 hover:bg-green-700 text-white"
+                      className="rounded-2xl bg-green-600 text-white hover:bg-green-700"
                       onClick={() => handleMarkAsDone(task)}
                     >
                       <CheckCircle className="h-3.5 w-3.5 mr-1.5" />
