@@ -1,8 +1,10 @@
 import {
   Sidebar,
+  SidebarHeader,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
+  SidebarGroupLabel,
   SidebarFooter,
   SidebarMenu,
   SidebarMenuButton,
@@ -208,8 +210,8 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   const isCollapsed = state === "collapsed" || isMd;
   const isCollapsedDesktop = isCollapsed && !isMobile;
   const menuLinkClassName = isCollapsedDesktop
-    ? "flex items-center justify-center px-2 py-2"
-    : "flex items-center gap-3 px-3 py-2.5";
+    ? "flex items-center justify-center p-5"
+    : "flex items-center gap-3 p-5";
 
   const handleLogoutClick = async () => {
     const result = await Swal.fire({
@@ -299,30 +301,36 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
     <>
       {showLogoutSpinner && <CustomLogoutSpinner />}
 
-      <Sidebar className="border-r-0 h-screen min-h-screen" collapsible="icon">
-        <SidebarContent className="gap-0 bg-sidebar no-scrollbar">
-          <div className="border-b border-sidebar-border px-4 py-3">
-            <CompanyLogo
-              size={isCollapsedDesktop ? "sm" : "md"}
-              showText={!isCollapsedDesktop}
-              clickable={true}
-              className={
-                isCollapsedDesktop
-                  ? "justify-center"
-                  : "max-w-full [&_span]:!text-sidebar-foreground [&_span:last-child]:!text-sidebar-foreground/70"
-              }
-            />
-          </div>
+      <Sidebar
+        className="h-screen min-h-screen border-r-0 border-[#ece8e1] bg-white text-[#3f4654] [&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-[#ece8e1] [&_[data-sidebar=sidebar]]:bg-white [&_[data-sidebar=sidebar]]:text-[#3f4654]"
+        collapsible="icon"
+      >
+        <SidebarHeader className="shrink-0 border-b border-[#ece8e1] px-4 py-5">
+          <CompanyLogo
+            size={isCollapsedDesktop ? "sm" : "md"}
+            showText={!isCollapsedDesktop}
+            clickable={true}
+            className={
+              isCollapsedDesktop
+                ? "justify-center"
+                : "max-w-full [&_span:first-child]:!text-[#20242c] [&_span:last-child]:!text-[#8a909c]"
+            }
+          />
+        </SidebarHeader>
 
-          <SidebarGroup className="py-2">
+        <SidebarContent className="gap-0 overflow-y-auto overflow-x-hidden bg-transparent no-scrollbar">
+          <SidebarGroup className="px-3 py-4">
+            <SidebarGroupLabel className="mb-2 h-auto px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a0a5af] group-data-[collapsible=icon]:hidden">
+              Navigation
+            </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-1 px-2 md:group-data-[collapsible=icon]:px-0">
+              <SidebarMenu className="gap-1.5 md:group-data-[collapsible=icon]:px-0">
                 {navigationItems.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton
                       asChild
                       isActive={activeHash === item.url}
-                      className="hover:bg-sidebar-accent rounded-lg transition-colors"
+                      className="rounded-lg border border-transparent bg-transparent p-0 text-[#616977] shadow-none ring-0 transition-all duration-200 hover:bg-orange-400 hover:text-white data-[active=true]:border-orange-400 data-[active=true]:bg-orange-400 data-[active=true]:text-white data-[active=true]:ring-0"
                       tooltip={isCollapsedDesktop ? item.title : undefined}
                     >
                       <a
@@ -336,8 +344,10 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
                           if (isMobile) setOpenMobile(false);
                         }}
                       >
-                        <item.icon className="h-4 w-4 flex-shrink-0" />
-                        <span className={isCollapsedDesktop ? "sr-only" : ""}>
+                        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-current">
+                          <item.icon className="h-4 w-4 flex-shrink-0" />
+                        </span>
+                        <span className={`${isCollapsedDesktop ? "sr-only" : ""} font-normal`}>
                           {item.title}
                         </span>
                       </a>
@@ -349,20 +359,22 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="pt-2 border-t border-sidebar-border px-4 py-5">
+        <SidebarFooter className="border-t border-[#ece8e1] px-3 py-4">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleLogoutClick}
-                className="h-10 rounded-lg bg-destructive text-destructive-foreground transition-colors hover:bg-destructive/90 active:bg-destructive active:text-destructive-foreground"
+                className="h-auto rounded-2xl border border-[#f0d6d6] bg-[#fff7f7] p-0 text-[#b94b4b] shadow-none transition-colors hover:bg-[#ffecec] hover:text-[#a33a3a] active:bg-[#ffe3e3]"
                 tooltip={isCollapsedDesktop ? "Logout" : undefined}
               >
-                <LogOut className="h-4 w-4 text-destructive-foreground" />
-                <span
-                  className={`${isCollapsedDesktop ? "sr-only" : ""} text-destructive-foreground`}
-                >
-                  Logout
-                </span>
+                <div className={menuLinkClassName}>
+                  <span className="flex flex-shrink-0 items-center justify-center rounded-xl bg-white text-current shadow-[0_1px_2px_rgba(185,75,75,0.08)]">
+                    <LogOut className="h-4 w-4" />
+                  </span>
+                  <span className={`${isCollapsedDesktop ? "sr-only" : ""} font-normal`}>
+                    Logout
+                  </span>
+                </div>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

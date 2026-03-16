@@ -1,9 +1,9 @@
-@import url("https://fonts.googleapis.com/css2?family=Archivo+Black&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap");
 @import url("tailwindcss");
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-family: "Archivo Black", sans-serif;
+  --font-family: "Manrope", sans-serif;
   --font-size: 16px;
   --background: #f5f7fa;
   --foreground: #103054;
@@ -142,7 +142,7 @@
     transition:
       background-color 0.5s ease,
       color 0.5s ease;
-    font-family: "Archivo Black", sans-serif;
+    font-family: var(--font-family);
     @apply bg-background text-foreground;
   }
 
@@ -233,7 +233,7 @@
 
 html {
   font-size: var(--font-size);
-  font-family: "Archivo Black", sans-serif;
+  font-family: var(--font-family);
   scrollbar-gutter: stable;
 }
 
@@ -263,7 +263,7 @@ html body[data-scroll-locked] {
 }
 
 * {
-  font-family: "Archivo Black", sans-serif;
+  font-family: inherit;
 }
 
 @keyframes gradientAnimation {

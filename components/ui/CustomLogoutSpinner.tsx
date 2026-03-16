@@ -35,7 +35,7 @@ export const CustomLogoutSpinner: React.FC = () => (
         fontWeight: 500,
         letterSpacing: 1,
         textAlign: "center",
-        fontFamily: "Archivo Black, sans-serif",
+        fontFamily: "Manrope, sans-serif",
         textShadow: "0 2px 8px rgba(0,0,0,0.3)",
         display: "flex",
         flexDirection: "column",
