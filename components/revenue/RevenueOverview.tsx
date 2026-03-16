@@ -202,6 +202,12 @@ export function RevenueOverview({
   users,
   onUpdateProject,
 }: RevenueOverviewProps) {
+  const summaryCardClassName =
+    "group cursor-pointer overflow-hidden rounded-[1.25rem] border border-[#e6edf5] bg-white shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1d4ed8]/20 dark:border-slate-700 dark:bg-slate-900";
+  const summaryHeaderClassName =
+    "flex flex-row items-start justify-between space-y-0 px-4 pb-0 pt-4";
+  const summaryContentClassName = "px-4 pb-4 pt-2.5";
+
   const [spentEdits, setSpentEdits] = useState<Record<string, string>>({});
   const [profitDate, setProfitDate] = useState<Date | null>(null);
   const [showProfitCalendar, setShowProfitCalendar] = useState(false);
@@ -593,17 +599,19 @@ export function RevenueOverview({
   return (
     <div className="space-y-6">
       <div className="text-left">
-        <h2 className="text-xl sm:text-2xl font-bold">
-          <PhilippinePeso className="inline-block mr-2 mb-1 text-blue-700" />
-          Revenue
-        </h2>
-        <p className="text-sm text-muted-foreground">
+        <div className="flex items-center gap-3">
+          <PhilippinePeso className="h-6 w-6 text-orange-400" />
+          <h1 className="text-3xl font-bold tracking-tight text-black dark:text-white">
+            Revenue
+          </h1>
+        </div>
+        <p className="mt-2 text-sm text-muted-foreground">
           Overview of project financials
         </p>
       </div>
 
       {canViewProjectRevenue && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2 lg:grid-cols-3">
           <Card
             role="button"
             tabIndex={0}
@@ -614,22 +622,30 @@ export function RevenueOverview({
                 setShowRevenueTotals(true);
               }
             }}
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className={summaryCardClassName}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Client Budget</CardTitle>
-              <Wallet
-                className={`h-5 w-5 ${totalProjectRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
-              />
+            <CardHeader className={summaryHeaderClassName}>
+              <div className="space-y-1">
+                <CardTitle className="text-[0.95rem] font-medium text-[#4f6b95] dark:text-slate-300">
+                  Client Budget
+                </CardTitle>
+              </div>
+              <div className="flex h-10 w-10 items-center justify-center rounded-[0.9rem] border border-[#d8e9ff] bg-[#eef6ff] dark:border-slate-600 dark:bg-slate-800">
+                <Wallet
+                  className={`h-4.5 w-4.5 ${totalProjectRevenue >= 0 ? "text-[#2563eb]" : "text-[#dc2626]"}`}
+                />
+              </div>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
+            <CardContent className={summaryContentClassName}>
               <div
-                className={`text-2xl ${totalProjectRevenue >= 0 ? "text-green-600" : "text-red-600"}`}
+                className={`text-[1.55rem] font-bold leading-none tracking-[-0.03em] ${totalProjectRevenue >= 0 ? "text-[#0f2d5c] dark:text-white" : "text-[#b91c1c]"}`}
               >
                 {peso}
                 {formatCompactAmount(totalProjectRevenue)}
               </div>
-              <p className="text-xs text-muted-foreground">Client Budget</p>
+              <p className="mt-2 text-[0.9rem] leading-5 text-[#5f789c] dark:text-slate-400">
+                Total client budget
+              </p>
             </CardContent>
           </Card>
 
@@ -644,10 +660,10 @@ export function RevenueOverview({
                   setShowProfitTotals(true);
                 }
               }}
-              className="cursor-pointer transition-shadow hover:shadow-md"
+              className={summaryCardClassName}
             >
-              <CardHeader className="flex items-start justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Project Profit</CardTitle>
+              <CardHeader className={summaryHeaderClassName}>
+                <CardTitle className="text-[0.95rem] font-medium text-[#4f6b95] dark:text-slate-300">Project Profit</CardTitle>
                 <div
                   className="flex items-center gap-2"
                   onClick={(event) => event.stopPropagation()}
@@ -675,7 +691,7 @@ export function RevenueOverview({
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="h-8 px-2 text-xs"
+                        className="h-8 rounded-xl border-[#dbe6f4] px-2 text-xs text-[#4f6b95]"
                         onClick={(event) => event.stopPropagation()}
                         onKeyDown={(event) => event.stopPropagation()}
                       >
@@ -719,14 +735,16 @@ export function RevenueOverview({
                   </Popover>
                 </div>
               </CardHeader>
-              <CardContent className="p-4 pt-0">
+              <CardContent className={summaryContentClassName}>
                 <p
-                  className={`text-2xl ${filteredProfit >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`text-[1.55rem] font-bold leading-none tracking-[-0.03em] ${filteredProfit >= 0 ? "text-[#0f2d5c] dark:text-white" : "text-[#b91c1c]"}`}
                 >
                   {peso}
                   {formatCompactAmount(filteredProfit)}
                 </p>
-                <p className="text-xs text-muted-foreground">Project Profit</p>
+                <p className="mt-2 text-[0.9rem] leading-5 text-[#5f789c] dark:text-slate-400">
+                  Filtered project profit
+                </p>
               </CardContent>
             </Card>
           )}
@@ -741,24 +759,26 @@ export function RevenueOverview({
                 setShowProjectTotals(true);
               }
             }}
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className={summaryCardClassName}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Total Cost</CardTitle>
-              <Briefcase
-                className={`h-5 w-5 ${totalProjectTotal >= 0 ? "text-green-600" : "text-red-600"}`}
-              />
+            <CardHeader className={summaryHeaderClassName}>
+              <CardTitle className="text-[0.95rem] font-medium text-[#4f6b95] dark:text-slate-300">Total Cost</CardTitle>
+              <div className="flex h-10 w-10 items-center justify-center rounded-[0.9rem] border border-[#dce6f5] bg-[#f7faff] dark:border-slate-600 dark:bg-slate-800">
+                <Briefcase
+                  className={`h-4.5 w-4.5 ${totalProjectTotal >= 0 ? "text-[#64748b]" : "text-[#dc2626]"}`}
+                />
+              </div>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
+            <CardContent className={summaryContentClassName}>
               <div
-                className={`text-2xl ${totalProjectTotal >= 0 ? "text-green-600" : "text-red-600"}`}
+                className={`text-[1.55rem] font-bold leading-none tracking-[-0.03em] ${totalProjectTotal >= 0 ? "text-[#0f2d5c] dark:text-white" : "text-[#b91c1c]"}`}
               >
                 {peso}
                 {formatCompactAmount(totalProjectTotal)}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Total Cost · {filteredProjects.length} project
-                {filteredProjects.length !== 1 ? "s" : ""}
+              <p className="mt-2 text-[0.9rem] leading-5 text-[#5f789c] dark:text-slate-400">
+                Combined project cost for {filteredProjects.length} project
+                {filteredProjects.length !== 1 ? "s" : ""} in view
               </p>
             </CardContent>
           </Card>
@@ -773,22 +793,26 @@ export function RevenueOverview({
                 setShowCompanyTotals(true);
               }
             }}
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className={summaryCardClassName}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Company Allocation</CardTitle>
-              <Building
-                className={`h-5 w-5 ${totalProjectSpent >= 0 ? "text-green-600" : "text-red-600"}`}
-              />
+            <CardHeader className={summaryHeaderClassName}>
+              <CardTitle className="text-[0.95rem] font-medium text-[#4f6b95] dark:text-slate-300">Company Allocation</CardTitle>
+              <div className="flex h-10 w-10 items-center justify-center rounded-[0.9rem] border border-[#fee7c8] bg-[#fff7ed] dark:border-slate-600 dark:bg-slate-800">
+                <Building
+                  className={`h-4.5 w-4.5 ${totalProjectSpent >= 0 ? "text-[#f97316]" : "text-[#dc2626]"}`}
+                />
+              </div>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
+            <CardContent className={summaryContentClassName}>
               <div
-                className={`text-2xl ${totalProjectSpent >= 0 ? "text-green-600" : "text-red-600"}`}
+                className={`text-[1.55rem] font-bold leading-none tracking-[-0.03em] ${totalProjectSpent >= 0 ? "text-[#0f2d5c] dark:text-white" : "text-[#b91c1c]"}`}
               >
                 {peso}
                 {formatCompactAmount(totalProjectSpent)}
               </div>
-              <p className="text-xs text-muted-foreground">Company costs</p>
+              <p className="mt-2 text-[0.9rem] leading-5 text-[#5f789c] dark:text-slate-400">
+                Company costs
+              </p>
             </CardContent>
           </Card>
 
@@ -802,22 +826,24 @@ export function RevenueOverview({
                 setShowLaborTotals(true);
               }
             }}
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className={summaryCardClassName}
           >
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm">Labor Allocation</CardTitle>
-              <Hammer
-                className={`h-5 w-5 ${totalProjectBudget >= 0 ? "text-green-600" : "text-red-600"}`}
-              />
+            <CardHeader className={summaryHeaderClassName}>
+              <CardTitle className="text-[0.95rem] font-medium text-[#4f6b95] dark:text-slate-300">Labor Allocation</CardTitle>
+              <div className="flex h-10 w-10 items-center justify-center rounded-[0.9rem] border border-[#dbeafe] bg-[#eff6ff] dark:border-slate-600 dark:bg-slate-800">
+                <Hammer
+                  className={`h-4.5 w-4.5 ${totalProjectBudget >= 0 ? "text-[#2563eb]" : "text-[#dc2626]"}`}
+                />
+              </div>
             </CardHeader>
-            <CardContent className="p-4 pt-0">
+            <CardContent className={summaryContentClassName}>
               <div
-                className={`text-2xl ${totalProjectBudget >= 0 ? "text-green-600" : "text-red-600"}`}
+                className={`text-[1.55rem] font-bold leading-none tracking-[-0.03em] ${totalProjectBudget >= 0 ? "text-[#0f2d5c] dark:text-white" : "text-[#b91c1c]"}`}
               >
                 {peso}
                 {formatCompactAmount(totalProjectBudget)}
               </div>
-              <p className="text-xs text-muted-foreground">
+              <p className="mt-2 text-[0.9rem] leading-5 text-[#5f789c] dark:text-slate-400">
                 Fabricator + Supervisor
               </p>
             </CardContent>
@@ -834,23 +860,25 @@ export function RevenueOverview({
                   setShowMaterialTotals(true);
                 }
               }}
-              className="cursor-pointer transition-shadow hover:shadow-md"
+              className={summaryCardClassName}
             >
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm">Total Cost Quantity</CardTitle>
-                <Package
-                  className={`h-5 w-5 ${totalProjectCostQuantity >= 0 ? "text-green-600" : "text-red-600"}`}
-                />
+              <CardHeader className={summaryHeaderClassName}>
+                <CardTitle className="text-[0.95rem] font-medium text-[#4f6b95] dark:text-slate-300">Total Cost Quantity</CardTitle>
+                <div className="flex h-10 w-10 items-center justify-center rounded-[0.9rem] border border-[#fee2e2] bg-[#fff5f5] dark:border-slate-600 dark:bg-slate-800">
+                  <Package
+                    className={`h-4.5 w-4.5 ${totalProjectCostQuantity >= 0 ? "text-[#ef4444]" : "text-[#dc2626]"}`}
+                  />
+                </div>
               </CardHeader>
-              <CardContent className="p-4 pt-0">
+              <CardContent className={summaryContentClassName}>
                 <div
-                  className={`text-2xl ${totalProjectCostQuantity >= 0 ? "text-green-600" : "text-red-600"}`}
+                  className={`text-[1.55rem] font-bold leading-none tracking-[-0.03em] ${totalProjectCostQuantity >= 0 ? "text-[#0f2d5c] dark:text-white" : "text-[#b91c1c]"}`}
                 >
                   {peso}
                   {formatCompactAmount(totalProjectCostQuantity)}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Quantity-based total used in project cost
+                <p className="mt-2 text-[0.9rem] leading-5 text-[#5f789c] dark:text-slate-400">
+                  Quantity-based material total
                 </p>
               </CardContent>
             </Card>
