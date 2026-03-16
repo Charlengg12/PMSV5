@@ -302,10 +302,10 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       {showLogoutSpinner && <CustomLogoutSpinner />}
 
       <Sidebar
-        className="h-screen min-h-screen border-r-0 border-[#ece8e1] bg-white text-[#3f4654] [&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-[#ece8e1] [&_[data-sidebar=sidebar]]:bg-white [&_[data-sidebar=sidebar]]:text-[#3f4654]"
+        className="h-screen min-h-screen border-r-0 border-[#ece8e1] bg-white text-[#3f4654] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 [&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-[#ece8e1] [&_[data-sidebar=sidebar]]:bg-white [&_[data-sidebar=sidebar]]:text-[#3f4654] dark:[&_[data-sidebar=sidebar]]:border-slate-700 dark:[&_[data-sidebar=sidebar]]:bg-slate-950 dark:[&_[data-sidebar=sidebar]]:text-slate-200"
         collapsible="icon"
       >
-        <SidebarHeader className="shrink-0 border-b border-[#ece8e1] px-4 py-5">
+        <SidebarHeader className="shrink-0 border-b border-[#ece8e1] px-4 py-5 dark:border-slate-700">
           <CompanyLogo
             size={isCollapsedDesktop ? "sm" : "md"}
             showText={!isCollapsedDesktop}
@@ -313,7 +313,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
             className={
               isCollapsedDesktop
                 ? "justify-center"
-                : "max-w-full [&_span:first-child]:!text-[#20242c] [&_span:last-child]:!text-[#8a909c]"
+                : "max-w-full [&_span:first-child]:!text-[#20242c] [&_span:last-child]:!text-[#8a909c] dark:[&_span:first-child]:!text-slate-100 dark:[&_span:last-child]:!text-slate-400"
             }
           />
         </SidebarHeader>
@@ -330,7 +330,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
                     <SidebarMenuButton
                       asChild
                       isActive={activeHash === item.url}
-                      className="rounded-lg border border-transparent bg-transparent p-0 text-[#616977] shadow-none ring-0 transition-all duration-200 hover:bg-orange-400 hover:text-white data-[active=true]:border-orange-400 data-[active=true]:bg-orange-400 data-[active=true]:text-white data-[active=true]:ring-0"
+                      className="rounded-lg border border-transparent bg-transparent p-0 text-[#616977] shadow-none ring-0 transition-all duration-200 hover:bg-orange-400 hover:text-white dark:text-slate-300 dark:hover:bg-orange-400 dark:hover:text-white data-[active=true]:border-orange-400 data-[active=true]:bg-orange-400 data-[active=true]:text-white data-[active=true]:ring-0"
                       tooltip={isCollapsedDesktop ? item.title : undefined}
                     >
                       <a
@@ -359,16 +359,16 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
           </SidebarGroup>
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-[#ece8e1] px-3 py-4">
+        <SidebarFooter className="border-t border-[#ece8e1] px-3 py-4 dark:border-slate-700">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton
                 onClick={handleLogoutClick}
-                className="h-auto rounded-2xl border border-[#f0d6d6] bg-[#fff7f7] p-0 text-[#b94b4b] shadow-none transition-colors hover:bg-[#ffecec] hover:text-[#a33a3a] active:bg-[#ffe3e3]"
+                className="h-auto rounded-2xl border border-[#f0d6d6] bg-[#fff7f7] p-0 text-[#b94b4b] shadow-none transition-colors hover:bg-[#ffecec] hover:text-[#a33a3a] active:bg-[#ffe3e3] dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300 dark:hover:bg-red-950/50 dark:hover:text-red-200 dark:active:bg-red-950/60"
                 tooltip={isCollapsedDesktop ? "Logout" : undefined}
               >
                 <div className={menuLinkClassName}>
-                  <span className="flex flex-shrink-0 items-center justify-center rounded-xl bg-white text-current shadow-[0_1px_2px_rgba(185,75,75,0.08)]">
+                  <span className="flex flex-shrink-0 items-center justify-center rounded-xl bg-white text-current shadow-[0_1px_2px_rgba(185,75,75,0.08)] dark:bg-slate-900">
                     <LogOut className="h-4 w-4" />
                   </span>
                   <span className={`${isCollapsedDesktop ? "sr-only" : ""} font-normal`}>
