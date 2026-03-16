@@ -306,31 +306,23 @@ export function ActivityLogs() {
   };
 
   return (
-    <div className="space-y-6 min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b pb-6 mb-6">
-        {/* Left Side: Text Content */}
-        <div className="space-y-1">
-          <div className="flex items-center gap-3">
-            {/* Icon: Fixed size, centered vertically */}
-            <Activity className="h-6 w-6 text-blue-600 dark:text-blue-400 shrink-0" />
-            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-              Activity Logs
-            </h2>
-          </div>
-
-          {/* Description: Placed below the title row */}
-          <p className="text-sm text-muted-foreground text-gray-500 dark:text-gray-400">
-            Track and monitor all system activities.
+    <div className="space-y-6 min-h-screen">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="text-left">
+          <h2 className="text-xl font-bold sm:text-2xl">
+            <Activity className="mr-2 mb-1 inline-block h-6 w-6 text-orange-400" />
+            Activity Logs
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            Track and monitor all system activities
           </p>
         </div>
 
-        {/* Right Side: Actions (Consolidated Button) */}
-        <div className="flex items-center gap-3 w-full sm:w-auto">
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 w-full sm:w-auto shadow-sm"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-[#d9e5f2] bg-white px-4 py-2.5 text-sm font-semibold text-[#123a68] shadow-sm transition-colors hover:bg-[#f8fbff] disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800 sm:w-auto"
           >
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
             <span>Refresh</span>
@@ -338,27 +330,36 @@ export function ActivityLogs() {
         </div>
       </div>
 
-      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm overflow-hidden">
-        {/* Filters & Actions Bar */}
-        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div className="overflow-hidden rounded-[1.75rem] border border-[#e7edf4] bg-white shadow-[0_14px_40px_rgba(15,23,42,0.05)] dark:border-slate-700 dark:bg-slate-900">
+        <div className="border-b border-[#edf2f7] px-6 py-5 dark:border-slate-800">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold tracking-[-0.02em] text-[#123a68] dark:text-white">
                 Audit Trail
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-0.5">
+              <p className="mt-1 text-sm text-[#6b7b93] dark:text-slate-400">
                 {filteredLogs.length > 0
                   ? `Showing ${displayedLogs.length} of ${filteredLogs.length} activities`
                   : "No activities found"}
               </p>
             </div>
-            {/* Action Bar: Dropdown + Export Button */}
-            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-              {/* Filter Dropdown: Full width on mobile, auto on desktop */}
+
+            <div className="flex w-full flex-col gap-3 xl:w-auto xl:flex-row">
+              <div className="relative w-full xl:min-w-[360px]">
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={handleSearchChange}
+                  placeholder="Search by User, Action, Or Description..."
+                  className="w-full rounded-2xl border border-[#d9e5f2] bg-white py-2.5 pl-11 pr-4 text-sm text-[#123a68] shadow-sm outline-none transition-all placeholder:text-[#8da0b8] focus:border-orange-500 focus:ring-2 focus:ring-blue-100 dark:border-orange-700 dark:bg-orange-950 dark:text-white dark:placeholder:text-orange-500 dark:focus:border-blue-400 dark:focus:ring-orange-950"
+                />
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8da0b8] dark:text-slate-500" />
+              </div>
+
               <select
                 value={selectedAction}
                 onChange={handleActionChange}
-                className="w-full sm:w-auto rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm hover:border-gray-400 dark:hover:border-gray-500 focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all outline-none cursor-pointer"
+                className="w-full rounded-2xl border border-[#d9e5f2] bg-white px-4 py-2.5 text-sm font-medium text-[#123a68] shadow-sm outline-none transition-all hover:border-[#bfd3ea] focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-blue-400 dark:focus:ring-blue-950 sm:w-auto"
               >
                 <option value="">All Activities</option>
                 <option value="add">Add</option>
@@ -367,11 +368,10 @@ export function ActivityLogs() {
                 <option value="login">Login</option>
               </select>
 
-              {/* Export Button: Full width on mobile, auto on desktop */}
               <button
                 onClick={handleExport}
                 disabled={displayedLogs.length === 0}
-                className="w-full sm:w-auto justify-center flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-50 dark:bg-emerald-900 text-emerald-700 dark:text-emerald-200 border border-emerald-300 dark:border-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-800 transition-colors disabled:opacity-50 font-medium text-sm"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 disabled:opacity-50 dark:border-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 dark:hover:bg-emerald-950 sm:w-auto"
               >
                 <Download className="h-4 w-4" />
                 Export
@@ -380,35 +380,35 @@ export function ActivityLogs() {
               {/* Export Modal */}
               {showExportModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-2 sm:p-4">
-                  <div className="modal bg-white dark:bg-gray-800 backdrop-blur-md border border-gray-200 dark:border-gray-700 shadow-2xl rounded-xl w-full max-w-md overflow-hidden">
-                    <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                  <div className="modal w-full max-w-md overflow-hidden rounded-[1.5rem] border border-[#e7edf4] bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900">
+                    <div className="border-b border-[#edf2f7] p-6 dark:border-slate-800">
                       <div className="flex items-center justify-between gap-2">
-                        <h3 className="text-lg font-semibold dark:text-white flex items-center gap-2.5">
+                        <h3 className="flex items-center gap-2.5 text-lg font-semibold text-[#123a68] dark:text-white">
                           <Download className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
                           Export Activity Logs
                         </h3>
                         <button
-                          className="text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-full p-1.5 transition-colors"
+                          className="rounded-full p-1.5 text-gray-500 transition-colors hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
                           onClick={() => setShowExportModal(false)}
                           aria-label="Close"
                         >
                           <X className="h-5 w-5" />
                         </button>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1.5">
+                      <p className="mt-1.5 text-sm text-gray-600 dark:text-gray-400">
                         Are you sure you want to export the currently displayed
                         activity logs?
                       </p>
                     </div>
-                    <div className="p-6 flex flex-col sm:flex-row justify-end gap-3">
+                    <div className="flex flex-col justify-end gap-3 p-6 sm:flex-row">
                       <button
-                        className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600 transition-colors"
+                        className="rounded-2xl border border-[#d9e5f2] bg-white px-4 py-2.5 font-semibold text-[#123a68] transition-colors hover:bg-[#f8fbff] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100 dark:hover:bg-slate-800"
                         onClick={() => setShowExportModal(false)}
                       >
                         Cancel
                       </button>
                       <button
-                        className="px-4 py-2 rounded-lg bg-emerald-600 dark:bg-emerald-700 text-white hover:bg-emerald-700 dark:hover:bg-emerald-600 transition-colors font-semibold"
+                        className="rounded-2xl bg-emerald-600 px-4 py-2.5 font-semibold text-white transition-colors hover:bg-emerald-700 dark:bg-emerald-700 dark:hover:bg-emerald-600"
                         onClick={confirmExport}
                       >
                         Export
@@ -419,58 +419,43 @@ export function ActivityLogs() {
               )}
             </div>
           </div>
-        </div>
-
-        {/* Search Bar */}
-        <div className="border-b border-gray-100 dark:border-gray-700 px-6 py-4 bg-white dark:bg-gray-800">
-          <div className="relative w-full max-w-md">
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder="Search by user, action, or description..."
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 pl-10 pr-4 py-2.5 text-sm text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 shadow-sm focus:border-blue-500 dark:focus:border-blue-400 focus:ring-2 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all outline-none"
-            />
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500 pointer-events-none" />
-          </div>
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5">
-            <span className="inline-block w-1 h-1 rounded-full bg-blue-500"></span>
+          <p className="mt-4 flex items-center gap-1.5 text-xs text-[#7c8ca3] dark:text-slate-500">
+            <span className="inline-block h-1 w-1 rounded-full bg-orange-500"></span>
             Search across all fields: user name, role, action type, description,
             IP address, and timestamps
           </p>
         </div>
 
-        {/* Content Area */}
-        <div className="p-6 bg-white dark:bg-gray-800">
+        <div className="bg-white p-6 dark:bg-slate-900">
           {loading ? (
-            <div className="flex flex-col items-center justify-center py-20 text-gray-500 dark:text-gray-400">
-              <div className="relative mb-4">
+            <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-gray-400">
+              <div className="relative mb-4 rounded-full bg-blue-50 p-4 dark:bg-blue-950/40">
                 <Loader2 className="h-12 w-12 animate-spin text-blue-500" />
               </div>
-              <p className="text-lg font-medium dark:text-white">
+              <p className="text-lg font-medium text-[#123a68] dark:text-white">
                 Loading activity history...
               </p>
               <p className="text-sm mt-2">Please wait</p>
             </div>
           ) : error ? (
-            <div className="flex flex-col items-center justify-center py-20 text-red-600 dark:text-red-400">
-              <div className="bg-red-100 dark:bg-red-900 rounded-full p-4 mb-4">
+            <div className="flex flex-col items-center justify-center py-24 text-red-600 dark:text-red-400">
+              <div className="mb-4 rounded-full bg-red-100 p-4 dark:bg-red-900">
                 <AlertTriangle className="h-8 w-8" />
               </div>
               <p className="text-lg font-medium dark:text-white">{error}</p>
               <button
                 onClick={handleRefresh}
-                className="mt-4 px-4 py-2 bg-red-600 dark:bg-red-700 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-colors text-sm font-medium"
+                className="mt-4 rounded-2xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600"
               >
                 Try Again
               </button>
             </div>
           ) : displayedLogs.length === 0 && page === 1 ? (
-            <div className="py-20 text-center text-gray-500 dark:text-gray-400">
-              <div className="bg-gray-100 dark:bg-gray-700 rounded-full p-4 w-16 h-16 flex items-center justify-center mx-auto mb-4">
+            <div className="py-24 text-center text-gray-500 dark:text-gray-400">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
                 <Activity className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
-              <p className="text-lg font-medium dark:text-white">
+              <p className="text-lg font-medium text-[#123a68] dark:text-white">
                 {searchTerm || selectedAction
                   ? "No matching activities found"
                   : "No activity logs found"}
@@ -485,93 +470,93 @@ export function ActivityLogs() {
             <>
               <div
                 ref={tableContainerRef}
-                className="max-h-[calc(100vh-320px)] overflow-y-auto overflow-x-auto scroll-smooth"
+                className="relative max-h-[calc(100vh-320px)] overflow-auto border border-[#edf2f7] bg-[#fbfdff] scroll-smooth dark:border-slate-800 dark:bg-slate-950"
               >
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                  <thead className="sticky top-0 z-10 dark:bg-gray-800">
+                <table className="min-w-full divide-y divide-[#edf2f7] dark:divide-slate-800">
+                  <thead className="sticky top-0 z-10 bg-[#123a68]">
                     <tr>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                        className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.14em] text-white"
                       >
                         Timestamp
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                        className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.14em] text-white"
                       >
                         User
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                        className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.14em] text-white"
                       >
                         Action
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-left text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                        className="px-5 py-4 text-left text-xs font-semibold uppercase tracking-[0.14em] text-white"
                       >
                         Description
                       </th>
                       <th
                         scope="col"
-                        className="px-4 py-3.5 text-right text-xs font-semibold text-white dark:text-gray-300 uppercase tracking-wider"
+                        className="px-5 py-4 text-right text-xs font-semibold uppercase tracking-[0.14em] text-white"
                       >
                         IP Address
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                  <tbody className="divide-y divide-[#edf2f7] dark:divide-slate-800">
                     {displayedLogs.map((log) => (
                       <tr
                         key={log.id}
-                        className="hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                        className="transition-colors hover:bg-[#f7fbff] dark:hover:bg-slate-900"
                       >
-                        <td className="px-4 py-4">
+                        <td className="px-5 py-4">
                           <div className="flex flex-col">
-                            <div className="font-medium text-gray-900 dark:text-white text-sm">
+                            <div className="text-sm font-medium text-[#123a68] dark:text-white">
                               {formatDateSafe(log.created_at, "MMM d, yyyy")}
                             </div>
-                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <div className="mt-1 text-xs text-[#7b8ca4] dark:text-slate-400">
                               {formatDateSafe(log.created_at, "h:mm a")}
                             </div>
                           </div>
                         </td>
-                        <td className="px-4 py-4">
+                        <td className="px-5 py-4">
                           <div className="flex items-center gap-2.5">
                             <div className="flex-shrink-0">
-                              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white text-xs font-bold">
+                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-500 to-[#123a68] text-xs font-bold text-white">
                                 {getUserInitials(log.user_name)}
                               </div>
                             </div>
                             <div>
-                              <div className="font-medium text-gray-900 dark:text-white text-sm">
+                              <div className="text-sm font-medium text-[#123a68] dark:text-white">
                                 {safeText(log.user_name)}
                               </div>
-                              <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 capitalize">
+                              <div className="mt-1 flex items-center gap-1.5 text-xs capitalize text-[#6b7b93] dark:text-slate-400">
                                 {getRoleIcon(log.user_role)}
                                 <span>{safeText(log.user_role)}</span>
                               </div>
                             </div>
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-sm">
+                        <td className="whitespace-nowrap px-5 py-4 text-sm">
                           <span
-                            className={`inline-flex items-center border-l-4 px-3 py-1 text-xs font-medium ${getActionColor(log.action)}`}
+                            className={`inline-flex items-center px-3 py-1.5 text-xs font-semibold ${getActionColor(log.action)}`}
                           >
                             {getActionLabel(log.action)}
                           </span>
                         </td>
-                        <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">
+                        <td className="px-5 py-4 text-sm text-[#5f728d] dark:text-slate-400">
                           <div
-                            className="line-clamp-2 max-w-xs"
+                            className="line-clamp-2 max-w-xs leading-6"
                             title={safeText(log.description)}
                           >
                             {safeText(log.description)}
                           </div>
                         </td>
-                        <td className="whitespace-nowrap px-4 py-4 text-right text-sm font-mono text-gray-600 dark:text-gray-400">
+                        <td className="whitespace-nowrap px-5 py-4 text-right font-mono text-sm text-[#5f728d] dark:text-slate-400">
                           {safeText(log.ip_address)}
                         </td>
                       </tr>
@@ -597,8 +582,8 @@ export function ActivityLogs() {
                 )}
 
                 {!isFiltering && !hasMore && displayedLogs.length > 0 && (
-                  <div className="py-8 text-center text-sm text-gray-500 dark:text-gray-400 font-medium">
-                    <span className="inline-block px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg">
+                  <div className="py-8 text-center text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <span className="inline-block rounded-2xl bg-gray-100 px-4 py-2 dark:bg-slate-800">
                       You've reached the end
                     </span>
                   </div>
@@ -610,22 +595,21 @@ export function ActivityLogs() {
                     Showing all {filteredLogs.length} matching activities
                   </div>
                 )}
+
+                {showScrollTop && (
+                  <button
+                    onClick={scrollToTop}
+                    className="sticky bottom-5 ml-auto mr-5 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl dark:from-blue-700 dark:to-blue-800"
+                    aria-label="Scroll to top"
+                  >
+                    <ChevronUp className="h-5 w-5" />
+                  </button>
+                )}
               </div>
             </>
           )}
         </div>
       </div>
-
-      {/* Scroll to Top Button */}
-      {showScrollTop && (
-        <button
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 text-white rounded-full p-3 shadow-lg hover:shadow-xl hover:scale-110 transition-all z-50"
-          aria-label="Scroll to top"
-        >
-          <ChevronUp className="h-5 w-5" />
-        </button>
-      )}
     </div>
   );
 }
