@@ -604,8 +604,8 @@ export function ProjectDetails({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 sm:p-6">
-      <Card className="w-full max-w-4xl max-h-[90vh] overflow-y-auto modal">
-        <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
+      <Card className="modal flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden">
+        <CardHeader className="shrink-0 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-col gap-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
@@ -675,7 +675,7 @@ export function ProjectDetails({
                 ) : (
                   <div className="min-w-0">
                     <CardTitle
-                      className="text-2xl font-bold truncate"
+                      className="truncate text-2xl font-semibold"
                       title={editedProject.name || "Untitled Project"}
                     >
                       {editedProject.name || "Untitled Project"}
@@ -739,35 +739,35 @@ export function ProjectDetails({
           </div>
         </CardHeader>
 
-        <CardContent className="px-4 pb-6 sm:px-6 sm:pb-8">
-          <Tabs defaultValue="overview" className="w-full">
-            <TabsList className="flex w-full overflow-x-auto justify-start md:grid md:grid-cols-5 h-auto p-1 bg-muted/50">
-              <TabsTrigger value="overview" className="flex-1 min-w-[80px]">
+        <CardContent className="flex min-h-0 flex-1 flex-col px-4 pb-6 sm:px-6 sm:pb-8">
+          <Tabs defaultValue="overview" className="flex min-h-0 w-full flex-1 flex-col">
+            <TabsList className="flex h-auto w-full shrink-0 justify-start overflow-x-auto bg-muted/50 p-1 md:grid md:grid-cols-5">
+              <TabsTrigger value="overview" className="min-w-[80px] flex-1 font-medium">
                 <FileIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Overview</span>
               </TabsTrigger>
-              <TabsTrigger value="team" className="flex-1 min-w-[80px]">
+              <TabsTrigger value="team" className="min-w-[80px] flex-1 font-medium">
                 <UsersIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Team</span>
               </TabsTrigger>
-              <TabsTrigger value="revenue" className="flex-1 min-w-[80px]">
+              <TabsTrigger value="revenue" className="min-w-[80px] flex-1 font-medium">
                 <RevenueIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Revenue</span>
               </TabsTrigger>
-              <TabsTrigger value="files" className="flex-1 min-w-[80px]">
+              <TabsTrigger value="files" className="min-w-[80px] flex-1 font-medium">
                 <FileIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Files</span>
               </TabsTrigger>
               <TabsTrigger
                 value="documentation"
-                className="flex-1 min-w-[80px]"
+                className="min-w-[80px] flex-1 font-medium"
               >
                 <LinkIcon className="h-4 w-4 md:mr-2" />
                 <span className="hidden md:inline">Docs</span>
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6 pt-5">
+            <TabsContent value="overview" className="mt-0 min-h-0 flex-1 overflow-y-auto space-y-6 pt-5 pr-1">
               <div className="grid gap-6 md:grid-cols-2">
                 <div className="space-y-5">
                   <div>
@@ -999,7 +999,7 @@ export function ProjectDetails({
                       <div className="mt-1.5 flex items-center justify-between bg-muted/30 p-2 rounded-md border text-sm min-w-0">
                         <div className="min-w-0">
                           <p
-                            className="font-medium truncate"
+                            className="truncate font-semibold"
                             title={clientDisplay.name}
                           >
                             {clientDisplay.name}
@@ -1039,7 +1039,7 @@ export function ProjectDetails({
               <Separator className="my-6" />
 
               <div className="space-y-5">
-                <h3 className="text-lg font-medium">Financial Overview</h3>
+                <h3 className="text-lg font-semibold">Financial Overview</h3>
                 <div className="grid gap-4 md:grid-cols-1">
                   <Card className="border-blue-200 bg-blue-50/50">
                     <CardContent className="pt-6 px-4 sm:px-6 pb-5">
@@ -1060,11 +1060,11 @@ export function ProjectDetails({
                           className="text-2xl font-semibold"
                         />
                       ) : (
-                        <p className="text-2xl font-bold">
+                        <p className="text-2xl font-semibold">
                           {"\u20B1"}{displayRevenue.toLocaleString()}
                         </p>
                       )}
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Client Budget
                       </p>
                     </CardContent>
@@ -1091,11 +1091,11 @@ export function ProjectDetails({
                           className="text-2xl font-semibold"
                         />
                       ) : (
-                        <p className="text-2xl font-bold">
+                        <p className="text-2xl font-semibold">
                           {"\u20B1"}{displayBudget.toLocaleString()}
                         </p>
                       )}
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Total Cost
                       </p>
                     </CardContent>
@@ -1106,10 +1106,10 @@ export function ProjectDetails({
                         <TrendingUp className="h-4 w-4" />
                         <span className="text-sm font-semibold">Profit</span>
                       </div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-semibold">
                         {"\u20B1"}{displayProfit.toLocaleString()}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Net Income
                       </p>
                     </CardContent>
@@ -1122,10 +1122,10 @@ export function ProjectDetails({
                           Company Allocation
                         </span>
                       </div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-semibold">
                         {"\u20B1"}{displayCompanyAllocation.toLocaleString()}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Company costs
                       </p>
                     </CardContent>
@@ -1138,10 +1138,10 @@ export function ProjectDetails({
                           Fabricator Allocation
                         </span>
                       </div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-semibold">
                         {"\u20B1"}{displayFabricatorAllocation.toLocaleString()}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Allocated to fabricator labor
                       </p>
                     </CardContent>
@@ -1154,10 +1154,10 @@ export function ProjectDetails({
                           Supervisor Allocation
                         </span>
                       </div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-semibold">
                         {"\u20B1"}{displaySupervisorAllocation.toLocaleString()}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Oversight and admin fees
                       </p>
                     </CardContent>
@@ -1170,10 +1170,10 @@ export function ProjectDetails({
                           Materials Allocation
                         </span>
                       </div>
-                      <p className="text-2xl font-bold">
+                      <p className="text-2xl font-semibold">
                         {"\u20B1"}{displayMaterialsAllocation.toLocaleString()}
                       </p>
-                      <p className="text-sm text-muted-foreground mt-2 font-medium">
+                      <p className="mt-2 text-sm font-medium text-muted-foreground">
                         Expected material expenses
                       </p>
                     </CardContent>
@@ -1182,7 +1182,7 @@ export function ProjectDetails({
               </div>
             </TabsContent>
 
-            <TabsContent value="team" className="space-y-6 pt-5">
+            <TabsContent value="team" className="mt-0 min-h-0 flex-1 overflow-y-auto space-y-6 pt-5 pr-1">
               <Card>
                 <CardHeader className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-4">
                   <CardTitle className="flex items-center gap-2">
@@ -1350,7 +1350,7 @@ export function ProjectDetails({
               </Card>
             </TabsContent>
 
-            <TabsContent value="revenue" className="pt-5">
+            <TabsContent value="revenue" className="mt-0 min-h-0 flex-1 overflow-y-auto pt-5 pr-1">
               <FabricatorRevenueManager
                 project={project}
                 users={users}
@@ -1359,7 +1359,7 @@ export function ProjectDetails({
               />
             </TabsContent>
 
-            <TabsContent value="files" className="space-y-6 pt-5">
+            <TabsContent value="files" className="mt-0 min-h-0 flex-1 overflow-y-auto space-y-6 pt-5 pr-1">
               {canUploadFiles && (
                 <ProjectFileUpload
                   projectId={project.id}
@@ -1440,7 +1440,7 @@ export function ProjectDetails({
               )}
             </TabsContent>
 
-            <TabsContent value="documentation" className="space-y-6 pt-5">
+            <TabsContent value="documentation" className="mt-0 min-h-0 flex-1 overflow-y-auto space-y-6 pt-5 pr-1">
               <Card>
                 <CardHeader className="px-4 py-3 sm:px-6 sm:py-4">
                   <CardTitle className="flex items-center gap-2">
