@@ -28,7 +28,7 @@ import {
 const SIDEBAR_COOKIE_NAME = "sidebar_state";
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7;
 const SIDEBAR_WIDTH = "16rem";
-const SIDEBAR_WIDTH_MOBILE = "18rem";
+const SIDEBAR_WIDTH_MOBILE = SIDEBAR_WIDTH;
 const SIDEBAR_WIDTH_ICON = "3.5rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
@@ -213,10 +213,11 @@ function Sidebar({
           data-slot="sidebar"
           data-mobile="true"
           className={cn(
-            "bg-sidebar text-sidebar-foreground w-(--sidebar-width) p-0 transition-transform duration-300 ease-in-out [&>button]:hidden",
+            "w-(--sidebar-width) p-0 transition-transform duration-300 ease-in-out [&>button]:hidden",
             side === "left"
               ? "data-[state=open]:translate-x-0 data-[state=closed]:-translate-x-full"
-              : "data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full"
+              : "data-[state=open]:translate-x-0 data-[state=closed]:translate-x-full",
+            className
           )}
           style={
             {
