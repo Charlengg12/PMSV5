@@ -94,6 +94,8 @@ export function UserManagement({
   const loadMoreTriggerRef = useRef<HTMLDivElement>(null);
 
   const canManageUsers = currentUser.role === "admin";
+  const tableCheckboxClass =
+    "border-slate-300 bg-white/90 dark:border-white/40 dark:bg-white/10 data-[state=checked]:bg-white data-[state=checked]:text-[#103055] dark:data-[state=checked]:bg-white dark:data-[state=checked]:text-slate-900";
 
   // Fetch inactive users when modal opens
   useEffect(() => {
@@ -706,6 +708,21 @@ export function UserManagement({
                 Search by name, email, role, school, employee number, secure ID,
                 phone, or GCash number.
               </p>
+              <div className="mt-2 w-full sm:w-60">
+                <Label className="text-sm mb-1.5 block">Filter by Role:</Label>
+                <Select value={selectedRole} onValueChange={setSelectedRole}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="supervisor">Supervisor</SelectItem>
+                    <SelectItem value="fabricator">Fabricator</SelectItem>
+                    <SelectItem value="client">Client</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 self-start">
@@ -733,23 +750,7 @@ export function UserManagement({
           </div>
         </CardHeader>
 
-        <CardContent className="p-4 sm:p-6 pt-0">
-          <div className="mb-1 w-full sm:w-60">
-            <Label className="text-sm mb-1.5 block">Filter by Role:</Label>
-            <Select value={selectedRole} onValueChange={setSelectedRole}>
-              <SelectTrigger>
-                <SelectValue placeholder="All roles" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="supervisor">Supervisor</SelectItem>
-                <SelectItem value="fabricator">Fabricator</SelectItem>
-                <SelectItem value="client">Client</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
+        <CardContent className="p-4 sm:p-6 pt-2">
           {/* Table */}
           <div className="w-full rounded-2xl border border-border/60 bg-card/90 dark:bg-slate-900/70 overflow-hidden">
             <Table className="w-full">
@@ -758,6 +759,7 @@ export function UserManagement({
                   {canManageUsers && (
                     <TableHead className="w-12 text-center p-0">
                       <Checkbox
+                        className={tableCheckboxClass}
                         checked={
                           displayedUsers.length > 0 &&
                           displayedUsers.every((u) =>
@@ -828,6 +830,7 @@ export function UserManagement({
                       {canManageUsers && (
                         <TableCell className="text-center p-0">
                           <Checkbox
+                            className={tableCheckboxClass}
                             checked={selectedUserIds.includes(user.id)}
                             disabled={user.id === currentUser.id}
                             onCheckedChange={(checked) => {
