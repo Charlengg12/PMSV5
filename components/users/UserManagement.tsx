@@ -649,7 +649,7 @@ export function UserManagement({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between w-full">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <UserIcon className="h-6 w-6 text-blue-700 dark:text-blue-400" />
+            <UserIcon className="h-6 w-6 text-orange-400" />
             <h1 className="text-3xl font-bold tracking-tight">
               User Management
             </h1>
