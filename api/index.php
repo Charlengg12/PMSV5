@@ -1899,7 +1899,7 @@ function handle_me(PDO $pdo): void
     if (empty($_SESSION['user_id'])) {
         json_response(['user' => null]);
     }
-    $stmt = $pdo->prepare('SELECT  name, email, role, school, phone, gcash_number, secure_id, gcash_qr_url, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1');
+    $stmt = $pdo->prepare('SELECT id, name, email, role, school, phone, gcash_number, secure_id, gcash_qr_url, employee_number, is_active, created_at FROM users WHERE id = :id LIMIT 1');
     $stmt->execute([':id' => $_SESSION['user_id']]);
     $user = $stmt->fetch();
     if (!$user) {

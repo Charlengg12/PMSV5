@@ -122,7 +122,10 @@ export function AdminSettingsPage({
       try {
         const response = await apiService.getMe();
         if (response.data?.user) {
-          const freshUser = mapUserDataFromBackend(response.data.user);
+          const freshUser = {
+            ...mapUserDataFromBackend(response.data.user),
+            id: response.data.user.id ?? currentUser.id,
+          };
           onUpdateCurrentUser(freshUser);
           setGcashQrUrl(freshUser.gcashQrUrl || null);
         }
@@ -264,7 +267,10 @@ export function AdminSettingsPage({
       if (response.error) throw new Error(response.error);
 
       const updatedUser = response.data?.user
-        ? mapUserDataFromBackend(response.data.user)
+        ? {
+            ...mapUserDataFromBackend(response.data.user),
+            id: response.data.user.id ?? currentUser.id,
+          }
         : {
             ...currentUser,
             name: fullName,

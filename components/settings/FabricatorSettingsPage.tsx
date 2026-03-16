@@ -88,7 +88,10 @@ export function FabricatorSettingsPage({
       try {
         const res = await apiService.getMe();
         if (res.data?.user) {
-          const freshUser = mapUserDataFromBackend(res.data.user);
+          const freshUser = {
+            ...mapUserDataFromBackend(res.data.user),
+            id: res.data.user.id ?? currentUser.id,
+          };
           onUpdateCurrentUser(freshUser);
           setGcashQrUrl(freshUser.gcashQrUrl || null);
         }
@@ -211,7 +214,10 @@ export function FabricatorSettingsPage({
       if (response.error) throw new Error(response.error);
 
       const updatedUser = response.data?.user
-        ? mapUserDataFromBackend(response.data.user)
+        ? {
+            ...mapUserDataFromBackend(response.data.user),
+            id: response.data.user.id ?? currentUser.id,
+          }
         : {
             ...currentUser,
             name: trimmedName,
