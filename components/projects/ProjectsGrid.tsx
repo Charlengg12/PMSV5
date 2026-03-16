@@ -24,6 +24,7 @@ import {
   FolderOpen,
   MessageCircle,
   Search,
+  CheckCircle2,
 } from "lucide-react";
 import { Project, ProjectFeedback, User } from "../../types";
 import { CreateProjectForm } from "./CreateProjectForm";
@@ -142,6 +143,11 @@ export function ProjectsGrid({
         fabricatorNames.includes(term)
       );
     });
+
+  const totalProjectsCount = roleFilteredProjects.length;
+  const totalCompletedProjectsCount = roleFilteredProjects.filter(
+    (project) => project.status === "completed" || project.progress >= 100,
+  ).length;
 
   const canCreateProject =
     currentUser.role === "admin" || currentUser.role === "supervisor";
@@ -304,11 +310,13 @@ export function ProjectsGrid({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-xl sm:text-2xl">
-            <FolderOpen className="inline-block mr-2 mb-1 text-blue-700" />
-            Projects
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <div className="flex items-center gap-3">
+            <FolderOpen className="h-6 w-6 text-orange-400" />
+            <h1 className="text-3xl font-bold tracking-tight">
+              Projects
+            </h1>
+          </div>
+          <p className="mt-2 text-sm text-muted-foreground">
             Manage and track your projects
           </p>
         </div>
@@ -340,57 +348,98 @@ export function ProjectsGrid({
         </div>
       </div>
 
-      <div className="relative flex-1 sm:min-w-[280px]">
-        <Search className="absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 text-muted-foreground pointer-events-none" />
-        <Input
-          type="search"
-          placeholder="Search project..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10 w-full max-w-md"
-        />
-        <p className="text-sm text-muted-foreground mt-1">
-          <span className="font-medium text-[#e28a33]">Note:</span> You can
-          search by name, client, or supervisor
-        </p>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="overflow-hidden rounded-[1.75rem] border border-[#e8ebf0] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Total Projects
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalProjectsCount}
+                </div>
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                  All projects available in your current view
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-blue-100 bg-blue-50 text-blue-600 dark:border-blue-900/60 dark:bg-blue-950/50 dark:text-blue-300">
+                <FolderOpen className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="overflow-hidden rounded-[1.75rem] border border-[#e8ebf0] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+          <CardContent className="p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
+                  Total Completed Projects
+                </p>
+                <div className="mt-1 text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {totalCompletedProjectsCount}
+                </div>
+                <p className="mt-4 text-sm text-slate-500 dark:text-slate-400">
+                  Projects marked completed or finished at 100%
+                </p>
+              </div>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50 text-emerald-600 dark:border-emerald-900/60 dark:bg-emerald-950/50 dark:text-emerald-300">
+                <CheckCircle2 className="h-5 w-5" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
 
       {(currentUser.role === "admin" ||
         currentUser.role === "supervisor") && (
-        <Card className="p-4 md:p-6">
-          <CardHeader className="p-0 flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2 text-lg">
-              <MessageCircle className="h-5 w-5" />
-              Client Feedback
-            </CardTitle>
-            <Badge variant="outline" className="text-xs">
+        <Card className="overflow-hidden rounded-[2rem] border border-[#e8ebf0] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+          <CardHeader className="flex items-center justify-between border-b border-[#eef2f6] p-6 dark:border-slate-700">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e8ebf0] bg-white text-orange-400 dark:border-slate-700 dark:bg-slate-950 dark:text-orange-300">
+                <MessageCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  Client Feedback
+                </CardTitle>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                  Recent comments and updates from client reviews
+                </p>
+              </div>
+            </div>
+            <Badge
+              variant="outline"
+              className="rounded-full border-[#e8ebf0] px-3 py-1 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:text-slate-300"
+            >
               {latestFeedbackEntries.length} recent
             </Badge>
           </CardHeader>
-          <CardContent className="space-y-3 pt-4">
-            <div className="space-y-3 max-h-[220px] overflow-y-auto pr-1">
+          <CardContent className="p-6">
+            <div className="max-h-[260px] space-y-4 overflow-y-auto pr-1">
               {latestFeedbackEntries.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <div className="rounded-[1.5rem] border border-dashed border-[#e8ebf0] bg-white px-4 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
                   No client feedback has been recorded for your projects yet.
-                </p>
+                </div>
               ) : (
                 latestFeedbackEntries.map((entry) => (
                   <div
                     key={`${entry.id}-${entry.projectId}`}
-                    className="rounded-xl border p-3 space-y-1"
+                    className="space-y-3 rounded-[1.5rem] border border-[#edf1f5] bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
                   >
                     <div>
-                      <p className="text-sm font-semibold text-slate-900">
+                      <p className="text-sm font-semibold leading-6 text-slate-900 dark:text-slate-100">
                         {entry.comment}
                       </p>
                     </div>
-                    <div className="flex items-center justify-between text-[0.65rem] uppercase tracking-[0.3em] text-muted-foreground">
-                      <span>{entry.projectName}</span>
-                      <span>{formatFeedbackDate(entry.createdAt)}</span>
+                    <div className="flex items-center justify-between gap-3 text-[0.65rem] font-semibold uppercase tracking-[0.24em] text-slate-400 dark:text-slate-500">
+                      <span className="truncate">{entry.projectName}</span>
+                      <span className="shrink-0">{formatFeedbackDate(entry.createdAt)}</span>
                     </div>
-                    <p className="text-[0.65rem] font-semibold text-muted-foreground">
+                    <p className="text-xs font-medium text-slate-500 dark:text-slate-400">
                       {entry.createdByName || entry.createdBy || "Client"}{" "}
-                      <span className="text-[0.6rem]">
+                      <span className="text-[11px] uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
                         ({entry.createdByRole || "client"})
                       </span>
                     </p>
@@ -402,20 +451,37 @@ export function ProjectsGrid({
         </Card>
       )}
 
+      <div className="relative flex-1 sm:min-w-[280px]">
+        <Search className="pointer-events-none absolute left-3 top-4.5 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
+          type="search"
+          placeholder="Search project..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full max-w-md pl-10"
+        />
+        <p className="mt-1 text-sm text-muted-foreground">
+          <span className="font-medium text-[#e28a33]">Note:</span> You can
+          search by name, client, or supervisor
+        </p>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {filteredProjects.map((project) => (
           <Card
             key={project.id}
-            className="hover:shadow-lg transition-all duration-200 border-0 shadow-md overflow-hidden group"
+            className="group overflow-hidden rounded-[2rem] border border-[#e8ebf0] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_22px_50px_rgba(15,23,42,0.1)] dark:border-slate-700 dark:bg-slate-900"
           >
-            <div className="h-2 bg-gradient-to-r from-primary to-accent"></div>
-            <CardHeader className="bg-gradient-to-br from-primary/5 to-transparent p-4 sm:p-6">
+            <div className="h-1.5 bg-orange-400"></div>
+            <CardHeader className="border-b border-[#eef2f6] bg-white p-5 sm:p-6 dark:border-slate-700 dark:bg-slate-900">
               <div className="space-y-2">
-                <CardTitle className="text-lg">{project.name}</CardTitle>
+                <CardTitle className="text-xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                  {project.name}
+                </CardTitle>
                 <div className="flex flex-wrap gap-2">
                   <Badge
                     variant={getStatusColor(project.status)}
-                    className="text-xs"
+                    className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase"
                   >
                     {project.status === "pending-assignment"
                       ? "Broadcasting"
@@ -425,24 +491,24 @@ export function ProjectsGrid({
                   </Badge>
                   <Badge
                     variant={getPriorityColor(project.priority)}
-                    className="text-xs"
+                    className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase"
                   >
                     {project.priority}
                   </Badge>
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-4 p-4 sm:p-6">
-              <p className="text-sm text-muted-foreground">
+            <CardContent className="space-y-5 p-5 sm:p-6">
+              <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
                 {project.description}
               </p>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-xs">
+              <div className="rounded-[1.5rem] border border-[#eef2f6] bg-[#fafbfc] p-4 dark:border-slate-700 dark:bg-slate-950">
+                <div className="mb-3 flex justify-between text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
                   <span>Progress</span>
                   <span>{project.progress}%</span>
                 </div>
-                <Progress value={project.progress} />
+                <Progress value={project.progress} className="h-2.5 bg-slate-200 dark:bg-slate-800" />
               </div>
 
               {/* Role-based financial information */}
@@ -566,38 +632,40 @@ export function ProjectsGrid({
                 </div>
               )}
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Building className="h-3 w-3" />
-                <span className="truncate">
-                  Client: {project.clientName || "Not assigned"}
-                </span>
-              </div>
+              <div className="grid gap-3 md:grid-cols-2">
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                  <Building className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <span className="truncate">
+                    Client: {project.clientName || "Not assigned"}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Calendar className="h-3 w-3" />
-                <span>
-                  {new Date(project.startDate).toLocaleDateString()} -{" "}
-                  {new Date(project.endDate).toLocaleDateString()}
-                </span>
-              </div>
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                  <Calendar className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <span className="truncate">
+                    {new Date(project.startDate).toLocaleDateString()} -{" "}
+                    {new Date(project.endDate).toLocaleDateString()}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Users className="h-3 w-3" />
-                <span className="truncate">
-                  Supervisor: {getSupervisorLabel(project)}
-                </span>
-              </div>
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                  <Users className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <span className="truncate">
+                    Supervisor: {getSupervisorLabel(project)}
+                  </span>
+                </div>
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Users className="h-3 w-3" />
-                <span className="truncate">
-                  Team: {getFabricatorNames(project.fabricatorIds) || "None"}
-                </span>
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                  <Users className="h-4 w-4 text-slate-400 dark:text-slate-500" />
+                  <span className="truncate">
+                    Team: {getFabricatorNames(project.fabricatorIds) || "None"}
+                  </span>
+                </div>
               </div>
 
               {project.documentationUrl && (
-                <div className="flex items-center gap-2 text-xs">
-                  <Link className="h-3 w-3" />
+                <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-sm dark:border-slate-700 dark:bg-slate-950">
+                  <Link className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                   <a
                     href={project.documentationUrl}
                     target="_blank"
@@ -610,26 +678,26 @@ export function ProjectsGrid({
               )}
 
               {project.attachments && project.attachments.length > 0 && (
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <Paperclip className="h-3 w-3" />
+                <div className="space-y-2 rounded-[1.5rem] border border-[#eef2f6] bg-[#fafbfc] p-4 dark:border-slate-700 dark:bg-slate-950">
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <Paperclip className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                     <span>Attachments ({project.attachments.length})</span>
                   </div>
-                  <div className="ml-5 space-y-1">
+                  <div className="ml-1 space-y-2">
                     {project.attachments.slice(0, 2).map((attachment) => (
                       <div
                         key={attachment.id}
-                        className="flex items-center gap-1 text-xs"
+                        className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300"
                       >
-                        <FileText className="h-3 w-3" />
+                        <FileText className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                         <span className="truncate">{attachment.name}</span>
-                        <span className="text-muted-foreground">
+                        <span className="text-slate-400 dark:text-slate-500">
                           ({formatFileSize(attachment.size)})
                         </span>
                       </div>
                     ))}
                     {project.attachments.length > 2 && (
-                      <div className="text-xs text-muted-foreground ml-4">
+                      <div className="ml-6 text-sm text-slate-400 dark:text-slate-500">
                         +{project.attachments.length - 2} more
                       </div>
                     )}
@@ -637,8 +705,8 @@ export function ProjectsGrid({
                 </div>
               )}
 
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Users className="h-3 w-3" />
+              <div className="flex items-center gap-3 rounded-[1.25rem] border border-[#eef2f6] bg-[#fafbfc] px-4 py-3 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">
+                <Users className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                 <span>
                   Created by:{" "}
                   {users.find((u) => u.id === project.createdBy)?.name ||
@@ -847,7 +915,7 @@ export function ProjectsGrid({
                 <Button
                   variant="outline"
                   size="sm"
-                  className="w-full"
+                  className="w-full rounded-2xl border-[#e8ebf0] bg-white shadow-sm hover:bg-slate-50 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-slate-100"
                   onClick={() => handleViewDetails(project)}
                 >
                   <Eye className="h-3 w-3 mr-1" />
@@ -861,7 +929,7 @@ export function ProjectsGrid({
                       variant="outline"
                       size="sm"
                       disabled
-                      className="w-full"
+                      className="w-full rounded-2xl border-[#e8ebf0] bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950"
                     >
                       <CheckCircle className="h-3 w-3 mr-1" />
                       Client
@@ -870,7 +938,7 @@ export function ProjectsGrid({
                     <Button
                       variant="outline"
                       size="sm"
-                      className="w-full text-primary"
+                      className="w-full rounded-2xl border-[#e8ebf0] bg-white text-primary shadow-sm hover:bg-slate-50 hover:text-primary dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800 dark:hover:text-primary"
                       onClick={() => {
                         setClientDialogProject(project);
                         setShowClientDialog(true);
@@ -887,7 +955,7 @@ export function ProjectsGrid({
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                      className="w-full rounded-2xl bg-blue-600 text-white hover:bg-blue-700"
                       onClick={() =>
                         onBroadcastFabricators &&
                         onBroadcastFabricators(project.id)
@@ -911,7 +979,7 @@ export function ProjectsGrid({
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full sm:col-span-2 bg-primary"
+                      className="w-full rounded-2xl bg-primary sm:col-span-2"
                       onClick={() =>
                         handleTransition(project, "1_Assigned_to_FAB")
                       }
@@ -926,7 +994,7 @@ export function ProjectsGrid({
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full sm:col-span-2 bg-primary"
+                      className="w-full rounded-2xl bg-primary sm:col-span-2"
                       onClick={() =>
                         handleTransition(
                           project,
@@ -951,7 +1019,7 @@ export function ProjectsGrid({
                       <Button
                         variant="default"
                         size="sm"
-                        className="bg-green-600 hover:bg-green-700"
+                        className="rounded-2xl bg-green-600 hover:bg-green-700"
                         onClick={() =>
                           handleTransition(project, "3_Ready_for_Admin_Review")
                         }
@@ -961,7 +1029,7 @@ export function ProjectsGrid({
                       <Button
                         variant="outline"
                         size="sm"
-                        className="text-destructive border-destructive/20"
+                        className="rounded-2xl border-destructive/20 text-destructive hover:bg-red-50 hover:text-destructive dark:hover:bg-red-950/30 dark:hover:text-red-300"
                         onClick={() =>
                           handleTransition(project, "1_Assigned_to_FAB")
                         }
@@ -976,7 +1044,7 @@ export function ProjectsGrid({
                     <Button
                       variant="default"
                       size="sm"
-                      className="w-full sm:col-span-2 bg-green-600 hover:bg-green-700"
+                      className="w-full rounded-2xl bg-green-600 hover:bg-green-700 sm:col-span-2"
                       onClick={() =>
                         handleTransition(
                           project,
