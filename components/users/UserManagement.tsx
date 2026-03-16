@@ -649,7 +649,7 @@ export function UserManagement({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between w-full">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">
-            <UserIcon className="h-6 w-6 inline mr-2 text-blue-700" />
+            <UserIcon className="h-6 w-6 inline mr-2 text-orange-600" />
             User Management
           </h1>
           <p className="text-sm text-muted-foreground mt-1">

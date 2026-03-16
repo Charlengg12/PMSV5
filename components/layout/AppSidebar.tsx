@@ -238,64 +238,118 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
     }
   };
 
-  const navigationItems = useMemo(() => {
-    const baseItems = [
-      { title: "Dashboard", url: "#dashboard", icon: LayoutDashboard },
-      { title: "Projects", url: "#projects", icon: FolderOpen },
-    ];
+  const navigationGroups = useMemo(() => {
+    const homeGroup = {
+      title: "Home",
+      items: [
+        { title: "Dashboard", url: "#dashboard", icon: LayoutDashboard },
+      ],
+    };
 
     if (currentUser.role === "admin") {
       return [
-        ...baseItems,
-        { title: "Archives", url: "#archives", icon: Archive },
-        { title: "Tasks", url: "#tasks", icon: CheckSquare },
-        { title: "Users", url: "#users", icon: Users },
-        { title: "Revenue", url: "#revenue", icon: PhilippinePeso },
-        { title: "Reports", url: "#reports", icon: BarChart3 },
-        { title: "Activity Logs", url: "#activity-logs", icon: Activity },
-        { title: "Billing", url: "#billing", icon: CreditCard },
-        { title: "Settings", url: "#settings", icon: Settings },
+        homeGroup,
+        {
+          title: "Management",
+          items: [
+            { title: "Projects", url: "#projects", icon: FolderOpen },
+            { title: "Archives", url: "#archives", icon: Archive },
+            { title: "Tasks", url: "#tasks", icon: CheckSquare },
+            { title: "Users", url: "#users", icon: Users },
+          ],
+        },
+        {
+          title: "Finance",
+          items: [
+            { title: "Revenue", url: "#revenue", icon: PhilippinePeso },
+            { title: "Billing", url: "#billing", icon: CreditCard },
+            { title: "Reports", url: "#reports", icon: BarChart3 },
+          ],
+        },
+        {
+          title: "System",
+          items: [
+            { title: "Activity Logs", url: "#activity-logs", icon: Activity },
+            { title: "Settings", url: "#settings", icon: Settings },
+          ],
+        },
       ];
     }
 
     if (currentUser.role === "supervisor") {
       return [
-        ...baseItems,
-        { title: "Archives", url: "#archives", icon: Archive },
-        { title: "Tasks", url: "#tasks", icon: CheckSquare },
-        { title: "Team", url: "#team", icon: Users },
-        { title: "Reports", url: "#reports", icon: BarChart3 },
+        homeGroup,
+        {
+          title: "Management",
+          items: [
+            { title: "Projects", url: "#projects", icon: FolderOpen },
+            { title: "Archives", url: "#archives", icon: Archive },
+            { title: "Tasks", url: "#tasks", icon: CheckSquare },
+            { title: "Team", url: "#team", icon: Users },
+          ],
+        },
+        {
+          title: "Insights",
+          items: [
+            { title: "Reports", url: "#reports", icon: BarChart3 },
+          ],
+        },
       ];
     }
 
     if (currentUser.role === "fabricator") {
       return [
-        ...baseItems,
-        { title: "Work Log", url: "#worklog", icon: Calendar },
-        { title: "Materials", url: "#materials", icon: Package },
-        { title: "Tasks", url: "#tasks", icon: CheckSquare },
-        { title: "Settings", url: "#settings", icon: BarChart3 },
+        homeGroup,
+        {
+          title: "Workspace",
+          items: [
+            { title: "Projects", url: "#projects", icon: FolderOpen },
+            { title: "Tasks", url: "#tasks", icon: CheckSquare },
+            { title: "Work Log", url: "#worklog", icon: Calendar },
+            { title: "Materials", url: "#materials", icon: Package },
+          ],
+        },
+        {
+          title: "Preferences",
+          items: [{ title: "Settings", url: "#settings", icon: Settings }],
+        },
       ];
     }
 
     if (currentUser.role === "client") {
       return [
-        { title: "Dashboard", url: "#dashboard", icon: LayoutDashboard },
-        { title: "Project Status", url: "#project-status", icon: Eye },
-        { title: "Documentation", url: "#documentation", icon: Download },
+        homeGroup,
+        {
+          title: "Project",
+          items: [
+            { title: "Project Status", url: "#project-status", icon: Eye },
+            {
+              title: "Documentation",
+              url: "#documentation",
+              icon: Download,
+            },
+          ],
+        },
       ];
     }
 
-    return baseItems;
+    return [
+      homeGroup,
+      {
+        title: "Management",
+        items: [{ title: "Projects", url: "#projects", icon: FolderOpen }],
+      },
+    ];
   }, [currentUser.role]);
 
   useEffect(() => {
-    const getHash = () => window.location.hash || navigationItems[0]?.url || "#dashboard";
+    const getHash = () =>
+      window.location.hash || navigationGroups[0]?.items[0]?.url || "#dashboard";
     const updateHash = () => setActiveHash(getHash());
     updateHash();
     window.addEventListener("hashchange", updateHash);
     return () => window.removeEventListener("hashchange", updateHash);
-  }, [navigationItems]);
+  }, [navigationGroups]);
 
   return (
     <>
@@ -305,7 +359,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
         className="h-screen min-h-screen border-r-0 border-[#ece8e1] bg-white text-[#3f4654] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 [&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-[#ece8e1] [&_[data-sidebar=sidebar]]:bg-white [&_[data-sidebar=sidebar]]:text-[#3f4654] dark:[&_[data-sidebar=sidebar]]:border-slate-700 dark:[&_[data-sidebar=sidebar]]:bg-slate-950 dark:[&_[data-sidebar=sidebar]]:text-slate-200"
         collapsible="icon"
       >
-        <SidebarHeader className="shrink-0 border-b border-[#ece8e1] px-4 py-5 dark:border-slate-700">
+        <SidebarHeader className="flex h-[73px] shrink-0 items-center border-b border-[#ece8e1] px-4 dark:border-slate-700 sm:h-[81px]">
           <CompanyLogo
             size={isCollapsedDesktop ? "sm" : "md"}
             showText={!isCollapsedDesktop}
@@ -319,44 +373,48 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
         </SidebarHeader>
 
         <SidebarContent className="gap-0 overflow-y-auto overflow-x-hidden bg-transparent no-scrollbar">
-          <SidebarGroup className="px-3 py-4">
-            <SidebarGroupLabel className="mb-2 h-auto px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a0a5af] group-data-[collapsible=icon]:hidden">
-              Navigation
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-1.5 md:group-data-[collapsible=icon]:px-0">
-                {navigationItems.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={activeHash === item.url}
-                      className="rounded-lg border border-transparent bg-transparent p-0 text-[#616977] shadow-none ring-0 transition-all duration-200 hover:bg-orange-400 hover:text-white dark:text-slate-300 dark:hover:bg-orange-400 dark:hover:text-white data-[active=true]:border-orange-400 data-[active=true]:bg-orange-400 data-[active=true]:text-white data-[active=true]:ring-0"
-                      tooltip={isCollapsedDesktop ? item.title : undefined}
-                    >
-                      <a
-                        href={item.url}
-                        className={menuLinkClassName}
-                        onClick={(e) => {
-                          if (item.url.startsWith("#")) {
-                            e.preventDefault();
-                            window.location.hash = item.url;
-                          }
-                          if (isMobile) setOpenMobile(false);
-                        }}
+          {navigationGroups.map((group) => (
+            <SidebarGroup key={group.title} className="px-3 py-4">
+              <SidebarGroupLabel className="mb-2 h-auto px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-[#a0a5af] group-data-[collapsible=icon]:hidden">
+                {group.title}
+              </SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-1.5 md:group-data-[collapsible=icon]:px-0">
+                  {group.items.map((item) => (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={activeHash === item.url}
+                        className="rounded-lg border border-transparent bg-transparent p-0 text-[#616977] shadow-none ring-0 transition-all duration-200 hover:bg-orange-400 hover:text-white dark:text-slate-300 dark:hover:bg-orange-400 dark:hover:text-white data-[active=true]:border-orange-400 data-[active=true]:bg-orange-400 data-[active=true]:text-white data-[active=true]:ring-0"
+                        tooltip={isCollapsedDesktop ? item.title : undefined}
                       >
-                        <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-current">
-                          <item.icon className="h-4 w-4 flex-shrink-0" />
-                        </span>
-                        <span className={`${isCollapsedDesktop ? "sr-only" : ""} font-normal`}>
-                          {item.title}
-                        </span>
-                      </a>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                        <a
+                          href={item.url}
+                          className={menuLinkClassName}
+                          onClick={(e) => {
+                            if (item.url.startsWith("#")) {
+                              e.preventDefault();
+                              window.location.hash = item.url;
+                            }
+                            if (isMobile) setOpenMobile(false);
+                          }}
+                        >
+                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center text-current">
+                            <item.icon className="h-4 w-4 flex-shrink-0" />
+                          </span>
+                          <span
+                            className={`${isCollapsedDesktop ? "sr-only" : ""} font-normal`}
+                          >
+                            {item.title}
+                          </span>
+                        </a>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
 
         <SidebarFooter className="border-t border-[#ece8e1] px-3 py-4 dark:border-slate-700">

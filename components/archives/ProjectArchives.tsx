@@ -252,7 +252,7 @@ export function ProjectArchives({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <Archive className="h-6 w-6 text-blue-700" />
+            <Archive className="h-6 w-6 text-orange-600" />
             <h1 className="text-3xl font-bold tracking-tight">
               Project Archives
             </h1>
