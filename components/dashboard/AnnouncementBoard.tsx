@@ -1,6 +1,9 @@
 import { useState, useEffect } from "react";
-import { createPortal } from "react-dom"; // Import createPortal
+import { createPortal } from "react-dom";
+import { format } from "date-fns";
+import Swal from "sweetalert2";
 import { apiService } from "../../utils/apiService";
+import { User } from "../../types";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -18,9 +21,6 @@ import {
   Save,
   Send,
 } from "lucide-react";
-import { format } from "date-fns";
-import { User } from "../../types";
-import Swal from "sweetalert2";
 
 interface Announcement {
   id: number;
@@ -53,8 +53,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(true);
-
-  // Form State
   const [editingId, setEditingId] = useState<number | null>(null);
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -81,7 +79,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     }
   };
 
-  // Carousel Navigation
   const handlePrev = () => {
     setCurrentIndex((prev) =>
       prev === 0 ? announcements.length - 1 : prev - 1,
@@ -94,27 +91,24 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     );
   };
 
-  // Role selection logic
   const toggleRole = (role: string) => {
     if (role === "all") {
       setSelectedRoles(["all"]);
       return;
     }
 
-    let newRoles = selectedRoles.filter((r) => r !== "all");
+    let nextRoles = selectedRoles.filter((entry) => entry !== "all");
 
-    if (newRoles.includes(role)) {
-      newRoles = newRoles.filter((r) => r !== role);
+    if (nextRoles.includes(role)) {
+      nextRoles = nextRoles.filter((entry) => entry !== role);
     } else {
-      newRoles.push(role);
+      nextRoles.push(role);
     }
 
-    if (newRoles.length === 0) newRoles = ["all"];
-
-    setSelectedRoles(newRoles);
+    if (nextRoles.length === 0) nextRoles = ["all"];
+    setSelectedRoles(nextRoles);
   };
 
-  // Modal open handlers
   const openCreateModal = () => {
     setEditingId(null);
     setTitle("");
@@ -123,16 +117,18 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     setShowModal(true);
   };
 
-  const openEditModal = (ann: Announcement) => {
-    setEditingId(ann.id);
-    setTitle(ann.title);
-    setContent(ann.content);
+  const openEditModal = (announcement: Announcement) => {
+    setEditingId(announcement.id);
+    setTitle(announcement.title);
+    setContent(announcement.content);
+
     try {
-      const parsedRoles = JSON.parse(ann.target_role);
+      const parsedRoles = JSON.parse(announcement.target_role);
       setSelectedRoles(Array.isArray(parsedRoles) ? parsedRoles : ["all"]);
     } catch {
       setSelectedRoles(["all"]);
     }
+
     setShowModal(true);
   };
 
@@ -140,10 +136,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     setShowModal(false);
     setEditingId(null);
   };
-  
 
-
-  // ─── CREATE / UPDATE with confirmation + loading ───────────────────────────
   const handleSubmit = async () => {
     if (!title.trim() || !content.trim()) {
       Swal.fire({
@@ -154,8 +147,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       });
       return;
     }
-
-    // if title is > 50 chars return the sweet alert exceeding limit
 
     if (title.length > 50) {
       Swal.fire({
@@ -193,7 +184,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
 
     if (!result.isConfirmed) return;
 
-    // Show loading
     const loadingSwal = Swal.fire({
       title: isEdit ? "Updating..." : "Posting...",
       text: "Please wait...",
@@ -206,13 +196,12 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       customClass: swalCustomClasses,
     });
 
-    // Simulate minimum 1.5 seconds runtime
     const startTime = Date.now();
-    const MIN_DURATION = 1500;
+    const minDuration = 1500;
 
     try {
       if (isEdit) {
-        await apiService.updateAnnouncement(editingId!, {
+        await apiService.updateAnnouncement(editingId, {
           title,
           content,
           targetRoles: selectedRoles,
@@ -225,12 +214,9 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         });
       }
 
-      // Ensure at least 1.5s has passed
       const elapsed = Date.now() - startTime;
-      if (elapsed < MIN_DURATION) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, MIN_DURATION - elapsed),
-        );
+      if (elapsed < minDuration) {
+        await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
       }
 
       loadingSwal.close();
@@ -247,10 +233,8 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       fetchAnnouncements();
     } catch (error) {
       const elapsed = Date.now() - startTime;
-      if (elapsed < MIN_DURATION) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, MIN_DURATION - elapsed),
-        );
+      if (elapsed < minDuration) {
+        await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
       }
 
       loadingSwal.close();
@@ -264,7 +248,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
     }
   };
 
-  // ─── DELETE with confirmation + loading ────────────────────────────────────
   const handleDelete = async (id: number) => {
     const result = await Swal.fire({
       title: "Delete Announcement?",
@@ -279,7 +262,6 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
 
     if (!result.isConfirmed) return;
 
-    // Show loading
     const loadingSwal = Swal.fire({
       title: "Deleting...",
       text: "Please wait...",
@@ -292,26 +274,22 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       customClass: swalCustomClasses,
     });
 
-    // Simulate minimum 1.5 seconds runtime
     const startTime = Date.now();
-    const MIN_DURATION = 1500;
+    const minDuration = 1500;
 
     try {
       await apiService.deleteAnnouncement(id);
 
-      const newAnnouncements = announcements.filter((a) => a.id !== id);
-      setAnnouncements(newAnnouncements);
+      const nextAnnouncements = announcements.filter((announcement) => announcement.id !== id);
+      setAnnouncements(nextAnnouncements);
 
-      if (currentIndex >= newAnnouncements.length) {
-        setCurrentIndex(Math.max(0, newAnnouncements.length - 1));
+      if (currentIndex >= nextAnnouncements.length) {
+        setCurrentIndex(Math.max(0, nextAnnouncements.length - 1));
       }
 
-      // Ensure at least 1.5s has passed
       const elapsed = Date.now() - startTime;
-      if (elapsed < MIN_DURATION) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, MIN_DURATION - elapsed),
-        );
+      if (elapsed < minDuration) {
+        await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
       }
 
       loadingSwal.close();
@@ -326,10 +304,8 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
       });
     } catch (error) {
       const elapsed = Date.now() - startTime;
-      if (elapsed < MIN_DURATION) {
-        await new Promise((resolve) =>
-          setTimeout(resolve, MIN_DURATION - elapsed),
-        );
+      if (elapsed < minDuration) {
+        await new Promise((resolve) => setTimeout(resolve, minDuration - elapsed));
       }
 
       loadingSwal.close();
@@ -345,22 +321,24 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
 
   const renderTargetBadges = (roleString: string) => {
     let roles: string[] = [];
+
     try {
       roles = JSON.parse(roleString);
     } catch {
       return null;
     }
+
     if (roles.includes("all")) return null;
 
     return (
-      <div className="flex flex-wrap gap-1 mt-2">
-        {roles.map((r) => (
+      <div className="mt-2 flex flex-wrap gap-2">
+        {roles.map((role) => (
           <Badge
-            key={r}
+            key={role}
             variant="outline"
-            className="text-[10px] h-4 px-1 uppercase border-primary/30 text-primary dark:border-primary/50 dark:text-white"
+            className="h-6 rounded-full border-[#e8ebf0] px-2.5 text-[10px] uppercase text-slate-500 dark:border-slate-700 dark:text-slate-300"
           >
-            {r}
+            {role}
           </Badge>
         ))}
       </div>
@@ -371,36 +349,43 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
 
   return (
     <>
-      <Card className="h-full flex flex-col border-none shadow-none bg-transparent sm:bg-card sm:border sm:shadow-sm relative w-full overflow-hidden p-0 sm:p-6">
-        <CardHeader className="w-full flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between pb-2 p-0">
-          {/* Left Side: Title & Counter */}
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Megaphone className="h-5 w-5 text-primary dark:text-white" />
-            <CardTitle className="text-lg w-full sm:w-auto">Announcements</CardTitle>
+      <Card className="relative flex h-full w-full flex-col overflow-hidden rounded-[2rem] border border-[#e8ebf0] bg-white p-6 shadow-[0_16px_40px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+        <CardHeader className="flex w-full flex-col gap-4 border-b border-[#eef2f6] p-0 pb-5 sm:flex-row sm:items-center sm:justify-between dark:border-slate-700">
+          <div className="flex w-full items-center gap-3 sm:w-auto">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e8ebf0] bg-white text-orange-400 dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300">
+              <Megaphone className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <CardTitle className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+                Announcements
+              </CardTitle>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                Team updates and broadcast notices
+              </p>
+            </div>
             {!loading && announcements.length > 0 && (
-              <span className="text-xs text-muted-foreground ml-2 bg-muted dark:bg-slate-800 px-2 py-0.5 flex items-center gap-1 whitespace-nowrap rounded-full">
+              <span className="ml-auto flex items-center gap-1 whitespace-nowrap rounded-full border border-[#e8ebf0] px-3 py-1 text-xs font-medium text-slate-500 dark:border-slate-700 dark:text-slate-400">
                 {currentIndex + 1} / {announcements.length}
               </span>
             )}
           </div>
 
-          {/* Right Side: Actions (Aligns right on mobile) */}
-          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <div className="flex w-full items-center justify-end gap-2 sm:w-auto">
             {announcements.length > 1 && (
-              <div className="flex items-center border dark:border-slate-700 rounded-md mr-2 bg-background dark:bg-slate-800 shadow-sm">
+              <div className="mr-2 flex items-center rounded-2xl border border-[#e8ebf0] bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-8 w-8 rounded-xl"
                   onClick={handlePrev}
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
-                <div className="w-[1px] h-4 bg-border dark:bg-slate-700"></div>
+                <div className="h-4 w-[1px] bg-[#e8ebf0] dark:bg-slate-700"></div>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-7 w-7"
+                  className="h-8 w-8 rounded-xl"
                   onClick={handleNext}
                 >
                   <ChevronRight className="h-4 w-4" />
@@ -409,59 +394,60 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
             )}
 
             {canPost && (
-              <Button variant="outline" size="sm" onClick={openCreateModal}>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="rounded-2xl border-[#e8ebf0] bg-white shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+                onClick={openCreateModal}
+              >
+                <Plus className="mr-2 h-4 w-4" />
                 New
               </Button>
             )}
           </div>
         </CardHeader>
 
-        <CardContent className="relative flex-1 min-h-0 flex flex-col min-w-0 w-full">
+        <CardContent className="relative flex w-full min-h-0 min-w-0 flex-1 flex-col px-0 pt-6">
           {loading ? (
-            <div className="h-full flex items-center justify-center text-muted-foreground text-sm">
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Loading...
             </div>
           ) : announcements.length === 0 ? (
-            <div className="h-full flex flex-col items-center justify-center text-muted-foreground border-2 border-dashed rounded-lg">
-              <Megaphone className="h-8 w-8 mb-2 opacity-20 dark:text-slate-300" />
+            <div className="flex h-full flex-col items-center justify-center rounded-[1.5rem] border border-dashed border-[#e8ebf0] bg-white text-muted-foreground dark:border-slate-700 dark:bg-slate-900">
+              <Megaphone className="mb-2 h-8 w-8 opacity-20 dark:text-slate-300" />
               <p>No announcements yet.</p>
             </div>
           ) : (
-            <div className="h-full w-full bg-card dark:bg-slate-800 border dark:border-slate-700 rounded-xl p-5 flex flex-col shadow-sm relative group animate-in fade-in duration-300">
-              <div className="flex justify-between items-start mb-2">
+            <div className="group relative flex h-full w-full flex-col rounded-[1.75rem] border border-[#e8ebf0] bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-slate-950">
+              <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
-                  <h4 className="font-semibold text-lg leading-tight dark:text-slate-100">
+                  <h4 className="text-lg font-bold leading-tight text-slate-900 dark:text-slate-100">
                     {currentAnnouncement.title}
                   </h4>
-                  <div className="text-xs text-muted-foreground dark:text-slate-400 mt-1">
+                  <div className="mt-2 text-xs font-medium uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
                     {currentAnnouncement.author_name} •{" "}
-                    {format(
-                      new Date(currentAnnouncement.created_at),
-                      "MMM d, yyyy",
-                    )}
+                    {format(new Date(currentAnnouncement.created_at), "MMM d, yyyy")}
                   </div>
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto mb-2 pr-1 custom-scrollbar">
-                <p className="text-sm text-foreground/90 dark:text-slate-200 whitespace-pre-wrap leading-relaxed">
+              <div className="mb-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                <p className="whitespace-pre-wrap text-sm leading-7 text-slate-600 dark:text-slate-200">
                   {currentAnnouncement.content}
                 </p>
               </div>
 
-              <div className="mt-auto pt-2 border-t dark:border-slate-700 flex justify-between items-center">
+              <div className="mt-auto flex items-center justify-between border-t border-[#eef2f6] pt-4 dark:border-slate-700">
                 <div className="flex-1">
                   {renderTargetBadges(currentAnnouncement.target_role)}
                 </div>
 
-                {(isAdmin ||
-                  currentUser.id === currentAnnouncement.created_by) && (
+                {(isAdmin || currentUser.id === currentAnnouncement.created_by) && (
                   <div className="flex gap-2">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-primary"
+                      className="h-9 w-9 rounded-xl p-0 text-muted-foreground hover:bg-slate-100 hover:text-primary dark:hover:bg-slate-800"
                       onClick={() => openEditModal(currentAnnouncement)}
                       title="Edit"
                     >
@@ -470,7 +456,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      className="h-9 w-9 rounded-xl p-0 text-muted-foreground hover:bg-red-50 hover:text-destructive dark:hover:bg-red-950/30"
                       onClick={() => handleDelete(currentAnnouncement.id)}
                       title="Delete"
                     >
@@ -484,25 +470,24 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
         </CardContent>
       </Card>
 
-      {/* MODAL WRAPPED IN CREATEPORTAL TO COVER FULL SCREEN */}
       {showModal &&
         createPortal(
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className=" modal bg-background dark:bg-slate-900 border dark:border-slate-700 rounded-xl shadow-lg w-full max-w-lg p-6 relative animate-in zoom-in-95 duration-200">
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+            <div className="modal relative w-full max-w-lg rounded-[2rem] border border-[#e8ebf0] bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200 dark:border-slate-700 dark:bg-slate-900">
               <Button
                 variant="ghost"
                 size="icon"
-                className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+                className="absolute right-4 top-4 rounded-xl text-muted-foreground hover:bg-slate-100 hover:text-foreground dark:hover:bg-slate-800"
                 onClick={closeModal}
               >
                 <X className="h-4 w-4" />
               </Button>
 
               <div className="mb-5">
-                <h2 className="text-xl font-semibold dark:text-slate-100">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                   {editingId ? "Edit Announcement" : "New Announcement"}
                 </h2>
-                <p className="text-sm text-muted-foreground dark:text-slate-400">
+                <p className="text-sm text-slate-500 dark:text-slate-400">
                   Share updates with your team.
                 </p>
               </div>
@@ -514,6 +499,7 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                     placeholder="e.g. Holiday Schedule"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
+                    className="rounded-2xl border-[#e8ebf0] bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950"
                   />
                 </div>
 
@@ -523,20 +509,18 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                     placeholder="Write your message here..."
                     value={content}
                     onChange={(e) => setContent(e.target.value)}
-                    className="min-h-[120px]"
+                    className="min-h-[120px] rounded-2xl border-[#e8ebf0] bg-white shadow-sm dark:border-slate-700 dark:bg-slate-950"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium dark:text-slate-100 flex items-center gap-2">
+                  <label className="flex items-center gap-2 text-sm font-medium dark:text-slate-100">
                     <Users className="h-4 w-4" /> Visible To
                   </label>
-                  <div className="flex flex-wrap gap-2 p-3 border dark:border-slate-700 rounded-md bg-muted/20 dark:bg-slate-800">
+                  <div className="flex flex-wrap gap-2 rounded-2xl border border-[#e8ebf0] bg-white p-3 dark:border-slate-700 dark:bg-slate-950">
                     <Badge
-                      variant={
-                        selectedRoles.includes("all") ? "default" : "outline"
-                      }
-                      className="cursor-pointer hover:bg-primary/80 transition-colors px-3 py-1"
+                      variant={selectedRoles.includes("all") ? "default" : "outline"}
+                      className="cursor-pointer rounded-xl px-3 py-1 transition-colors hover:bg-primary/80"
                       onClick={() => toggleRole("all")}
                     >
                       Everyone
@@ -544,10 +528,8 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                     {AVAILABLE_ROLES.map((role) => (
                       <Badge
                         key={role}
-                        variant={
-                          selectedRoles.includes(role) ? "default" : "outline"
-                        }
-                        className="cursor-pointer hover:bg-primary/80 transition-colors capitalize px-3 py-1"
+                        variant={selectedRoles.includes(role) ? "default" : "outline"}
+                        className="cursor-pointer rounded-xl px-3 py-1 capitalize transition-colors hover:bg-primary/80"
                         onClick={() => toggleRole(role)}
                       >
                         {role}
@@ -560,14 +542,18 @@ export function AnnouncementBoard({ currentUser }: AnnouncementBoardProps) {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={closeModal}>
+                  <Button
+                    variant="outline"
+                    className="rounded-2xl border-[#e8ebf0] bg-white shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800"
+                    onClick={closeModal}
+                  >
                     Cancel
                   </Button>
-                  <Button onClick={handleSubmit}>
+                  <Button className="rounded-2xl" onClick={handleSubmit}>
                     {editingId ? (
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="mr-2 h-4 w-4" />
                     ) : (
-                      <Send className="h-4 w-4 mr-2" />
+                      <Send className="mr-2 h-4 w-4" />
                     )}
                     {editingId ? "Update" : "Post Announcement"}
                   </Button>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
-import { CheckCircle, Clock, AlertCircle } from "lucide-react";
+import { CheckCircle, Clock3, AlertCircle, ListTodo } from "lucide-react";
 import { Task, User, Project } from "../../types";
 
 interface TaskListProps {
@@ -30,13 +30,13 @@ export function TaskList({
     }
     if (currentUser.role === "supervisor") {
       const supervisorProjects = projects.filter(
-        (p) => p.supervisorId === currentUser.id
+        (project) => project.supervisorId === currentUser.id,
       );
-      return displayTasks.filter((t) =>
-        supervisorProjects.some((p) => p.id === t.projectId)
+      return displayTasks.filter((task) =>
+        supervisorProjects.some((project) => project.id === task.projectId),
       );
     }
-    return displayTasks.filter((t) => t.assignedTo === currentUser.id);
+    return displayTasks.filter((task) => task.assignedTo === currentUser.id);
   };
 
   const filteredTasks = getFilteredTasks().slice(0, 8);
@@ -44,13 +44,14 @@ export function TaskList({
   const getStatusIcon = (status: Task["status"]) => {
     switch (status) {
       case "completed":
-        return <CheckCircle className="h-4 w-4 text-green-500" />;
+        return <CheckCircle className="h-4 w-4 text-emerald-500" />;
       case "in-progress":
-        return <Clock className="h-4 w-4 text-blue-500" />;
+        return <Clock3 className="h-4 w-4 text-blue-500" />;
       case "blocked":
-        return <AlertCircle className="h-4 w-4 text-yellow-500" />;
+        return <AlertCircle className="h-4 w-4 text-amber-500" />;
+      case "pending":
       default:
-        return <Clock className="h-4 w-4 text-gray-400" />;
+        return <Clock3 className="h-4 w-4 text-slate-400" />;
     }
   };
 
@@ -63,7 +64,6 @@ export function TaskList({
       case "blocked":
         return "destructive";
       case "pending":
-        return "outline";
       default:
         return "outline";
     }
@@ -72,27 +72,23 @@ export function TaskList({
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent":
-        return "destructive";
       case "high":
         return "destructive";
       case "medium":
         return "secondary";
       case "low":
-        return "outline";
       default:
         return "outline";
     }
   };
 
   const getProjectName = (projectId: string) => {
-    const project = projects.find((p) => p.id === projectId);
+    const project = projects.find((entry) => entry.id === projectId);
     return project?.name || "Unknown Project";
   };
 
   const canUpdateTask = (task: Task) => {
-    return (
-      currentUser.role === "fabricator" && task.assignedTo === currentUser.id
-    );
+    return currentUser.role === "fabricator" && task.assignedTo === currentUser.id;
   };
 
   const canMarkAsDone = (task: Task) => {
@@ -107,9 +103,7 @@ export function TaskList({
       case "pending":
         return "in-progress";
       case "in-progress":
-        return "completed";
       case "blocked":
-        return "completed";
       case "completed":
       default:
         return "completed";
@@ -121,81 +115,108 @@ export function TaskList({
       prevTasks.map((task) =>
         task.id === taskId
           ? { ...task, status, updatedAt: new Date().toISOString() }
-          : task
-      )
+          : task,
+      ),
     );
     onUpdateTaskStatus?.(taskId, status);
   };
 
   return (
-    <Card className="gap-3">
-      <CardHeader>
-        <CardTitle>Recent Tasks</CardTitle>
-      </CardHeader>
-      <CardContent className="p-4 sm:p-6">
-        <div className="space-y-4 sm:space-y-6">
-          {filteredTasks.map((task) => (
-            <div
-              key={task.id}
-              className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4"
-            >
-              <div className="flex items-start gap-3 sm:items-center sm:gap-3 flex-1 min-w-0">
-                {getStatusIcon(task.status)}
-                <div className="flex-1 min-w-0 space-y-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm break-words">{task.title}</p>
-                    <Badge variant={getStatusColor(task.status)}>
-                      {task.status}
-                    </Badge>
-                    <Badge variant={getPriorityColor(task.priority)}>
-                      {task.priority}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-muted-foreground break-words">
-                    {getProjectName(task.projectId)} • Due:{" "}
-                    {task.dueDate
-                      ? new Date(task.dueDate).toLocaleDateString()
-                      : "No due date"}
-                  </p>
-                </div>
-              </div>
-              {onUpdateTaskStatus && (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                  {canUpdateTask(task) && task.status !== "completed" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full sm:w-auto"
-                      onClick={() => {
-                        handleStatusUpdate(task.id, getNextStatus(task.status));
-                      }}
-                    >
-                      {task.status === "pending" && "Start"}
-                      {task.status === "in-progress" && "Complete"}
-                      {task.status === "blocked" && "Complete"}
-                    </Button>
-                  )}
-                  {canMarkAsDone(task) && (
-                    <Button
-                      size="sm"
-                      variant="default"
-                      className="w-full bg-green-600 hover:bg-green-700 sm:w-auto"
-                      onClick={() => handleStatusUpdate(task.id, "completed")}
-                    >
-                      <CheckCircle className="h-3 w-3 mr-1" />
-                      Done
-                    </Button>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-          {filteredTasks.length === 0 && (
-            <p className="text-center text-muted-foreground py-8">
-              No tasks available
+    <Card className="overflow-hidden rounded-[2rem] border border-[#e8ebf0] bg-white shadow-[0_16px_40px_rgba(15,23,42,0.06)] dark:border-slate-700 dark:bg-slate-900">
+      <CardHeader className="border-b border-[#eef2f6] pb-5 dark:border-slate-700">
+        <div className="flex items-center gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e8ebf0] bg-white text-orange-400 dark:border-slate-700 dark:bg-slate-900 dark:text-orange-300">
+            <ListTodo className="h-5 w-5" />
+          </div>
+          <div>
+            <CardTitle className="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">
+              Recent Tasks
+            </CardTitle>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+              Monitor current assignments and update status fast
             </p>
-          )}
+          </div>
         </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4 p-6">
+        {filteredTasks.map((task) => (
+          <div
+            key={task.id}
+            className="rounded-[1.5rem] border border-[#edf1f5] bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-950"
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex min-w-0 items-start gap-3">
+                  <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#eef2f6] bg-[#fafbfc] dark:border-slate-700 dark:bg-slate-900">
+                    {getStatusIcon(task.status)}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="break-words text-base font-bold text-slate-900 dark:text-slate-100">
+                      {task.title}
+                    </p>
+                    <p className="mt-1 break-words text-sm text-slate-500 dark:text-slate-400">
+                      {getProjectName(task.projectId)} • Due{" "}
+                      {task.dueDate
+                        ? new Date(task.dueDate).toLocaleDateString()
+                        : "No due date"}
+                    </p>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <Badge
+                        variant={getStatusColor(task.status)}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase"
+                      >
+                        {task.status}
+                      </Badge>
+                      <Badge
+                        variant={getPriorityColor(task.priority)}
+                        className="rounded-full px-3 py-1 text-[11px] font-semibold uppercase"
+                      >
+                        {task.priority}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+
+                {onUpdateTaskStatus && (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    {canUpdateTask(task) && task.status !== "completed" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="rounded-xl border-[#e8ebf0] bg-white shadow-sm hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:bg-slate-800"
+                        onClick={() => {
+                          handleStatusUpdate(task.id, getNextStatus(task.status));
+                        }}
+                      >
+                        {task.status === "pending" && "Start"}
+                        {task.status === "in-progress" && "Complete"}
+                        {task.status === "blocked" && "Complete"}
+                      </Button>
+                    )}
+                    {canMarkAsDone(task) && (
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="rounded-xl bg-green-600 hover:bg-green-700"
+                        onClick={() => handleStatusUpdate(task.id, "completed")}
+                      >
+                        <CheckCircle className="mr-1 h-3 w-3" />
+                        Done
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+
+        {filteredTasks.length === 0 && (
+          <div className="rounded-[1.5rem] border border-dashed border-[#e8ebf0] bg-white px-4 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-400">
+            No tasks available
+          </div>
+        )}
       </CardContent>
     </Card>
   );
