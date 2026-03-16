@@ -42,6 +42,7 @@
     "@tailwindcss/postcss": "^4.1.15",
     "@xyflow/react": "^12.9.0",
     "animate.css": "^4.1.1",
+    "aos": "^2.3.4",
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -71,6 +72,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.18",
+    "@types/aos": "^3.0.7",
     "@types/node": "^20.11.17",
     "@types/react": "^18.2.55",
     "@types/react-dom": "^18.2.19",

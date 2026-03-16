@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import AOS from "aos";
+import "aos/dist/aos.css";
 import { Button } from "../ui/button";
 import {
   Card,
@@ -46,6 +48,14 @@ export function LoginForm({
   const [isLoading, setIsLoading] = useState(false);
   const [showLoginAnimation, setShowLoginAnimation] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      easing: "ease-out-cubic",
+      once: true,
+    });
+  }, []);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
@@ -132,7 +142,7 @@ export function LoginForm({
           gcashNumber: "09987654321",
           secureId: "SUP001",
           employeeNumber: "EMP101",
-          isActive: true,
+          Active: true,
           createdAt: new Date().toISOString(),
           department: "Demo Department",
         };
@@ -166,32 +176,52 @@ export function LoginForm({
       </button>
 
       <div className="h-full flex items-center justify-center px-4 sm:px-6">
-        <div className="w-[980px] h-[600px] max-w-[95vw] max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200/60 dark:border-slate-800 transition-colors duration-500 ease-in-out">
+        <div
+          className="w-[980px] h-[600px] max-w-[95vw] max-h-[90vh] bg-white dark:bg-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-slate-200/60 dark:border-slate-800 transition-colors duration-500 ease-in-out"
+          data-aos="fade-up"
+          data-aos-duration="800"
+        >
           <div className="grid h-full lg:grid-cols-2">
             <div
               className="relative hidden lg:flex items-center justify-center overflow-hidden bg-slate-900 bg-cover bg-center"
               style={{ backgroundImage: "url('/Image.png')" }}
+              data-aos="fade-right"
+              data-aos-duration="900"
             >
               <div className="absolute inset-0 bg-gradient-to-br from-slate-900/80 via-slate-900/70 to-slate-900/90"></div>
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(251,146,60,0.18),_transparent_55%)]"></div>
-              <div className="relative z-10 max-w-md px-10 text-white">
-                <img
-                  src="/logo.png"
-                  alt="Ehub logo"
-                  className="h-16 w-16 mb-6 rounded-2xl bg-white/10 p-2 shadow-xl"
-                />
-                <div className="text-4xl font-[Archivo_Black] tracking-wide">
+              <div className="relative z-10 flex w-full max-w-md flex-col items-center justify-center px-10 text-center text-white">
+                <CompanyLogo className="object-center"
+                size="lg" showText={false} />
+                <div
+                  className="text-4xl font-[Archivo_Black] tracking-wide"
+                  data-aos="zoom-in"
+                  data-aos-duration="800"
+                >
                   ELECTRONIK <span className="text-orange-300">HUB</span>
                 </div>
-                <p className="mt-4 text-lg text-slate-200">
+                <p
+                  className="mt-4 text-lg text-slate-200"
+                  data-aos="fade-up"
+                  data-aos-duration="800"
+                  data-aos-delay="100"
+                >
                   Creating a Culture of Technological Innovation
                 </p>
               </div>
             </div>
 
             <div className="flex h-full items-center justify-center px-6 py-6 sm:px-10 lg:px-12">
-              <Card className="w-full max-w-md border-0 bg-transparent shadow-none transition-colors duration-500 ease-in-out">
-                <CardHeader className="space-y-2 pb-4 text-center">
+              <Card
+                className="w-full max-w-md border-0 bg-transparent shadow-none transition-colors duration-500 ease-in-out"
+                data-aos="fade-left"
+                data-aos-duration="900"
+              >
+                <CardHeader
+                  className="space-y-2 pb-4 text-center"
+                  data-aos="fade-down"
+                  data-aos-duration="700"
+                >
                   <div className="flex items-center justify-center">
                     <CompanyLogo size="lg" showText={true} className="font-[Archivo_Black]" />
                   </div>
@@ -206,7 +236,12 @@ export function LoginForm({
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  <form onSubmit={handleSubmit} className="space-y-3">
+                  <form
+                    onSubmit={handleSubmit}
+                    className="space-y-3"
+                    data-aos="fade-up"
+                    data-aos-duration="800"
+                  >
                     <div className="space-y-2">
                       <Label htmlFor="identifier" className="text-slate-700 dark:text-slate-200 text-[11px] font-semibold uppercase tracking-wide transition-colors duration-500 ease-in-out">
                         Employee ID / Secure ID / Email
@@ -237,7 +272,7 @@ export function LoginForm({
                         <button
                           type="button"
                           onClick={onShowForgotPassword}
-                          className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors duration-500 ease-in-out font-[Manrope]"
+                          className="text-[11px] text-slate-500 dark:text-slate-400 hover:text-amber-500 dark:hover:text-slate-200"
                           disabled={isLoading || showLoginAnimation}
                         >
                           Forgot Password?
@@ -311,7 +346,7 @@ export function LoginForm({
                   <Button
                     onClick={onShowSignup}
                     variant="outline"
-                    className="w-full h-10 text-sm border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors duration-500 ease-in-out"
+                    className="w-full h-10 text-sm"
                     disabled={isLoading || showLoginAnimation}
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
