@@ -55,7 +55,7 @@ interface UserManagementProps {
 
 const swalCustomClasses = {
   container: "swal-container",
-  popup: "swal-popup !max-w-md",
+  popup: "swal-popup !max-w-md swal-actions-right",
   title: "swal-title",
   htmlContainer: "swal-content",
   confirmButton: "swal-confirm-button",
@@ -646,18 +646,20 @@ export function UserManagement({
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between w-full">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            <UserIcon className="h-6 w-6 inline mr-2 text-orange-600" />
-            User Management
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between w-full">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <UserIcon className="h-6 w-6 text-blue-700 dark:text-blue-400" />
+            <h1 className="text-3xl font-bold tracking-tight">
+              User Management
+            </h1>
+          </div>
+          <p className="text-sm text-muted-foreground">
             Manage system users, roles and permissions
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 w-full sm:w-auto sm:justify-end">
+        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
           {canManageUsers && (
             <>
               <Button
@@ -683,76 +685,76 @@ export function UserManagement({
         </div>
       </div>
 
-      <Card className="border shadow-sm">
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <CardTitle className="text-lg font-semibold">
-              System Users
-            </CardTitle>
-
-            <Button
-              variant={showSecureIds ? "destructive" : "outline"}
-              size="sm"
-              className="gap-2"
-              onClick={handleToggleSecureIds}
-            >
-              {showSecureIds ? <EyeOff size={16} /> : <Eye size={16} />}
-              {showSecureIds ? "Hide" : "Show"} Secure IDs
-            </Button>
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-4 sm:p-6">
-          {/* Filters */}
-          <div className="flex flex-col-reverse lg:flex-row justify-between lg:items-end gap-5 mb-6">
-            <div className="relative flex-1 max-w-lg">
-              <Search className="absolute left-3 top-4.5 -translate-y-1/2 h-4 w-4 text-[#e28a33] pointer-events-none" />
-              <Input
-                placeholder="Search user...."
-                type="search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 bg-muted/40 border-muted-foreground/30"
-              />
+      <Card className="border border-border/60 shadow-sm rounded-[24px]">
+        <CardHeader className="p-4 sm:p-6 pb-2 border-b border-border/60">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="flex-1">
+              <div className="relative max-w-xl">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                <Input
+                  placeholder="Search user...."
+                  type="search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 bg-muted/40 dark:bg-slate-800/60 border-border/60"
+                />
+              </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                <span className="font-medium text-[#e28a33]">Note:</span> Search
-                by name, email, role, school, employee number, secure ID, phone,
-                or GCash number.
+                <span className="font-medium text-amber-600 dark:text-amber-400">
+                  Note:
+                </span>{" "}
+                Search by name, email, role, school, employee number, secure ID,
+                phone, or GCash number.
               </p>
             </div>
 
-            <div className="min-w-[200px]">
-              <Label className="text-sm mb-1.5 block">Filter by Role:</Label>
-              <Select value={selectedRole} onValueChange={setSelectedRole}>
-                <SelectTrigger>
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="supervisor">Supervisor</SelectItem>
-                  <SelectItem value="fabricator">Fabricator</SelectItem>
-                  <SelectItem value="client">Client</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 self-start">
+              {canManageUsers && selectedUserIds.length > 0 && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="w-full sm:w-auto"
+                  onClick={handleDeactivateSelected}
+                >
+                  Deactivate {selectedUserIds.length}
+                </Button>
+              )}
 
-            {canManageUsers && selectedUserIds.length > 0 && (
               <Button
-                variant="destructive"
+                variant={showSecureIds ? "destructive" : "outline"}
                 size="sm"
-                onClick={handleDeactivateSelected}
+                className="gap-2 w-full sm:w-auto"
+                onClick={handleToggleSecureIds}
               >
-                Deactivate {selectedUserIds.length}
+                {showSecureIds ? <EyeOff size={16} /> : <Eye size={16} />}
+                {showSecureIds ? "Hide" : "Show"} Secure IDs
               </Button>
-            )}
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 sm:p-6 pt-0">
+          <div className="mb-1 w-full sm:w-60">
+            <Label className="text-sm mb-1.5 block">Filter by Role:</Label>
+            <Select value={selectedRole} onValueChange={setSelectedRole}>
+              <SelectTrigger>
+                <SelectValue placeholder="All roles" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="supervisor">Supervisor</SelectItem>
+                <SelectItem value="fabricator">Fabricator</SelectItem>
+                <SelectItem value="client">Client</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Table */}
-          <div className="w-full rounded-lg border bg-white overflow-x-auto">
+          <div className="w-full rounded-2xl border border-border/60 bg-card/90 dark:bg-slate-900/70 overflow-hidden">
             <Table className="w-full">
-              <TableHeader className="bg-muted/50">
-                <TableRow>
+              <TableHeader className="bg-[#103055] dark:bg-slate-800 [&_th]:text-white">
+                <TableRow className="hover:bg-transparent">
                   {canManageUsers && (
                     <TableHead className="w-12 text-center p-0">
                       <Checkbox
@@ -790,52 +792,38 @@ export function UserManagement({
                       />
                     </TableHead>
                   )}
-                  <TableHead className="min-w-[220px] text-white">
-                    Name & Email
-                  </TableHead>
-                  <TableHead className="min-w-[110px] text-white">
-                    Role
-                  </TableHead>
-                  <TableHead className="min-w-[140px] text-white">
-                    School
-                  </TableHead>
-                  <TableHead className="min-w-[160px] text-white">
-                    Contact
-                  </TableHead>
-                  <TableHead className="min-w-[140px] text-center text-white">
+                  <TableHead className="min-w-[220px]">Name & Email</TableHead>
+                  <TableHead className="min-w-[110px]">Role</TableHead>
+                  <TableHead className="min-w-[140px]">School</TableHead>
+                  <TableHead className="min-w-[160px]">Contact</TableHead>
+                  <TableHead className="min-w-[140px] text-center">
                     GCash QR
                   </TableHead>
                   {showSecureIds && (
-                    <TableHead className="min-w-[160px] text-white">
-                      Secure ID
-                    </TableHead>
+                    <TableHead className="min-w-[160px]">Secure ID</TableHead>
                   )}
-                  <TableHead className="min-w-[120px] text-white">
-                    Employee #
-                  </TableHead>
+                  <TableHead className="min-w-[120px]">Employee #</TableHead>
                   {canManageUsers && (
-                    <TableHead className="w-28 text-right text-white">
-                      Actions
-                    </TableHead>
+                    <TableHead className="w-28 text-right">Actions</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
 
               <TableBody>
                 {displayedUsers.length === 0 ? (
-                  <TableRow>
+                  <TableRow className="odd:bg-muted/30 dark:odd:bg-slate-800/40">
                     <TableCell
                       colSpan={100}
                       className="h-48 text-center text-muted-foreground"
                     >
-                      No users found matching your filters
+                      No users found matching your search or role filter
                     </TableCell>
                   </TableRow>
                 ) : (
                   displayedUsers.map((user) => (
                     <TableRow
                       key={user.id}
-                      className="hover:bg-muted/60 transition-colors"
+                      className="odd:bg-muted/30 even:bg-transparent dark:odd:bg-slate-800/50 dark:even:bg-slate-900/30 hover:bg-muted/60 dark:hover:bg-slate-800/70 transition-colors"
                     >
                       {canManageUsers && (
                         <TableCell className="text-center p-0">
@@ -996,7 +984,7 @@ export function UserManagement({
 
           {filteredUsers.length === 0 && (
             <div className="py-12 text-center text-muted-foreground">
-              No users match the current filters
+              No users match the current search or role filter
             </div>
           )}
         </CardContent>
