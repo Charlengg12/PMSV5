@@ -619,6 +619,36 @@ export function ReportsManager({
     }
   };
 
+  const getStatusBadgeClassName = (status: Report["status"]) => {
+    switch (status) {
+      case "published":
+        return "border-transparent bg-[#e9f7ef] text-[#166534] shadow-none";
+      case "draft":
+        return "border-transparent bg-[#eaf2ff] text-[#1d4ed8] shadow-none";
+      case "archived":
+        return "border-[#e5e7eb] bg-white text-[#64748b] shadow-none";
+      default:
+        return "border-[#e5e7eb] bg-white text-[#64748b] shadow-none";
+    }
+  };
+
+  const getTypeBadgeClassName = (type: Report["type"]) => {
+    switch (type) {
+      case "project":
+        return "border-transparent bg-[#eef4ff] text-[#315cba] shadow-none";
+      case "task":
+        return "border-transparent bg-[#fff4e8] text-[#c26b16] shadow-none";
+      case "financial":
+        return "border-transparent bg-[#eefbf3] text-[#15803d] shadow-none";
+      case "user":
+        return "border-[#e5e7eb] bg-white text-[#64748b] shadow-none";
+      case "custom":
+        return "border-[#e5e7eb] bg-white text-[#64748b] shadow-none";
+      default:
+        return "border-[#e5e7eb] bg-white text-[#64748b] shadow-none";
+    }
+  };
+
   const canCreateReport =
     currentUser.role === "admin" || currentUser.role === "supervisor";
   const canEditReport = (report: Report) =>
@@ -642,6 +672,16 @@ export function ReportsManager({
   };
 
   const roleFiltered = getRoleFilteredReports();
+  const totalReportsCount = roleFiltered.length;
+  const totalProjectReportsCount = roleFiltered.filter(
+    (report) => report.type === "project",
+  ).length;
+  const totalTaskReportsCount = roleFiltered.filter(
+    (report) => report.type === "task",
+  ).length;
+  const totalFinancialReportsCount = roleFiltered.filter(
+    (report) => report.type === "financial",
+  ).length;
 
   const searchedReports = roleFiltered.filter((report) => {
     if (!searchTerm.trim()) return true;
@@ -732,7 +772,7 @@ export function ReportsManager({
       <div className="flex flex-col gap-4 sm:flex-row sm:justify-between sm:items-center">
         <div className="text-left">
           <h2 className="text-xl sm:text-2xl font-bold">
-            <BarChart3 className="inline-block mr-2 mb-1 text-blue-700" />
+            <BarChart3 className="inline-block mr-2 mb-1 text-orange-400" />
             Reports
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -752,6 +792,86 @@ export function ReportsManager({
           )}
         </div>
       </div>
+
+      {!loading && !error && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Card className="overflow-hidden rounded-[1.4rem] border border-[#edf1f5] bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-white">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 pb-0 pt-4">
+              <CardTitle className="text-sm font-medium text-[#5b6b82]">
+                Total Reports
+              </CardTitle>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e2ecff] bg-[#f5f9ff]">
+                <FileText className="h-4.5 w-4.5 text-[#2563eb]" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-5 pb-4 pt-1.5">
+              <div className="text-[1.7rem] font-bold leading-none tracking-[-0.03em] text-[#0f172a]">
+                {totalReportsCount}
+              </div>
+              <p className="mt-2 text-[0.95rem] leading-5 text-[#6b7b93]">
+                All accessible reports
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden rounded-[1.4rem] border border-[#edf1f5] bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-white">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 pb-0 pt-4">
+              <CardTitle className="text-sm font-medium text-[#5b6b82]">
+                Project Reports
+              </CardTitle>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e7eef8] bg-[#f8fbff]">
+                <Building className="h-4.5 w-4.5 text-[#475569]" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-5 pb-4 pt-1.5">
+              <div className="text-[1.7rem] font-bold leading-none tracking-[-0.03em] text-[#0f172a]">
+                {totalProjectReportsCount}
+              </div>
+              <p className="mt-2 text-[0.95rem] leading-5 text-[#6b7b93]">
+                Total project reports
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden rounded-[1.4rem] border border-[#edf1f5] bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-white">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 pb-0 pt-4">
+              <CardTitle className="text-sm font-medium text-[#5b6b82]">
+                Task Reports
+              </CardTitle>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#ffe8d8] bg-[#fff7f0]">
+                <AlertCircle className="h-4.5 w-4.5 text-[#ea580c]" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-5 pb-4 pt-1.5">
+              <div className="text-[1.7rem] font-bold leading-none tracking-[-0.03em] text-[#0f172a]">
+                {totalTaskReportsCount}
+              </div>
+              <p className="mt-2 text-[0.95rem] leading-5 text-[#6b7b93]">
+                Total task reports
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden rounded-[1.4rem] border border-[#edf1f5] bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_36px_rgba(15,23,42,0.08)] dark:border-slate-700 dark:bg-white">
+            <CardHeader className="flex flex-row items-start justify-between space-y-0 px-5 pb-0 pt-4">
+              <CardTitle className="text-sm font-medium text-[#5b6b82]">
+                Financial Reports
+              </CardTitle>
+              <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#dff6e8] bg-[#f2fcf6]">
+                <BarChart3 className="h-4.5 w-4.5 text-[#16a34a]" />
+              </div>
+            </CardHeader>
+            <CardContent className="px-5 pb-4 pt-1.5">
+              <div className="text-[1.7rem] font-bold leading-none tracking-[-0.03em] text-[#0f172a]">
+                {totalFinancialReportsCount}
+              </div>
+              <p className="mt-2 text-[0.95rem] leading-5 text-[#6b7b93]">
+                Total financial reports
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Search bar */}
       <div className="relative w-full max-w-md">
@@ -779,145 +899,165 @@ export function ReportsManager({
           <p className="font-medium">{error}</p>
         </div>
       ) : (
-        <Tabs defaultValue="all" className="space-y-4">
-          <TabsList className="w-full">
-            <TabsTrigger value="all">
-              <FileText className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">All Reports</span>
-            </TabsTrigger>
-            <TabsTrigger value="project">
-              <Building className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Project</span>
-            </TabsTrigger>
-            <TabsTrigger value="task">
-              <AlertCircle className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Task</span>
-            </TabsTrigger>
-            <TabsTrigger value="financial">
-              <BarChart3 className="h-4 w-4 sm:mr-2" />
-              <span className="hidden sm:inline">Financial</span>
-            </TabsTrigger>
-          </TabsList>
+        <div className="space-y-4">
+          <Tabs defaultValue="all" className="space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-[1.6rem] border border-[#e7edf4] bg-[#f6f8fb] p-2 lg:grid-cols-4">
+              <TabsTrigger
+                value="all"
+                className="h-12 rounded-[1.1rem] border-0 bg-transparent px-4 text-[0.95rem] font-semibold text-[#59708f] shadow-none hover:text-[#123a68] data-[state=active]:bg-white data-[state=active]:text-[#123a68] data-[state=active]:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
+              >
+                <FileText className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">All Reports</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="project"
+                className="h-12 rounded-[1.1rem] border-0 bg-transparent px-4 text-[0.95rem] font-semibold text-[#59708f] shadow-none hover:text-[#123a68] data-[state=active]:bg-white data-[state=active]:text-[#123a68] data-[state=active]:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
+              >
+                <Building className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Project</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="task"
+                className="h-12 rounded-[1.1rem] border-0 bg-transparent px-4 text-[0.95rem] font-semibold text-[#59708f] shadow-none hover:text-[#123a68] data-[state=active]:bg-white data-[state=active]:text-[#123a68] data-[state=active]:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
+              >
+                <AlertCircle className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Task</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="financial"
+                className="h-12 rounded-[1.1rem] border-0 bg-transparent px-4 text-[0.95rem] font-semibold text-[#59708f] shadow-none hover:text-[#123a68] data-[state=active]:bg-white data-[state=active]:text-[#123a68] data-[state=active]:shadow-[0_8px_20px_rgba(15,23,42,0.08)]"
+              >
+                <BarChart3 className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Financial</span>
+              </TabsTrigger>
+            </TabsList>
 
-          {["all", "project", "task", "financial"].map((tabValue) => (
-            <TabsContent key={tabValue} value={tabValue} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {searchedReports
-                  .filter((r) => tabValue === "all" || r.type === tabValue)
-                  .map((report) => (
-                    <Card
-                      key={report.id}
-                      className="hover:shadow-md transition-shadow"
-                    >
-                      <CardHeader className="px-4 pt-4 pb-2">
-                        <div className="space-y-3">
-                          <div>
-                            <CardTitle className="text-lg">
-                              {report.title}
-                            </CardTitle>
+            {["all", "project", "task", "financial"].map((tabValue) => (
+              <TabsContent key={tabValue} value={tabValue} className="space-y-4">
+                <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+                  {searchedReports
+                    .filter((r) => tabValue === "all" || r.type === tabValue)
+                    .map((report) => (
+                      <Card
+                        key={report.id}
+                        className="overflow-hidden rounded-[1.6rem] border border-[#e7edf4] bg-white shadow-[0_12px_34px_rgba(15,23,42,0.05)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_18px_42px_rgba(15,23,42,0.08)]"
+                      >
+                        <CardHeader className="px-5 pb-0 pt-5">
+                          <div className="space-y-4">
+                            <div>
+                              <CardTitle className="text-[1.15rem] font-semibold tracking-[-0.02em] text-[#123a68]">
+                                {report.title}
+                              </CardTitle>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              <Badge
+                                variant={getStatusColor(report.status)}
+                                className={`capitalize ${getStatusBadgeClassName(report.status)}`}
+                              >
+                                {report.status}
+                              </Badge>
+                              <Badge
+                                variant={getTypeColor(report.type)}
+                                className={`capitalize ${getTypeBadgeClassName(report.type)}`}
+                              >
+                                {report.type}
+                              </Badge>
+                            </div>
                           </div>
-                          <div className="flex flex-wrap gap-2">
-                            <Badge variant={getStatusColor(report.status)}>
-                              {report.status}
-                            </Badge>
-                            <Badge variant={getTypeColor(report.type)}>
-                              {report.type}
-                            </Badge>
+                        </CardHeader>
+                        <CardContent className="px-5 pb-5 pt-5">
+                          <div className="grid gap-3 text-sm">
+                            <div className="flex items-center gap-3 rounded-2xl border border-[#edf2f7] bg-[#fafcfe] px-4 py-3 text-[#39597e]">
+                              <Building className="h-4 w-4 shrink-0 text-[#7b8ca4]" />
+                              <span className="truncate font-medium">
+                                {report.project_id
+                                  ? projects.find(
+                                      (p) => p.id === report.project_id,
+                                    )?.name || "Unknown"
+                                  : "All Projects"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-2xl border border-[#edf2f7] bg-[#fafcfe] px-4 py-3 text-[#39597e]">
+                              <User className="h-4 w-4 shrink-0 text-[#7b8ca4]" />
+                              <span className="truncate font-medium">
+                                Created by:{" "}
+                                {users.find((u) => u.id === report.created_by)
+                                  ?.name || "Unknown"}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-2xl border border-[#edf2f7] bg-[#fafcfe] px-4 py-3 text-[#39597e]">
+                              <Calendar className="h-4 w-4 shrink-0 text-[#7b8ca4]" />
+                              <span className="font-medium">
+                                Created:{" "}
+                                {new Date(report.created_at).toLocaleDateString(
+                                  "en-PH",
+                                )}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="px-4 pb-4">
-                        <div className="grid gap-3 text-sm">
-                          <div className="flex items-center gap-2">
-                            <Building className="h-4 w-4 text-muted-foreground" />
-                            <span className="truncate">
-                              {report.project_id
-                                ? projects.find(
-                                    (p) => p.id === report.project_id,
-                                  )?.name || "Unknown"
-                                : "All Projects"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              Created by:{" "}
-                              {users.find((u) => u.id === report.created_by)
-                                ?.name || "Unknown"}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Calendar className="h-4 w-4 text-muted-foreground" />
-                            <span>
-                              Created:{" "}
-                              {new Date(report.created_at).toLocaleDateString(
-                                "en-PH",
-                              )}
-                            </span>
-                          </div>
-                        </div>
 
-                        <div className="mt-5 space-y-2">
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleView(report)}
-                              className="w-full"
-                            >
-                              <Eye className="h-4 w-4 sm:mr-2" />
-                              <span className="hidden sm:inline">View</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleExport(report)}
-                              className="w-full"
-                            >
-                              <Download className="h-4 w-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Export</span>
-                            </Button>
-                          </div>
-                          {canEditReport(report) && (
-                            <div className="grid grid-cols-2 gap-2">
+                          <div className="mt-5 space-y-2.5">
+                            <div className="grid grid-cols-2 gap-2.5">
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleEdit(report)}
-                                className="w-full"
+                                onClick={() => handleView(report)}
+                                className="h-11 w-full rounded-2xl border-[#d9e5f2] bg-white font-semibold text-[#123a68] hover:bg-[#f8fbff] hover:text-[#123a68]"
                               >
-                                <Edit className="h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Edit</span>
+                                <Eye className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">View</span>
                               </Button>
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handleDelete(report)}
-                                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
+                                onClick={() => handleExport(report)}
+                                className="h-11 w-full rounded-2xl border-[#d9e5f2] bg-white font-semibold text-[#123a68] hover:bg-[#f8fbff] hover:text-[#123a68]"
                               >
-                                <Trash2 className="h-4 w-4 sm:mr-2" />
-                                <span className="hidden sm:inline">Delete</span>
+                                <Download className="h-4 w-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Export</span>
                               </Button>
                             </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
+                            {canEditReport(report) && (
+                              <div className="grid grid-cols-2 gap-2.5">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleEdit(report)}
+                                  className="h-11 w-full rounded-2xl border-[#d9e5f2] bg-white font-semibold text-[#123a68] hover:bg-[#f8fbff] hover:text-[#123a68]"
+                                >
+                                  <Edit className="h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Edit</span>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => handleDelete(report)}
+                                  className="h-11 w-full rounded-2xl border-[#ffd8d8] bg-white font-semibold text-[#dc2626] hover:bg-[#fff5f5] hover:text-[#dc2626]"
+                                >
+                                  <Trash2 className="h-4 w-4 sm:mr-2" />
+                                  <span className="hidden sm:inline">Delete</span>
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
 
-                {searchedReports.filter(
-                  (r) => tabValue === "all" || r.type === tabValue,
-                ).length === 0 && (
-                  <div className="col-span-full text-center py-12 text-muted-foreground">
-                    <p>
-                      No {tabValue === "all" ? "" : tabValue} reports found.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+                  {searchedReports.filter(
+                    (r) => tabValue === "all" || r.type === tabValue,
+                  ).length === 0 && (
+                    <div className="col-span-full text-center py-12 text-muted-foreground">
+                      <p>
+                        No {tabValue === "all" ? "" : tabValue} reports found.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </TabsContent>
+            ))}
+          </Tabs>
+        </div>
       )}
 
       {searchedReports.length === 0 && !loading && !error && (
@@ -1266,15 +1406,20 @@ export function ReportsManager({
       {/* VIEW FORM - WITH REAL ANALYTICS CHARTS */}
       {showViewForm && selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="modal bg-background border rounded-lg shadow-xl w-full max-w-5xl max-h-[95vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                <h2 className="text-2xl font-bold">{selectedReport.title}</h2>
-                </div>
+          <div className="modal flex h-[min(92vh,900px)] w-full max-w-6xl flex-col overflow-hidden rounded-[1.75rem] border border-[#e5edf5] bg-white shadow-[0_24px_80px_rgba(15,23,42,0.28)]">
+            <div className="flex items-center justify-between border-b border-[#edf2f7] px-6 py-5">
+              <div className="min-w-0">
+                <h2 className="truncate text-[1.65rem] font-bold tracking-[-0.03em] text-[#123a68]">
+                  {selectedReport.title}
+                </h2>
+                <p className="mt-1 text-sm text-[#6b7b93]">
+                  Report Overview And Analytics
+                </p>
+              </div>
                 <Button
                   variant="ghost"
                   size="icon"
+                  className="rounded-2xl text-[#5b6b82] hover:bg-[#f5f8fc] hover:text-[#123a68]"
                   onClick={() => {
                     setShowViewForm(false);
                     setSelectedReport(null);
@@ -1284,32 +1429,34 @@ export function ReportsManager({
                   <X className="h-5 w-5" />
                 </Button>
               </div>
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="space-y-8 p-6">
 
               {/* Report Metadata */}
-              <div className="mx-1 grid grid-cols-2 sm:grid-cols-4 gap-6 mb-8 text-sm p-5">
-                <div>
-                  <p className="text-muted-foreground">Type</p>
-                  <p className="font-medium mt-1 capitalize">
+              <div className="grid grid-cols-2 gap-4 rounded-[1.5rem] border border-[#e9eff5] bg-[#f8fbfe] p-5 sm:grid-cols-4">
+                <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#7b8ca4]">Type</p>
+                  <p className="mt-2 font-semibold capitalize text-[#123a68]">
                     {selectedReport.type}
                   </p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Status</p>
-                  <p className="font-medium mt-1 capitalize">
+                <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#7b8ca4]">Status</p>
+                  <p className="mt-2 font-semibold capitalize text-[#123a68]">
                     {selectedReport.status}
                   </p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Created</p>
-                  <p className="font-medium mt-1">
+                <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#7b8ca4]">Created</p>
+                  <p className="mt-2 font-semibold text-[#123a68]">
                     {new Date(selectedReport.created_at).toLocaleString(
                       "en-PH",
                     )}
                   </p>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Last Updated</p>
-                  <p className="font-medium mt-1">
+                <div className="rounded-2xl bg-white px-4 py-3 shadow-sm">
+                  <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#7b8ca4]">Last Updated</p>
+                  <p className="mt-2 font-semibold text-[#123a68]">
                     {new Date(selectedReport.updated_at).toLocaleString(
                       "en-PH",
                     )}
@@ -1318,14 +1465,14 @@ export function ReportsManager({
               </div>
 
               {selectedReport.description && (
-                <section className="mb-8 mt-6 mx-5 rounded-2xl border border-muted-foreground/20 bg-white/90 p-5 shadow-sm">
+                <section className="rounded-[1.5rem] border border-[#e9eff5] bg-white p-6 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-semibold tracking-wide text-muted-foreground/80">
+                    <h3 className="text-lg font-semibold tracking-[-0.02em] text-[#123a68]">
                       Description
                     </h3>
                   </div>
-                  <div className="mt-3 max-h-48 overflow-y-auto pr-1 text-sm leading-relaxed text-slate-900">
-                    <p className="whitespace-pre-line break-words text-slate-900">{selectedReport.description}</p>
+                  <div className="mt-4 max-h-48 overflow-y-auto pr-1 text-sm leading-7 text-[#334155]">
+                    <p className="whitespace-pre-line break-words">{selectedReport.description}</p>
                   </div>
                 </section>
               )}
@@ -1337,41 +1484,41 @@ export function ReportsManager({
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
                   </div>
                 ) : analyticsData ? (
-                  <div className="space-y-10">
+                  <div className="space-y-8">
                     {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">
+                    <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+                      <Card className="rounded-[1.5rem] border border-[#e7edf4] bg-white shadow-sm">
+                        <CardHeader className="pb-0">
+                          <CardTitle className="text-base text-[#5b6b82]">
                             Total Budget
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <p className="text-3xl font-bold text-blue-600 p-5">
+                        <CardContent className="pt-3">
+                          <p className="px-5 pb-5 text-3xl font-bold text-blue-600">
                             ₱{analyticsData.budget.toLocaleString()}
                           </p>
                         </CardContent>
                       </Card>
 
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">Total Cost</CardTitle>
+                      <Card className="rounded-[1.5rem] border border-[#e7edf4] bg-white shadow-sm">
+                        <CardHeader className="pb-0">
+                          <CardTitle className="text-base text-[#5b6b82]">Total Cost</CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <p className="text-3xl font-bold text-red-600 p-5">
+                        <CardContent className="pt-3">
+                          <p className="px-5 pb-5 text-3xl font-bold text-red-600">
                             ₱{analyticsData.totalCost.toLocaleString()}
                           </p>
                         </CardContent>
                       </Card>
 
-                      <Card>
-                        <CardHeader className="pb-2">
-                          <CardTitle className="text-lg">
+                      <Card className="rounded-[1.5rem] border border-[#e7edf4] bg-white shadow-sm">
+                        <CardHeader className="pb-0">
+                          <CardTitle className="text-base text-[#5b6b82]">
                             Total Revenue
                           </CardTitle>
                         </CardHeader>
-                        <CardContent>
-                          <p className="text-3xl font-bold text-green-600 p-5">
+                        <CardContent className="pt-3">
+                          <p className="px-5 pb-5 text-3xl font-bold text-green-600">
                             ₱{analyticsData.totalRevenue.toLocaleString()}
                           </p>
                         </CardContent>
@@ -1379,12 +1526,12 @@ export function ReportsManager({
                     </div>
 
                     {/* Charts */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
                       {/* Monthly Bar Chart */}
-                      <Card>
+                      <Card className="rounded-[1.5rem] border border-[#e7edf4] bg-white shadow-sm">
                         <CardHeader>
-                          <CardTitle>
-                            Monthly Budget vs Cost vs Revenue
+                          <CardTitle className="text-[#123a68]">
+                            Monthly Budget Vs Cost Vs Revenue
                           </CardTitle>
                         </CardHeader>
                         <CardContent>
@@ -1414,9 +1561,9 @@ export function ReportsManager({
                       </Card>
 
                       {/* Doughnut Chart */}
-                      <Card>
+                      <Card className="rounded-[1.5rem] border border-[#e7edf4] bg-white shadow-sm">
                         <CardHeader>
-                          <CardTitle>Financial Distribution</CardTitle>
+                          <CardTitle className="text-[#123a68]">Financial Distribution</CardTitle>
                         </CardHeader>
                         <CardContent className="flex justify-center">
                           <div className="h-80 w-80">
@@ -1436,7 +1583,7 @@ export function ReportsManager({
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12 text-muted-foreground">
+                  <div className="py-12 text-center text-muted-foreground">
                     <AlertCircle className="h-12 w-12 mx-auto mb-4" />
                     <p className="text-lg font-medium">
                       No financial data available
@@ -1448,7 +1595,7 @@ export function ReportsManager({
                   </div>
                 )
               ) : (
-                <div className="border rounded-lg p-12 bg-muted/40 min-h-[400px] flex items-center justify-center text-muted-foreground">
+                <div className="flex min-h-[400px] items-center justify-center rounded-[1.5rem] border border-[#e9eff5] bg-[#f8fbfe] p-12 text-muted-foreground">
                   <div className="text-center">
                     <FileText className="h-16 w-16 mx-auto mb-6 opacity-70" />
                     <p className="text-xl font-medium mb-3">
@@ -1466,9 +1613,13 @@ export function ReportsManager({
                 </div>
               )}
 
-              <div className="flex justify-end mt-10">
+              </div>
+            </div>
+
+            <div className="flex justify-end border-t border-[#edf2f7] px-6 py-4">
                 <Button
                   variant="outline"
+                  className="rounded-2xl border-[#d9e5f2] bg-white font-semibold text-[#123a68] hover:bg-[#f8fbff] hover:text-[#123a68]"
                   onClick={() => {
                     setShowViewForm(false);
                     setSelectedReport(null);
@@ -1478,7 +1629,6 @@ export function ReportsManager({
                   Close
                 </Button>
               </div>
-            </div>
           </div>
         </div>
       )}
