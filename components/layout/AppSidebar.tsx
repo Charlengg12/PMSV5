@@ -351,6 +351,29 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
     return () => window.removeEventListener("hashchange", updateHash);
   }, [navigationGroups]);
 
+  useEffect(() => {
+    if (!activeHash) return;
+    const raf = window.requestAnimationFrame(() => {
+      const content = document.querySelector('[data-sidebar="content"]');
+      if (!content) return;
+      const activeItem = content.querySelector(
+        '[data-active="true"]'
+      ) as HTMLElement | null;
+      if (!activeItem) return;
+
+      const contentRect = content.getBoundingClientRect();
+      const activeRect = activeItem.getBoundingClientRect();
+      const isAbove = activeRect.top < contentRect.top;
+      const isBelow = activeRect.bottom > contentRect.bottom;
+
+      if (isAbove || isBelow) {
+        activeItem.scrollIntoView({ block: "center", inline: "nearest" });
+      }
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, [activeHash, navigationGroups]);
+
   return (
     <>
       {showLogoutSpinner && <CustomLogoutSpinner />}
