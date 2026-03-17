@@ -351,7 +351,7 @@ export function ActivityLogs() {
                   value={searchTerm}
                   onChange={handleSearchChange}
                   placeholder="Search by User, Action, Or Description..."
-                  className="w-full rounded-2xl border border-[#d9e5f2] bg-white py-2.5 pl-11 pr-4 text-sm text-[#123a68] shadow-sm outline-none transition-all placeholder:text-[#8da0b8] focus:border-orange-500 focus:ring-2 focus:ring-blue-100 dark:border-orange-700 dark:bg-orange-950 dark:text-white dark:placeholder:text-orange-500 dark:focus:border-blue-400 dark:focus:ring-orange-950"
+                  className="w-full rounded-2xl border border-[#d9e5f2] bg-white py-2.5 pl-11 pr-4 text-sm text-[#123a68] shadow-sm outline-none transition-all placeholder:text-[#8da0b8] focus:border-orange-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-400 dark:focus:border-blue-400 dark:focus:ring-blue-950"
                 />
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8da0b8] dark:text-slate-500" />
               </div>
