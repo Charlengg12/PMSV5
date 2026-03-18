@@ -16,6 +16,13 @@ import {
   ChevronUp,
   X,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { format } from "date-fns";
 
 interface LogEntry {
@@ -39,7 +46,7 @@ export function ActivityLogs() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedAction, setSelectedAction] = useState("");
+  const [selectedAction, setSelectedAction] = useState("all");
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [showScrollTop, setShowScrollTop] = useState(false);
@@ -48,7 +55,8 @@ export function ActivityLogs() {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
-  const isFiltering = searchTerm.trim() !== "" || selectedAction !== "";
+  const isFiltering =
+    searchTerm.trim() !== "" || selectedAction !== "all";
 
   const safeText = (value: unknown, fallback = "N/A"): string => {
     if (typeof value !== "string") return fallback;
@@ -259,7 +267,7 @@ export function ActivityLogs() {
   const applyFilters = () => {
     let result = [...logs];
 
-    if (selectedAction) {
+    if (selectedAction !== "all") {
       result = result.filter((log) => {
         const label = getActionLabel(log.action).toLowerCase();
         return label === selectedAction.toLowerCase();
@@ -290,8 +298,8 @@ export function ActivityLogs() {
     setSearchTerm(e.target.value);
   };
 
-  const handleActionChange = (e: ChangeEvent<HTMLSelectElement>) => {
-    setSelectedAction(e.target.value);
+  const handleActionChange = (value: string) => {
+    setSelectedAction(value);
   };
 
   const getUserInitials = (name: string | null): string => {
@@ -356,17 +364,21 @@ export function ActivityLogs() {
                 <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#8da0b8] dark:text-slate-500" />
               </div>
 
-              <select
+              <Select
                 value={selectedAction}
-                onChange={handleActionChange}
-                className="w-full rounded-2xl border border-[#d9e5f2] bg-white px-4 py-2.5 text-sm font-medium text-[#123a68] shadow-sm outline-none transition-all hover:border-[#bfd3ea] focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-blue-400 dark:focus:ring-blue-950 sm:w-auto"
+                onValueChange={handleActionChange}
               >
-                <option value="">All Activities</option>
-                <option value="add">Add</option>
-                <option value="edit">Edit</option>
-                <option value="delete">Delete</option>
-                <option value="login">Login</option>
-              </select>
+                <SelectTrigger className="w-full rounded-2xl border border-[#d9e5f2] bg-white px-4 py-2.5 text-sm font-medium text-[#123a68] shadow-sm outline-none transition-all hover:border-[#bfd3ea] focus:border-blue-500 focus:ring-2 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:hover:border-slate-600 dark:focus:border-blue-400 dark:focus:ring-blue-950 sm:w-auto">
+                  <SelectValue placeholder="Filter by Action" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl border border-[#d9e5f2] bg-white shadow-lg dark:border-slate-700 dark:bg-slate-900">
+                  <SelectItem value="all">All Activities</SelectItem>
+                  <SelectItem value="add">Add</SelectItem>
+                  <SelectItem value="edit">Edit</SelectItem>
+                  <SelectItem value="delete">Delete</SelectItem>
+                  <SelectItem value="login">Login</SelectItem>
+                </SelectContent>
+              </Select>
 
               <button
                 onClick={handleExport}
@@ -456,12 +468,12 @@ export function ActivityLogs() {
                 <Activity className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
               <p className="text-lg font-medium text-[#123a68] dark:text-white">
-                {searchTerm || selectedAction
+                {isFiltering
                   ? "No matching activities found"
                   : "No activity logs found"}
               </p>
               <p className="text-sm mt-2">
-                {searchTerm || selectedAction
+                {isFiltering
                   ? "Try adjusting your filters"
                   : "Activities will appear here"}
               </p>
