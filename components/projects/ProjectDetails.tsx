@@ -5,6 +5,13 @@ import { Button } from "../ui/button";
 import { Progress } from "../ui/progress";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { Calendar as CalendarPicker } from "../ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -148,6 +155,8 @@ export function ProjectDetails({
   const MAX_FINANCIAL_VALUE = 999_999_999.99;
   const MAX_FINANCIAL_INTEGER_DIGITS = 9;
   const MAX_FINANCIAL_DECIMALS = 2;
+  const FABRICATOR_PLACEHOLDER_VALUE = "__select_fabricator__";
+  const UNASSIGNED_SUPERVISOR_VALUE = "__unassigned_supervisor__";
 
   const clampFinancialValue = (value: string) => {
     if (!value.trim()) return 0;
@@ -623,53 +632,63 @@ export function ProjectDetails({
                       placeholder="Project name"
                     />
                     <div className="flex flex-wrap gap-2 items-center">
-                      <select
+                      <Select
                         value={editedProject.status}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditedProject((prev) => ({
                             ...prev,
-                            status: e.target.value as Project["status"],
+                            status: value as Project["status"],
                           }))
                         }
-                        className="border rounded px-2 py-1 text-sm bg-background"
                       >
-                        <option value="0_Created">0_Created</option>
-                        <option value="1_Assigned_to_FAB">
-                          1_Assigned_to_FAB
-                        </option>
-                        <option value="2_Ready_for_Supervisor_Review">
-                          2_Ready_for_Supervisor_Review
-                        </option>
-                        <option value="3_Ready_for_Admin_Review">
-                          3_Ready_for_Admin_Review
-                        </option>
-                        <option value="4_Ready_for_Client_Signoff">
-                          4_Ready_for_Client_Signoff
-                        </option>
-                        <option value="planning">Planning</option>
-                        <option value="in-progress">In Progress</option>
-                        <option value="review">Review</option>
-                        <option value="completed">Completed</option>
-                        <option value="on-hold">On Hold</option>
-                        <option value="pending-assignment">
-                          Pending Assignment
-                        </option>
-                      </select>
-                      <select
+                        <SelectTrigger className="w-[320px] max-w-full bg-background">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="0_Created">0_Created</SelectItem>
+                          <SelectItem value="1_Assigned_to_FAB">
+                            1_Assigned_to_FAB
+                          </SelectItem>
+                          <SelectItem value="2_Ready_for_Supervisor_Review">
+                            2_Ready_for_Supervisor_Review
+                          </SelectItem>
+                          <SelectItem value="3_Ready_for_Admin_Review">
+                            3_Ready_for_Admin_Review
+                          </SelectItem>
+                          <SelectItem value="4_Ready_for_Client_Signoff">
+                            4_Ready_for_Client_Signoff
+                          </SelectItem>
+                          <SelectItem value="planning">Planning</SelectItem>
+                          <SelectItem value="in-progress">
+                            In Progress
+                          </SelectItem>
+                          <SelectItem value="review">Review</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="on-hold">On Hold</SelectItem>
+                          <SelectItem value="pending-assignment">
+                            Pending Assignment
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
                         value={editedProject.priority}
-                        onChange={(e) =>
+                        onValueChange={(value) =>
                           setEditedProject((prev) => ({
                             ...prev,
-                            priority: e.target.value as Project["priority"],
+                            priority: value as Project["priority"],
                           }))
                         }
-                        className="border rounded px-2 py-1 text-sm bg-background"
                       >
-                        <option value="low">Low</option>
-                        <option value="medium">Medium</option>
-                        <option value="high">High</option>
-                        <option value="urgent">Urgent</option>
-                      </select>
+                        <SelectTrigger className="w-[140px] bg-background">
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                          <SelectItem value="urgent">Urgent</SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 ) : (
@@ -1203,25 +1222,37 @@ export function ProjectDetails({
                 {canManageFabricators && showAddFabricator && (
                   <div className="px-4 pb-4 sm:px-6">
                     <Label htmlFor="fabricator-select">Select Fabricator</Label>
-                    <select
-                      id="fabricator-select"
-                      value={newFabricatorId}
-                      onChange={(e) => setNewFabricatorId(e.target.value)}
-                      className="mt-1.5 border rounded px-3 py-2 w-full bg-background"
-                    >
-                      <option value="">-- Choose a Fabricator --</option>
-                      {users
-                        .filter(
-                          (user) =>
-                            user.role === "fabricator" &&
-                            !editedProject.fabricatorIds.includes(user.id),
+                    <Select
+                      value={newFabricatorId || FABRICATOR_PLACEHOLDER_VALUE}
+                      onValueChange={(value) =>
+                        setNewFabricatorId(
+                          value === FABRICATOR_PLACEHOLDER_VALUE ? "" : value,
                         )
-                        .map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name}
-                          </option>
-                        ))}
-                    </select>
+                      }
+                    >
+                      <SelectTrigger
+                        id="fabricator-select"
+                        className="mt-1.5 w-full bg-background"
+                      >
+                        <SelectValue placeholder="Choose a fabricator" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={FABRICATOR_PLACEHOLDER_VALUE}>
+                          -- Choose a Fabricator --
+                        </SelectItem>
+                        {users
+                          .filter(
+                            (user) =>
+                              user.role === "fabricator" &&
+                              !editedProject.fabricatorIds.includes(user.id),
+                          )
+                          .map((user) => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
                     <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                       <Button
                         onClick={handleAddFabricator}
@@ -1248,25 +1279,37 @@ export function ProjectDetails({
                       Supervisor
                     </Label>
                     {isEditing && currentUser.role === "admin" ? (
-                      <select
-                        value={editedProject.supervisorId}
-                        onChange={(e) =>
+                      <Select
+                        value={
+                          editedProject.supervisorId ||
+                          UNASSIGNED_SUPERVISOR_VALUE
+                        }
+                        onValueChange={(value) =>
                           setEditedProject((prev) => ({
                             ...prev,
-                            supervisorId: e.target.value,
+                            supervisorId:
+                              value === UNASSIGNED_SUPERVISOR_VALUE
+                                ? ""
+                                : value,
                           }))
                         }
-                        className="w-full border rounded px-3 py-2 bg-background"
                       >
-                        <option value="">Not assigned</option>
-                        {users
-                          .filter((user) => user.role === "supervisor")
-                          .map((user) => (
-                            <option key={user.id} value={user.id}>
-                              {user.name} - {user.school || "No school"}
-                            </option>
-                          ))}
-                      </select>
+                        <SelectTrigger className="w-full bg-background">
+                          <SelectValue placeholder="Select supervisor" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value={UNASSIGNED_SUPERVISOR_VALUE}>
+                            Not assigned
+                          </SelectItem>
+                          {users
+                            .filter((user) => user.role === "supervisor")
+                            .map((user) => (
+                              <SelectItem key={user.id} value={user.id}>
+                                {user.name} - {user.school || "No school"}
+                              </SelectItem>
+                            ))}
+                        </SelectContent>
+                      </Select>
                     ) : (
                       <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
                         <div className="w-10 h-10 rounded-full bg-primary text-primary-foreground flex items-center justify-center font-semibold">
