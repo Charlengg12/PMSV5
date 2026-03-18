@@ -379,10 +379,10 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       {showLogoutSpinner && <CustomLogoutSpinner />}
 
       <Sidebar
-        className="h-screen min-h-screen border-r-0 border-[#1a4572] bg-[#103054] text-white dark:border-[#1a4572] dark:bg-[#103054] dark:text-white [&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-[#1a4572] [&_[data-sidebar=sidebar]]:bg-[#103054] [&_[data-sidebar=sidebar]]:text-white dark:[&_[data-sidebar=sidebar]]:border-[#1a4572] dark:[&_[data-sidebar=sidebar]]:bg-[#103054] dark:[&_[data-sidebar=sidebar]]:text-white"
+        className="h-screen min-h-screen border-r-0 border-[#1a4572] bg-[#103054] text-white dark:border-slate-800 dark:bg-[#0f1729] dark:text-white [&_[data-sidebar=sidebar]]:border-r [&_[data-sidebar=sidebar]]:border-[#1a4572] [&_[data-sidebar=sidebar]]:bg-[#103054] [&_[data-sidebar=sidebar]]:text-white dark:[&_[data-sidebar=sidebar]]:border-slate-800 dark:[&_[data-sidebar=sidebar]]:bg-[#0f1729] dark:[&_[data-sidebar=sidebar]]:text-white"
         collapsible="icon"
       >
-        <SidebarHeader className="flex h-[73px] shrink-0 items-center border-b border-[#1a4572] px-4 dark:border-[#1a4572] sm:h-[81px]">
+        <SidebarHeader className="flex h-[73px] shrink-0 items-center border-b border-[#1a4572] px-4 dark:border-slate-800 sm:h-[81px]">
           <CompanyLogo
             size={isCollapsedDesktop ? "sm" : "md"}
             showText={!isCollapsedDesktop}
@@ -395,7 +395,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
           />
         </SidebarHeader>
 
-        <SidebarContent className="gap-0 overflow-y-auto overflow-x-hidden bg-transparent no-scrollbar">
+        <SidebarContent className="gap-0 overflow-y-auto overflow-x-hidden bg-transparent no-scrollbar dark:bg-transparent">
           {navigationGroups.map((group) => (
             <SidebarGroup key={group.title} className="px-3 py-4">
               <SidebarGroupLabel className="mb-2 h-auto px-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-white/60 group-data-[collapsible=icon]:hidden">
@@ -408,7 +408,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
                       <SidebarMenuButton
                         asChild
                         isActive={activeHash === item.url}
-                        className="app-sidebar-link rounded-lg border border-transparent bg-transparent p-0 text-white shadow-none ring-0 transition-all duration-200 hover:bg-white/10 hover:text-white dark:text-white dark:hover:bg-white/10 dark:hover:text-white data-[active=true]:ring-0"
+                        className="app-sidebar-link rounded-lg border border-transparent bg-transparent p-0 text-white shadow-none ring-0 transition-all duration-200 hover:bg-white/10 hover:text-white dark:text-white dark:hover:bg-white/5 dark:hover:text-white data-[active=true]:ring-0"
                         tooltip={isCollapsedDesktop ? item.title : undefined}
                       >
                         <a
@@ -440,7 +440,7 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
           ))}
         </SidebarContent>
 
-        <SidebarFooter className="border-t border-[#1a4572] px-3 py-4 dark:border-[#1a4572]">
+        <SidebarFooter className="border-t border-[#1a4572] px-3 py-4 dark:border-slate-800">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton

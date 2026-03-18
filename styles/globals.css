@@ -72,14 +72,14 @@
   --chart-3: #10b981;
   --chart-4: #f59e0b;
   --chart-5: #8b5cf6;
-  --sidebar: #103054;
+  --sidebar: #0f1729;
   --sidebar-foreground: #ffffff;
   --sidebar-primary: #e1862d;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #1a4572;
+  --sidebar-accent: #1e293b;
   --sidebar-accent-foreground: #ffffff;
-  --sidebar-border: #1a4572;
-  --sidebar-ring: #103054;
+  --sidebar-border: #1e293b;
+  --sidebar-ring: #334155;
 }
 
 @theme inline {

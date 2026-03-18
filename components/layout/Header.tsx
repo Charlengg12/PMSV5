@@ -62,7 +62,7 @@ export function Header({
         <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex min-h-12 items-center gap-3 bg-white px-3 py-2 transition-colors hover:bg-[#f8fbff] dark:bg-slate-900 dark:hover:bg-slate-800">
+              <button className="flex min-h-12 items-center gap-3 bg-transparent px-3 py-2 transition-colors hover:bg-transparent dark:bg-transparent dark:hover:bg-transparent">
                 <div className="relative shrink-0">
                   <div className="flex size-8 items-center justify-center rounded-full bg-[#f7fbff] text-[#123a68] dark:bg-slate-800 dark:text-slate-100">
                     <span className="text-xs font-bold">{getUserInitials()}</span>
