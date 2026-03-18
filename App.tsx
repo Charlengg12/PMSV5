@@ -23,6 +23,7 @@ import { AdminSettingsPage } from "./components/settings/AdminSettingsPage";
 import { ActivityLogs } from "./components/logs/ActivityLogs";
 import { TeamOverview } from "./components/team/TeamOverview";
 import { ClientBilling } from "./components/revenue/ClientBilling";
+import { RoutePreloader } from "./components/loader/RoutePreloader";
 import { LayoutDashboard } from "lucide-react";
 // import { AdminProjectsManager } from './components/admin/AdminProjectsManager';
 // import { AdminTasksManager } from './components/admin/AdminTasksManager';
@@ -225,6 +226,7 @@ export default function App() {
   const [_isInitialized, _setIsInitialized] = useState(false);
   const [backendHealthy, setBackendHealthy] = useState<boolean | null>(null);
   const [lastReloadAt, setLastReloadAt] = useState<number>(0);
+  const [isRouteLoading, setIsRouteLoading] = useState(true);
 
   function clampProgress(value: number) {
     return Math.min(100, Math.max(0, value));
@@ -1507,7 +1509,20 @@ export default function App() {
     };
   }, [backendHealthy, currentUser, lastReloadAt]);
 
-  if (!currentUser) {
+  const activeRouteKey = currentUser
+    ? `app:${currentView}`
+    : `auth:${authView}`;
+
+  useEffect(() => {
+    setIsRouteLoading(true);
+    const timeoutId = window.setTimeout(() => {
+      setIsRouteLoading(false);
+    }, 2000);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [activeRouteKey]);
+
+  const renderAuthView = () => {
     switch (authView) {
       case "fabricator-signup":
         return (
@@ -1537,6 +1552,15 @@ export default function App() {
           />
         );
     }
+  };
+
+  if (!currentUser) {
+    return (
+      <>
+        {renderAuthView()}
+        <RoutePreloader isVisible={isRouteLoading} />
+      </>
+    );
   }
 
   const renderView = () => {
@@ -1942,14 +1966,17 @@ case "activity-logs":
   };
 
   return (
-    <AppLayout
-      currentUser={currentUser}
-      onLogout={handleLogout}
-      currentTheme={getCurrentTheme()}
-      onThemeChange={setTheme}
-      isTransitioning={isTransitioning}
-    >
-      {renderView()}
-    </AppLayout>
+    <>
+      <AppLayout
+        currentUser={currentUser}
+        onLogout={handleLogout}
+        currentTheme={getCurrentTheme()}
+        onThemeChange={setTheme}
+        isTransitioning={isTransitioning}
+      >
+        {renderView()}
+      </AppLayout>
+      <RoutePreloader isVisible={isRouteLoading} />
+    </>
   );
 }
