@@ -49,20 +49,22 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   const inactivityTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const countdownTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const countdownIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const [countdownSeconds, setCountdownSeconds] = useState(180);
-  const [alertShown, setAlertShown] = useState(false);
+  const alertShownRef = useRef(false);
 
   const INACTIVITY_TIME = 300000;
   const COUNTDOWN_TIME = 180000;
+  const COUNTDOWN_SECONDS = COUNTDOWN_TIME / 1000;
 
-  const handleActivity = () => {
-    if (alertShown) return;
-
+  const clearInactivityTimers = () => {
     if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
     if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+  };
 
-    setCountdownSeconds(180);
+  const handleActivity = () => {
+    if (alertShownRef.current || Swal.isVisible()) return;
+
+    clearInactivityTimers();
 
     inactivityTimeoutRef.current = setTimeout(() => {
       showInactivityWarning();
@@ -70,12 +72,12 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
   };
 
   const showInactivityWarning = () => {
-    setAlertShown(true);
-    setCountdownSeconds(180);
+    alertShownRef.current = true;
+    clearInactivityTimers();
 
     Swal.fire({
       title: "Inactivity Warning",
-      html: `You will be logged out in <strong><span id="countdown">${countdownSeconds}</span></strong> seconds due to inactivity.`,
+      html: `You will be logged out in <strong><span id="countdown">${COUNTDOWN_SECONDS}</span></strong> seconds due to inactivity.`,
       icon: "warning",
       allowOutsideClick: false,
       allowEscapeKey: false,
@@ -84,32 +86,21 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       confirmButtonText: "Logout Now",
       cancelButtonText: "Stay Logged In",
       didOpen: () => {
-        const swalPopup = document.querySelector(".swal2-popup");
-        if (swalPopup) {
-          const handlePopupHover = () => {
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-            if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
-            Swal.close();
-            setAlertShown(false);
-            handleActivity();
-          };
-          swalPopup.addEventListener("mouseenter", handlePopupHover);
-        }
-
-        let seconds = 180;
+        let seconds = COUNTDOWN_SECONDS;
         countdownIntervalRef.current = setInterval(() => {
           seconds--;
           const countdownElement = document.getElementById("countdown");
           if (countdownElement) countdownElement.textContent = seconds.toString();
 
           if (seconds <= 0) {
-            if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+            clearInactivityTimers();
             Swal.close();
             performLogout();
           }
         }, 1000);
 
         countdownTimeoutRef.current = setTimeout(() => {
+          clearInactivityTimers();
           Swal.close();
           performLogout();
         }, COUNTDOWN_TIME);
@@ -124,15 +115,15 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
         icon: "swal-icon",
       },
     }).then((result) => {
+      clearInactivityTimers();
+
       if (result.isConfirmed) {
-        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-        if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
         performLogout();
-      } else if (result.dismiss) {
-        if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
-        if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
-        setAlertShown(false);
+      } else if (result.dismiss === Swal.DismissReason.cancel) {
+        alertShownRef.current = false;
         handleActivity();
+      } else if (!Swal.isVisible()) {
+        alertShownRef.current = false;
       }
     });
   };
@@ -181,11 +172,9 @@ export function AppSidebar({ currentUser, onLogout }: AppSidebarProps) {
       activityEvents.forEach((event) => {
         window.removeEventListener(event, handleActivity);
       });
-      if (inactivityTimeoutRef.current) clearTimeout(inactivityTimeoutRef.current);
-      if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
-      if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
+      clearInactivityTimers();
     };
-  }, [alertShown]);
+  }, []);
 
   useEffect(() => {
     const checkMd = () => {
