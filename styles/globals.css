@@ -436,3 +436,39 @@ html body[data-scroll-locked] {
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Sileo toast theme + elevation */
+.sileo-toast-title-light {
+  color: #0f172a !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+
+.sileo-toast-description-light {
+  color: #334155 !important;
+  text-align: center !important;
+}
+
+.sileo-toast-title-dark {
+  color: #f8fafc !important;
+  font-weight: 700 !important;
+}
+
+.sileo-toast-description-dark {
+  color: #cbd5e1 !important;
+  text-align: center !important;
+}
+
+[data-sileo-toast][data-ready="true"] [data-sileo-svg] {
+  filter: drop-shadow(0 14px 30px rgba(15, 23, 42, 0.24));
+}
+
+[data-sileo-toast] {
+  z-index: 10000 !important;
+}
+
+body.profile-dark [data-sileo-toast][data-ready="true"] [data-sileo-svg],
+body.dark [data-sileo-toast][data-ready="true"] [data-sileo-svg],
+html.dark [data-sileo-toast][data-ready="true"] [data-sileo-svg] {
+  filter: drop-shadow(0 16px 36px rgba(2, 6, 23, 0.6));
+}
