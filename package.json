@@ -63,6 +63,7 @@
     "react-router-dom": "^7.11.0",
     "reactflow": "^11.11.4",
     "recharts": "^2.15.4",
+    "sileo": "^0.1.5",
     "sonner": "^1.4.3",
     "sweetalert2": "^11.26.17",
     "tailwind-merge": "^2.6.0",
