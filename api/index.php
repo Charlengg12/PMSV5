@@ -2541,12 +2541,12 @@ function get_emails_by_roles(PDO $pdo, array $targetRoles): array
         // --- SERVER SETTINGS ---
         $mail->SMTPDebug = 0;                     
         $mail->isSMTP();                                            
-        $mail->Host       = 'smtp.gmail.com';     
+        $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';     
         $mail->SMTPAuth   = true;                                   
-        $mail->Username   = 'arkquestdev@gmail.com';  
-        $mail->Password   = 'hhjgxeprnxljiqdm';       
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
-        $mail->Port       = 587;                                    
+        $mail->Username   = getenv('SMTP_EMAIL') ?: 'arkquestdev@gmail.com';  
+        $mail->Password   = getenv('SMTP_PASSWORD') ?: 'hhjgxeprnxljiqdm';       
+        $mail->Port       = getenv('SMTP_PORT') ?: 587;                                    
+        $mail->SMTPSecure = $mail->Port == 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;                                    
 
         // --- SENDER ---
         $mail->setFrom($mail->Username, 'Elektronik Hub');
@@ -3039,13 +3039,13 @@ function send_password_reset_link_email(string $recipientEmail, string $recipien
     try {
         $mail->SMTPDebug = 0;
         $mail->isSMTP();
-        $mail->Host       = 'smtp.gmail.com';
+        $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';
         $mail->SMTPAuth   = true;
-        $mail->Username   = 'arkquestdev@gmail.com';
-        $mail->Password   = 'hhjgxeprnxljiqdm';
+        $mail->Username   = getenv('SMTP_EMAIL') ?: 'arkquestdev@gmail.com';
+        $mail->Password   = getenv('SMTP_PASSWORD') ?: 'hhjgxeprnxljiqdm';
 
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-        $mail->Port       = 587;
+        $mail->Port       = getenv('SMTP_PORT') ?: 587;
+        $mail->SMTPSecure = $mail->Port == 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;
 
         $mail->setFrom($mail->Username, 'Elektronik Hub');
         $mail->addAddress($recipientEmail, $recipientName);
@@ -3097,15 +3097,15 @@ function send_client_credentials_email($recipientEmail, $recipientName, $plainPa
         // --- SERVER SETTINGS ---
         $mail->SMTPDebug = 0;                      // 0 = OFF. (CRITICAL for JSON APIs)
         $mail->isSMTP();                                            
-        $mail->Host       = 'smtp.gmail.com';     
+        $mail->Host       = getenv('SMTP_HOST') ?: 'smtp.gmail.com';     
         $mail->SMTPAuth   = true;                                   
         
         // --- YOUR CREDENTIALS ---
-        $mail->Username   = 'arkquestdev@gmail.com';   // Your Gmail address
-        $mail->Password   = 'hhjgxeprnxljiqdm';         // Your 16-digit App Password
+        $mail->Username   = getenv('SMTP_EMAIL') ?: 'arkquestdev@gmail.com';   // Your Gmail address
+        $mail->Password   = getenv('SMTP_PASSWORD') ?: 'hhjgxeprnxljiqdm';         // Your 16-digit App Password
         
-        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;         
-        $mail->Port       = 587;                                    
+        $mail->Port       = getenv('SMTP_PORT') ?: 587;                                    
+        $mail->SMTPSecure = $mail->Port == 465 ? PHPMailer::ENCRYPTION_SMTPS : PHPMailer::ENCRYPTION_STARTTLS;                                    
 
         // --- RECIPIENTS ---
         $mail->setFrom($mail->Username, 'Electronik Hub');
