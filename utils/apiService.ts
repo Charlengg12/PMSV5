@@ -1,6 +1,7 @@
 // API Service for PHP backend (cPanel/shared hosting friendly)
 // Use VITE_API_URL when provided, otherwise default to same-origin /api
-const API_BASE_URL = '/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+
 
 interface ApiResponse<T> {
     data?: T;
